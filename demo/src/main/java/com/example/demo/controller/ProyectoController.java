@@ -63,6 +63,7 @@ public class ProyectoController {
         List<Proyecto> proyectosDB = proyectoRepository.findAll();
 
         return proyectosDB.stream().map(p -> new ProyectoDTO(
+            p.getId(),
             p.getNombre(),
             p.getDescripcion(),
             p.getFechaInicio(),

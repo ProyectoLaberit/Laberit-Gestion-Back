@@ -26,9 +26,9 @@ public class UsuarioController  {
             
             // 1. Creamos una lista de proyectos de prueba
             List<ProyectoDTO> listaProyectos = new ArrayList<>();
-            listaProyectos.add(new ProyectoDTO( "Proyecto A", "Descripción del Proyecto A", "2023-01-01", true));
-            listaProyectos.add(new ProyectoDTO( "Proyecto B", "Descripción del Proyecto B", "2023-02-01", true));
-            listaProyectos.add(new ProyectoDTO( "Proyecto C", "Descripción del Proyecto C", "2023-03-01", true));
+            // listaProyectos.add(new ProyectoDTO( 2, "Proyecto A", "Descripción del Proyecto A", "2023-01-01", true));
+            // listaProyectos.add(new ProyectoDTO( 2, "Proyecto B", "Descripción del Proyecto B", "2023-02-01", true));
+            // listaProyectos.add(new ProyectoDTO( 2, "Proyecto C", "Descripción del Proyecto C", "2023-03-01", true));
 
             // 2. Metemos la lista en el campo 'data' del ApiResponse
             return new ApiResponse("Login exitoso", true, listaProyectos);
