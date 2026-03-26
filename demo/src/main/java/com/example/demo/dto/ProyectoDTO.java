@@ -21,4 +21,9 @@ public class ProyectoDTO {
     public String getDescripcion() { return descripcion; }
     public String getFechaInicio() { return fechaInicio; }
     public boolean isActivo() { return activo; }
+    
+    public void setNombre(String nombre) { this.nombre = nombre; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+    public void setFechaInicio(String fechaInicio) { this.fechaInicio = fechaInicio; }
+    public void setActivo(boolean activo) { this.activo = activo; }
 }
