@@ -16,6 +16,12 @@ public class DetalleEstimacion {
 
     private String tarea;
 
+    @Column(name = "id_departamento")
+    private int idDepartamento;
+
+    @Column(name = "id_fase")
+    private int idFase;
+
     @Column(name = "tiempo_max")
     private Double tiempoMax;
 
@@ -28,6 +34,13 @@ public class DetalleEstimacion {
     // Getters y Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public int getIdDepartamento() { return idDepartamento; }
+    public void setIdDepartamento(int idDepartamento) { this.idDepartamento = idDepartamento; }
+
+    public int getIdFase() { return idFase; }
+    public void setIdFase(int idFase) { this.idFase = idFase; }
+
 
     public Long getIdProyecto() { return idProyecto; }
     public void setIdProyecto(Long idProyecto) { this.idProyecto = idProyecto; }
