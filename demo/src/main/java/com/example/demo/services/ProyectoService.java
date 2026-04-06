@@ -24,7 +24,10 @@ public class ProyectoService {
             p.getNombre(),
             p.getDescripcion(),
             p.getFechaInicio(),
-            p.isActivo()
+            p.isActivo(),
+            p.getGitlabId(),
+            p.getClockifyId(),
+            true
         )).collect(Collectors.toList());
     }
 }
