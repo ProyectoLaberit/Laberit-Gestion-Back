@@ -17,11 +17,12 @@ public class HolaController {
     public ApiResponse conectar() {
         // Aquí es donde el Back-end genera su respuesta
         String mensajeParaElFront = "Respuesta del back_end";
+        String error = "Error";
         
-        if (true) {
+        try {
             return new ApiResponse(mensajeParaElFront, true, null);
+        } catch(Exception e){
+            return new ApiResponse(error, false, null);
         }
-        
-        return new ApiResponse("Error", false, null);
     }
 }
