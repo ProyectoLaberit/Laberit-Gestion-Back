@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.services.ProyectoService;
 
@@ -23,7 +24,8 @@ public class ProyectoController {
     private ProyectoService proyectoService;
     
     @GetMapping
-    public List<ProyectoDTO> obtenerProyectos() {
-        return proyectoService.obtenerTodosLosProyectos();
+    public ApiResponse obtenerProyectos() {
+        List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos();
+        return new ApiResponse("Listado de proyectos recuperado", true, lista);
     }
 }
