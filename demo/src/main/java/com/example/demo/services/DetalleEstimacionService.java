@@ -94,4 +94,8 @@ public class DetalleEstimacionService {
        
     }
 
+    public List<DetalleEstimacion> obtenerTodasLasEstimaciones() {
+        return detalleEstimacionRepository.findAll();
+    }
+
     }
