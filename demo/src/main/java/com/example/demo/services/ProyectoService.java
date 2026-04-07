@@ -35,6 +35,33 @@ public class ProyectoService {
         )).collect(Collectors.toList());
     }
 
+    public ProyectoDTO actualizarProyecto(Long id, ProyectoDTO proyectoDTO) {
+        // Buscar el proyecto en la base de datos por su ID
+        Proyecto proyecto = proyectoRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
+        
+        // Actualizar los datos del proyecto con la información nueva
+        proyecto.setNombre(proyectoDTO.getNombre());
+        proyecto.setDescripcion(proyectoDTO.getDescripcion());
+        proyecto.setFechaInicio(proyectoDTO.getFechaInicio());
+        proyecto.setActivo(proyectoDTO.isActivo());
+        
+        // Guardar los cambios en la base de datos
+        Proyecto actualizado = proyectoRepository.save(proyecto);
+        
+        // Devolver un DTO con el proyecto ya actualizado
+        return new ProyectoDTO(
+            actualizado.getId(),
+            actualizado.getNombre(),
+            actualizado.getDescripcion(),
+            actualizado.getFechaInicio(),
+            actualizado.isActivo(),
+            actualizado.getGitlabId(),
+            actualizado.getClockifyId(),
+            true
+        );
+    }
+
     public List<ProyectoDTO> obtenerProyectosGitLabNoRegistrados() {
         // Sacamos de nuestra DB los IDs de GitLab que ya conocemos
         // stream: pasa proyecto por proyecto hasta que acaben
