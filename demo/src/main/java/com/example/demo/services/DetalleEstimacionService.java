@@ -22,6 +22,9 @@ import com.example.demo.repository.DepartamentoRepository;
 import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.ExcelRepository;
 
+import com.example.demo.dto.DetalleEstimacionDTO;
+import java.util.stream.Collectors;
+
 @Service
 public class DetalleEstimacionService {
 
@@ -86,7 +89,7 @@ public class DetalleEstimacionService {
         
         workbook.close();
         return listaParaGuardar.size();
-}
+    }
 
     private int determinarDepartamento(String nombre){
 
@@ -94,4 +97,21 @@ public class DetalleEstimacionService {
         
     }
 
+    // Método para recuperar las tareas y enviarlas al Front-end
+    public List<DetalleEstimacionDTO> obtenerDetallesPorProyecto(Long idProyecto) {
+        // Buscamos todas las tareas del proyecto en la base de datos
+        List<DetalleEstimacion> entidades = detalleEstimacionRepository.findByIdProyecto(idProyecto);
+
+        // Convertimos cada Entity en un DTO para que el Front-end lo entienda
+        return entidades.stream().map(entidad -> new DetalleEstimacionDTO(
+            entidad.getId(),
+            entidad.getIdDepartamento(),
+            entidad.getIdProyecto(),
+            entidad.getIdFase(),
+            entidad.getTarea(),
+            entidad.getTiempoMax(),
+            entidad.getTiempoMin()
+        )).collect(Collectors.toList());
     }
+
+}

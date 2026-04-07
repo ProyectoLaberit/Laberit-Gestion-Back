@@ -93,23 +93,4 @@ public class ProyectoService {
             .collect(Collectors.toList());
     }
 
-    public ProyectoDTO actualizarProyecto(Long id, ProyectoDTO dto) {
-        // Buscamos el proyecto en la base de datos por su ID
-        Proyecto proyectoExistente = proyectoRepository.findById(id).get();
-
-        // Actualizamos los campos con los nuevos datos que vienen en el 'dto'
-        proyectoExistente.setNombre(dto.getNombre());
-        proyectoExistente.setDescripcion(dto.getDescripcion());
-        proyectoExistente.setFechaInicio(dto.getFechaInicio());
-        proyectoExistente.setActivo(dto.isActivo());
-        proyectoExistente.setGitlabId(dto.getGitlabId());
-        proyectoExistente.setClockifyId(dto.getClockifyId());
-
-        // Guardamos los cambios en la base
-        proyectoRepository.save(proyectoExistente);
-
-        // Devolvemos el proyecto actualizado convertido de nuevo a DTO
-        return dto;
-    }
-
 }
