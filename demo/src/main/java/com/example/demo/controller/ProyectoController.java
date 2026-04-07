@@ -34,7 +34,9 @@ public class ProyectoController {
     
     @PutMapping("/{id}")
     public ApiResponse actualizarProyecto(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
+        // Recibe el ID del proyecto y los datos nuevos desde el cuerpo de la petición
         ProyectoDTO actualizado = proyectoService.actualizarProyecto(id, proyectoDTO);
+        // Devuelve una respuesta con el proyecto ya actualizado
         return new ApiResponse("Proyecto actualizado correctamente", true, actualizado);
     }
 
