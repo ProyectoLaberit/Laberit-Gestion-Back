@@ -39,7 +39,7 @@ public class DetalleEstimacionController {
         return detalleEstimacionRepository.findByIdProyecto(idProyecto);
     }
 
-   @PostMapping("/importar")
+ @PostMapping("/importar")
     public ApiResponse importarExcel(
             @RequestParam("archivo") MultipartFile archivo, 
             @RequestParam("proyectoId") long proyectoId, 
@@ -51,9 +51,9 @@ public class DetalleEstimacionController {
 
         try {
             int filasGuardadas = detalleEstimacionService.procesarExcel(archivo, proyectoId, usuarioId);
-            return new ApiResponse("Éxito: se registraron " + filasGuardadas + " estimaciones.", true, filasGuardadas);
+            return new ApiResponse("Éxito: se importaron " + filasGuardadas + " registros.", true, filasGuardadas);
         } catch (Exception e) {
-            return new ApiResponse("Error al procesar: " + e.getMessage(), false, null);
+            return new ApiResponse("Error al procesar el Excel: " + e.getMessage(), false, null);
         }
     }
 
@@ -64,10 +64,15 @@ public class DetalleEstimacionController {
         List<DetalleEstimacion> estimaciones = detalleEstimacionService.obtenerEstimacionesPorProyecto(proyectoId);
 
         if (estimaciones == null || estimaciones.isEmpty()) {
-            return new ApiResponse("No hay estimaciones para el proyecto " + proyectoId, false, null);
+            return new ApiResponse("Error: El proyecto " + proyectoId + " no tiene estimaciones.", false, null);
         }
 
-        int total = excelService.crearYGuardarExcel(estimaciones);
-        return new ApiResponse("Listado de estimaciones obtenido.", true, total);
+        int resultado = excelService.crearYGuardarExcel(estimaciones);
+
+        if (resultado > 0) {
+            return new ApiResponse("Éxito: Excel generado para el proyecto " + proyectoId, true, resultado);
+        }
+
+        return new ApiResponse("Error al generar el archivo.", false, null);
     }
 }
