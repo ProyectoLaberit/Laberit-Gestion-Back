@@ -6,14 +6,12 @@ import org.springframework.stereotype.Service;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
 import com.example.demo.repository.ExcelRepository;
-
 @Service
 public class ExcelService {
 
-    @Autowired
+  @Autowired
     private ExcelRepository excelRepository;
 
-    // Este método es el que ahora recibe el objeto ya creado
     public Excel guardarDatosExcel(Excel excel) {
         return excelRepository.save(excel);
     }
