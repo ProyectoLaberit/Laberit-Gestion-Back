@@ -1,17 +1,14 @@
 package com.example.demo.services;
 
-import java.io.InputStream;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.CellType;
+
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,7 +17,7 @@ import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
 import com.example.demo.repository.DepartamentoRepository;
 import com.example.demo.repository.DetalleEstimacionRepository;
-import com.example.demo.repository.ExcelRepository;
+
 
 @Service
 public class DetalleEstimacionService {
@@ -31,20 +28,14 @@ public class DetalleEstimacionService {
     private DepartamentoRepository departamentoRepository;
 
     @Autowired
-    private ExcelRepository excelRepository;
+    private ExcelService excelService;
 
-   public int procesarExcell(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
+    public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
         
-        // OBJETIVO 1: Guardar metadatos en tabla 'excel'
-        Excel registroExcel = new Excel();
-        registroExcel.setIdProyecto(proyectoId);
-        registroExcel.setIdUsuario(usuarioId);
-        registroExcel.setFechaSubida(LocalDate.now());
-        registroExcel.setRutaArchivo("uploads/" + archivo.getOriginalFilename());
-        
-        Excel excelGuardado = excelRepository.save(registroExcel);
+        // PASO 1: Usamos ExcelService para registrar la subida (Objetivo 1)
+        Excel excelGuardado = excelService.registrarMetadata(archivo, proyectoId, usuarioId);
 
-        // OBJETIVO 2: Parsear y guardar en 'detalle_estimacion' vinculando IDs
+        // PASO 2: Leemos el Excel para las estimaciones (Objetivo 2)
         List<DetalleEstimacion> listaParaGuardar = new ArrayList<>();
         Workbook workbook = WorkbookFactory.create(archivo.getInputStream());
 
@@ -53,13 +44,11 @@ public class DetalleEstimacionService {
             int idDepartamento = determinarDepartamento(hoja.getSheetName());
 
             if (idDepartamento == -1) {
-                continue;
+                continue; // Si el nombre de la hoja no es un departamento válido, se ignora
             }
 
             for (Row fila : hoja) {
-                if (fila.getRowNum() == 0) {
-                    continue;
-                }
+                if (fila.getRowNum() == 0) continue; // Saltar cabecera
 
                 if (fila.getCell(0) != null && fila.getCell(1) != null) {
                     DetalleEstimacion detalle = new DetalleEstimacion();
@@ -70,39 +59,28 @@ public class DetalleEstimacionService {
                     detalle.setIdFase((int) fila.getCell(0).getNumericCellValue());
                     detalle.setTarea(fila.getCell(1).getStringCellValue());
                     
-                    if (fila.getCell(2) != null) {
-                        detalle.setTiempoMax(fila.getCell(2).getNumericCellValue());
-                    }
-                    if (fila.getCell(3) != null) {
-                        detalle.setTiempoMin(fila.getCell(3).getNumericCellValue());
-                    }
+                    if (fila.getCell(2) != null) detalle.setTiempoMax(fila.getCell(2).getNumericCellValue());
+                    if (fila.getCell(3) != null) detalle.setTiempoMin(fila.getCell(3).getNumericCellValue());
 
                     listaParaGuardar.add(detalle);
                 }
             }
         }
-        
         workbook.close();
 
         if (listaParaGuardar.isEmpty()) {
-            throw new Exception("Error: No se guardaron estimaciones. Revisa los nombres de las hojas del Excel.");
+            throw new Exception("No se encontraron datos válidos en las hojas para registrar estimaciones.");
         }
 
         detalleEstimacionRepository.saveAll(listaParaGuardar);
-        
         return listaParaGuardar.size();
     }
 
     private int determinarDepartamento(String nombre){
-
-        return departamentoRepository.findByNombre(nombre).map(departamento -> departamento.getId()).orElse(-1);
-       
+        return departamentoRepository.findByNombre(nombre).map(d -> d.getId()).orElse(-1);
     }
-
-    
 
     public List<DetalleEstimacion> obtenerEstimacionesPorProyecto(Long idProyecto) {
         return detalleEstimacionRepository.findByIdProyecto(idProyecto);
     }
-
     }
