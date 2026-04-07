@@ -38,14 +38,14 @@ public class DetalleEstimacionController {
     }
 
     @PostMapping("/importar")
-    public ApiResponse importarExcel(@RequestParam("archivo") MultipartFile archivo, @RequestParam("proyectoId") long proyectoId) {
+    public ApiResponse importarExcel(@RequestParam("archivo") MultipartFile archivo, @RequestParam("proyectoId") long proyectoId, @RequestParam("usuarioId") Integer usuarioId) {
         
         if(archivo.isEmpty()) {
           return  new ApiResponse("El archivo está vacío.", false, null);
            
         }
         try{
-            detalleEstimacionService.procesarExcell(archivo, proyectoId);
+            detalleEstimacionService.procesarExcell(archivo, proyectoId, usuarioId);
             return new ApiResponse("Archivo procesado exitosamente.", true, null);
         } catch (Exception e) {
             return new ApiResponse("Error al procesar el archivo: " + e.getMessage(), false, null);

@@ -1,6 +1,7 @@
 package com.example.demo.services;
 
 import java.io.InputStream;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -9,14 +10,17 @@ import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.entity.DetalleEstimacion;
+import com.example.demo.entity.Excel;
 import com.example.demo.repository.DepartamentoRepository;
 import com.example.demo.repository.DetalleEstimacionRepository;
+import com.example.demo.repository.ExcelRepository;
 
 @Service
 public class DetalleEstimacionService {
@@ -26,55 +30,62 @@ public class DetalleEstimacionService {
     @Autowired
     private DepartamentoRepository departamentoRepository;
 
-    public void procesarExcell(MultipartFile archivo, long proyectoId) throws Exception {
-        // Aquí iría la lógica para procesar el archivo Excel y guardar los detalles de estimación
-        // en la base de datos utilizando el detalleEstimacionRepository.
-        List<DetalleEstimacion> listaParaGuardar = new ArrayList<>();
-        // Lógica para leer el archivo Excel y convertirlo en objetos DetalleEstimacion
-        try(InputStream flujoDatos = archivo.getInputStream();
-            Workbook miExcel = new XSSFWorkbook(flujoDatos)) {
-         
-                for(int i = 0; i < miExcel.getNumberOfSheets();i++){
-                    Sheet pestanaActual = miExcel.getSheetAt(i);
-                    String nombrePestana = pestanaActual.getSheetName().toUpperCase();
+    @Autowired
+    private ExcelRepository excelRepository;
 
-                    int departamentoId = determinarDepartamento(nombrePestana);
-                    if(departamentoId == -1){    
-                        continue; // Si no se reconoce el nombre de la pestaña, se salta a la siguiente
-                    }
-                 for(Row filaActual : pestanaActual){
-                    if(filaActual == null){
-                        continue; // Si la fila es nula, se salta a la siguiente
-                    }
-                    Cell celdaTarea = filaActual.getCell(0); 
-                    Cell celdaMin = filaActual.getCell(3);
-                    Cell celdaMax = filaActual.getCell(4);      
-
-                    if(celdaTarea == null || celdaTarea.getCellType() != CellType.STRING){
-                        continue;
-                    }
-                    if(celdaMin == null || celdaMin.getCellType() != CellType.NUMERIC){
-                        continue;
-                    }
-                    if(celdaMax == null || celdaMax.getCellType() != CellType.NUMERIC){
-                        continue;
-                    }
-
-                    DetalleEstimacion nuevaTarea = new DetalleEstimacion();
-                    nuevaTarea.setIdProyecto(proyectoId);
-                    nuevaTarea.setIdDepartamento(departamentoId);
-                    nuevaTarea.setIdFase(1); // Aquí podrías agregar lógica para determinar la fase si es necesario
-
-                    nuevaTarea.setTarea(celdaTarea.getStringCellValue());
-                    nuevaTarea.setTiempoMin(celdaMin.getNumericCellValue());
-                    nuevaTarea.setTiempoMax(celdaMax.getNumericCellValue());
-
-                    listaParaGuardar.add(nuevaTarea);
-                 }   
-                }
+    public int procesarExcell(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
+      // PASO 1: Registrar el archivo en la tabla 'excel'
+        Excel registroExcel = new Excel();
+        registroExcel.setIdProyecto(proyectoId);
+        registroExcel.setIdUsuario(usuarioId);
+        registroExcel.setFechaSubida(LocalDate.now());
+        registroExcel.setRutaArchivo("uploads/" + archivo.getOriginalFilename());
         
-    }
-        detalleEstimacionRepository.saveAll(listaParaGuardar);
+        // Corrección 2: Usar la instancia 'excelRepository' (minúscula), no la clase estática
+        Excel excelGuardado = excelRepository.save(registroExcel);
+        Integer idExcelGenerado = excelGuardado.getIdExcel();
+
+        // PASO 2: Leer el contenido del Excel
+        List<DetalleEstimacion> listaParaGuardar = new ArrayList<>();
+        // Corrección 3: Usar 'archivo' en lugar de 'archivoSubido'
+        Workbook workbook = WorkbookFactory.create(archivo.getInputStream());
+
+        for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+            Sheet hoja = workbook.getSheetAt(i);
+            int idDepartamento = determinarDepartamento(hoja.getSheetName());
+
+            // Corrección 4: Validar contra -1, ya que el método retorna int primitivo, no null
+            if (idDepartamento == -1) {
+                continue;
+            }
+
+            for (Row fila : hoja) {
+                if (fila.getRowNum() == 0) {
+                    continue;
+                }
+
+                DetalleEstimacion detalle = new DetalleEstimacion();
+                detalle.setIdProyecto(proyectoId);
+                detalle.setIdDepartamento(idDepartamento);
+                detalle.setIdExcel(idExcelGenerado);
+                
+                // Asignación de datos del Excel
+                detalle.setIdFase((int) fila.getCell(0).getNumericCellValue());
+                detalle.setTarea(fila.getCell(1).getStringCellValue());
+                detalle.setTiempoMax(fila.getCell(2).getNumericCellValue());
+                detalle.setTiempoMin(fila.getCell(3).getNumericCellValue());
+
+                listaParaGuardar.add(detalle);
+            }
+        }
+
+        // PASO 3: Guardado masivo de las tareas vinculadas
+        if (!listaParaGuardar.isEmpty()) {
+            detalleEstimacionRepository.saveAll(listaParaGuardar);
+        }
+        
+        workbook.close();
+        return listaParaGuardar.size();
 }
 
     private int determinarDepartamento(String nombre){

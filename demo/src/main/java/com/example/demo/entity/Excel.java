@@ -18,7 +18,7 @@ public class Excel {
     @Column(name = "id_excel")
     private Integer id;
     @Column(name = "id_proyecto", nullable = false)
-    private Integer idProyecto;
+    private Long idProyecto;
 
     @Column(name = "id_usuario", nullable = false)
     private Integer idUsuario;
@@ -40,11 +40,11 @@ public class Excel {
         this.id = idExcel;
     }
 
-    public Integer getIdProyecto() {
+    public Long getIdProyecto() {
         return idProyecto;
     }
 
-    public void setIdProyecto(Integer idProyecto) {
+    public void setIdProyecto(Long idProyecto) {
         this.idProyecto = idProyecto;
     }
 
