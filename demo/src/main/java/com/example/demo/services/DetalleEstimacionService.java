@@ -33,28 +33,25 @@ public class DetalleEstimacionService {
     @Autowired
     private ExcelRepository excelRepository;
 
-    public int procesarExcell(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
-      // PASO 1: Registrar el archivo en la tabla 'excel'
+   public int procesarExcell(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
+        
+        // OBJETIVO 1: Guardar metadatos en tabla 'excel'
         Excel registroExcel = new Excel();
         registroExcel.setIdProyecto(proyectoId);
         registroExcel.setIdUsuario(usuarioId);
         registroExcel.setFechaSubida(LocalDate.now());
         registroExcel.setRutaArchivo("uploads/" + archivo.getOriginalFilename());
         
-        // Corrección 2: Usar la instancia 'excelRepository' (minúscula), no la clase estática
         Excel excelGuardado = excelRepository.save(registroExcel);
-        Integer idExcelGenerado = excelGuardado.getIdExcel();
 
-        // PASO 2: Leer el contenido del Excel
+        // OBJETIVO 2: Parsear y guardar en 'detalle_estimacion' vinculando IDs
         List<DetalleEstimacion> listaParaGuardar = new ArrayList<>();
-        // Corrección 3: Usar 'archivo' en lugar de 'archivoSubido'
         Workbook workbook = WorkbookFactory.create(archivo.getInputStream());
 
         for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
             Sheet hoja = workbook.getSheetAt(i);
             int idDepartamento = determinarDepartamento(hoja.getSheetName());
 
-            // Corrección 4: Validar contra -1, ya que el método retorna int primitivo, no null
             if (idDepartamento == -1) {
                 continue;
             }
@@ -64,29 +61,37 @@ public class DetalleEstimacionService {
                     continue;
                 }
 
-                DetalleEstimacion detalle = new DetalleEstimacion();
-                detalle.setIdProyecto(proyectoId);
-                detalle.setIdDepartamento(idDepartamento);
-                detalle.setIdExcel(idExcelGenerado);
-                
-                // Asignación de datos del Excel
-                detalle.setIdFase((int) fila.getCell(0).getNumericCellValue());
-                detalle.setTarea(fila.getCell(1).getStringCellValue());
-                detalle.setTiempoMax(fila.getCell(2).getNumericCellValue());
-                detalle.setTiempoMin(fila.getCell(3).getNumericCellValue());
+                if (fila.getCell(0) != null && fila.getCell(1) != null) {
+                    DetalleEstimacion detalle = new DetalleEstimacion();
+                    detalle.setIdProyecto(proyectoId);
+                    detalle.setIdDepartamento(idDepartamento);
+                    detalle.setIdExcel(excelGuardado.getIdExcel());
+                    
+                    detalle.setIdFase((int) fila.getCell(0).getNumericCellValue());
+                    detalle.setTarea(fila.getCell(1).getStringCellValue());
+                    
+                    if (fila.getCell(2) != null) {
+                        detalle.setTiempoMax(fila.getCell(2).getNumericCellValue());
+                    }
+                    if (fila.getCell(3) != null) {
+                        detalle.setTiempoMin(fila.getCell(3).getNumericCellValue());
+                    }
 
-                listaParaGuardar.add(detalle);
+                    listaParaGuardar.add(detalle);
+                }
             }
-        }
-
-        // PASO 3: Guardado masivo de las tareas vinculadas
-        if (!listaParaGuardar.isEmpty()) {
-            detalleEstimacionRepository.saveAll(listaParaGuardar);
         }
         
         workbook.close();
+
+        if (listaParaGuardar.isEmpty()) {
+            throw new Exception("Error: No se guardaron estimaciones. Revisa los nombres de las hojas del Excel.");
+        }
+
+        detalleEstimacionRepository.saveAll(listaParaGuardar);
+        
         return listaParaGuardar.size();
-}
+    }
 
     private int determinarDepartamento(String nombre){
 
@@ -94,8 +99,10 @@ public class DetalleEstimacionService {
        
     }
 
-    public List<DetalleEstimacion> obtenerTodasLasEstimaciones() {
-        return detalleEstimacionRepository.findAll();
+    
+
+    public List<DetalleEstimacion> obtenerEstimacionesPorProyecto(Long idProyecto) {
+        return detalleEstimacionRepository.findByIdProyecto(idProyecto);
     }
 
     }

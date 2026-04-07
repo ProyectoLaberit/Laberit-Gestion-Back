@@ -22,22 +22,25 @@ public class ExcelController {
     @Autowired
     private DetalleEstimacionService detalleEstimacionService;
 
-    @GetMapping("/exportar")
-    public ApiResponse exportarExcel() {
+    @GetMapping("/exportar/{proyectoId}")
+    public ApiResponse exportarExcel(@PathVariable Long proyectoId) {
         
-        List<DetalleEstimacion> estimaciones = detalleEstimacionService.obtenerTodasLasEstimaciones();
+        List<DetalleEstimacion> estimaciones = detalleEstimacionService.obtenerEstimacionesPorProyecto(proyectoId);
+
+        if (estimaciones.isEmpty()) {
+            return new ApiResponse("Error: El proyecto " + proyectoId + " no tiene estimaciones guardadas.", false, null);
+        }
 
         int filasGuardadas = excelService.crearYGuardarExcel(estimaciones);
 
         if (filasGuardadas == 0) {
-            return new ApiResponse("Error: No hay datos en la base de datos para exportar o falló la creación.", false, null);
+            return new ApiResponse("Error al crear el archivo Excel.", false, null);
         }
         
         if (filasGuardadas > 0) {
-            return new ApiResponse("Éxito: Se ha generado el Excel con " + filasGuardadas + " estimaciones.", true, filasGuardadas);
+            return new ApiResponse("Éxito: Se ha generado el Excel del proyecto " + proyectoId + " con " + filasGuardadas + " estimaciones.", true, filasGuardadas);
         } 
         
         return new ApiResponse("Error: Estado de la operación desconocido.", false, null);
-        
     }
 }
