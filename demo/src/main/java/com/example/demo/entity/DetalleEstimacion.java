@@ -13,6 +13,9 @@ public class DetalleEstimacion {
 
     @Column(name = "id_proyecto")
     private Long idProyecto;
+    
+    @Column(name = "id_excel")
+    private Integer idExcel;
 
     private String tarea;
 
@@ -53,4 +56,12 @@ public class DetalleEstimacion {
 
     public Double getTiempoMin() { return tiempoMin; }
     public void setTiempoMin(Double tiempoMin) { this.tiempoMin = tiempoMin; }
+
+    public Integer getIdExcel() {
+        return idExcel;
+    }
+
+    public void setIdExcel(Integer idExcel) {
+        this.idExcel = idExcel;
+    }
 }
