@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,7 +33,7 @@ public class ProyectoController {
         return new ApiResponse("Listado de proyectos recuperado", true, lista);
     }
     
-    @PutMapping("/{id}")
+    @PostMapping("/{id}")
     public ApiResponse actualizarProyecto(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
         // Recibe el ID del proyecto y los datos nuevos desde el cuerpo de la petición
         ProyectoDTO actualizado = proyectoService.actualizarProyecto(id, proyectoDTO);
