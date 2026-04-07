@@ -28,4 +28,12 @@ public class ProyectoController {
         List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos();
         return new ApiResponse("Listado de proyectos recuperado", true, lista);
     }
+
+    @GetMapping("/externos")
+    public ApiResponse obtenerProyectosExternos() {
+        // Llamamos al nuevo método que creamos en el servicio
+        List<ProyectoDTO> listaExternos = proyectoService.obtenerProyectosGitLabNoRegistrados();
+        
+        return new ApiResponse("Proyectos de GitLab pendientes de importar", true, listaExternos);
+    }
 }

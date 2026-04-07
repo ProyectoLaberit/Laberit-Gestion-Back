@@ -1,6 +1,7 @@
 package com.example.demo.services;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,9 @@ public class ProyectoService {
     @Autowired
     private ProyectoRepository proyectoRepository;
 
+    @Autowired
+    private GitLabService gitLabService;
+
     public List<ProyectoDTO> obtenerTodosLosProyectos() {
         List<Proyecto> proyectosDB = proyectoRepository.findAll();
 
@@ -30,4 +34,36 @@ public class ProyectoService {
             true
         )).collect(Collectors.toList());
     }
+
+    public List<ProyectoDTO> obtenerProyectosGitLabNoRegistrados() {
+        // Sacamos de nuestra DB los IDs de GitLab que ya conocemos
+        // stream: pasa proyecto por proyecto hasta que acaben
+        // map: de cada proyecto que pase se queda con la id
+        // filter: Si la id del proyecto es null no pasa
+        // collect: mete todos los proyectos que pasaron el filtro en la nueva lista
+        List<String> idsYaGuardados = proyectoRepository.findAll()
+            .stream()
+            .map(p -> p.getGitlabId())
+            .filter(id -> id != null)
+            .collect(Collectors.toList());
+
+        // Le pedimos a GitLab TODOS los proyectos
+        List<Map<String, Object>> proyectosGitLab = gitLabService.obtenerProyectosDeGitLab();
+
+        // filtra que proyectos de GitLab NO están en la lista de IDs guardados"
+        return proyectosGitLab.stream()
+            .filter(git -> !idsYaGuardados.contains(git.get("id").toString()))
+            .map(git -> new ProyectoDTO(
+                null,
+                git.get("name").toString(),
+                git.get("description") != null ? git.get("description").toString() : "Sin descripción",
+                null, // GitLab no nos da la fecha de inicio igual que nuestra DB
+                true,
+                git.get("id").toString(), // El ID de GitLab
+                null,
+                false // Indicamos que NO está en la base de datos
+            ))
+            .collect(Collectors.toList());
+    }
+
 }
