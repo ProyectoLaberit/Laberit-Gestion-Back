@@ -5,6 +5,7 @@ import com.example.demo.dto.DetalleEstimacionDTO;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.services.DetalleEstimacionService;
+import com.example.demo.services.ExcelService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +26,9 @@ public class DetalleEstimacionController {
 
     @Autowired
     private DetalleEstimacionService detalleEstimacionService;
+
+    @Autowired
+    private ExcelService excelService;
     
     @GetMapping("/proyecto/{idProyecto}")
     /* * @PathVariable: Captura el valor que viene en la URL (idProyecto)
@@ -46,14 +50,13 @@ public class DetalleEstimacionController {
             return  new ApiResponse("El archivo está vacío.", false, null);
 
         }
-        try{
-            detalleEstimacionService.procesarExcell(archivo, proyectoId, usuarioId);
-            return new ApiResponse("Archivo procesado exitosamente.", true, null);
+
+        try {
+            int filasGuardadas = detalleEstimacionService.procesarExcel(archivo, proyectoId, usuarioId);
+            return new ApiResponse("Éxito: se importaron " + filasGuardadas + " registros.", true, filasGuardadas);
         } catch (Exception e) {
-            return new ApiResponse("Error al procesar el archivo: " + e.getMessage(), false, null);
+            return new ApiResponse("Error al procesar el Excel: " + e.getMessage(), false, null);
         }
-        
-        
     }
 
     //La ruta del front
@@ -85,4 +88,21 @@ public class DetalleEstimacionController {
         }
     }
     
+    @GetMapping("/exportar/{proyectoId}")
+    public ApiResponse exportarExcel(@PathVariable Long proyectoId) {
+        
+        List<DetalleEstimacion> estimaciones = detalleEstimacionService.obtenerDetallesEntidadPorProyecto(proyectoId);
+
+        if (estimaciones == null || estimaciones.isEmpty()) {
+            return new ApiResponse("Error: El proyecto " + proyectoId + " no tiene estimaciones.", false, null);
+        }
+
+        int resultado = excelService.crearYGuardarExcel(estimaciones);
+
+        if (resultado > 0) {
+            return new ApiResponse("Éxito: Excel generado para el proyecto " + proyectoId, true, resultado);
+        }
+
+        return new ApiResponse("Error al generar el archivo.", false, null);
+    }
 }

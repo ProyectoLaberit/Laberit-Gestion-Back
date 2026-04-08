@@ -28,12 +28,16 @@ public class UsuarioController {
 
     @PostMapping("/login")
     public ApiResponse verificar(@RequestBody LoginRequest login) {
+
+        // 1. Verificamos por consola qué datos llegan realmente
+        System.out.println("Email recibido: " + login.getEmail());
+        System.out.println("Password recibido: " + login.getPassword());
         // Validamos las credenciales
         boolean esValido = usuarioService.validarUsuario(login);
         
         if (esValido) {
             // Paso 4: Recuperamos la lista de proyectos
-            List<ProyectoDTO> proyectos = proyectoService.obtenerTodosLosProyectos();
+            List<ProyectoDTO> proyectos = proyectoService.obtenerTodosLosProyectos(null, null, null); // Puedes ajustar los filtros según tus necesidades
             // La enviamos dentro del campo 'data' del ApiResponse
             return new ApiResponse("Login exitoso", true, proyectos);
         } else {

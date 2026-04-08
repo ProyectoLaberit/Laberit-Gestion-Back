@@ -1,14 +1,17 @@
 package com.example.demo.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.dto.ApiResponse;
@@ -27,12 +30,17 @@ public class ProyectoController {
     private ProyectoService proyectoService;
     
     @GetMapping
-    public ApiResponse obtenerProyectos() {
-        List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos();
+    public ApiResponse obtenerProyectos(
+    @RequestParam(required = false) Boolean activo, 
+    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+       
+
+        List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(activo, desde, hasta);
         return new ApiResponse("Listado de proyectos recuperado", true, lista);
     }
     
-    @PutMapping("/{id}")
+    @PostMapping("/{id}")
     public ApiResponse actualizarProyecto(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
         // Recibe el ID del proyecto y los datos nuevos desde el cuerpo de la petición
         ProyectoDTO actualizado = proyectoService.actualizarProyecto(id, proyectoDTO);

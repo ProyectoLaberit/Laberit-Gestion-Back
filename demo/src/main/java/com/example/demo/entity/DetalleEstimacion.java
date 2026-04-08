@@ -20,10 +20,10 @@ public class DetalleEstimacion {
     private String tarea;
 
     @Column(name = "id_departamento")
-    private int idDepartamento;
+    private Integer idDepartamento;
 
     @Column(name = "id_fase")
-    private int idFase;
+    private Integer idFase;
 
     @Column(name = "tiempo_max")
     private Double tiempoMax;
@@ -39,10 +39,10 @@ public class DetalleEstimacion {
     public void setId(Long id) { this.id = id; }
 
     public int getIdDepartamento() { return idDepartamento; }
-    public void setIdDepartamento(int idDepartamento) { this.idDepartamento = idDepartamento; }
+    public void setIdDepartamento(Integer idDepartamento) { this.idDepartamento = idDepartamento; }
 
-    public int getIdFase() { return idFase; }
-    public void setIdFase(int idFase) { this.idFase = idFase; }
+    public Integer getIdFase() { return idFase; }
+    public void setIdFase(Integer idFase) { this.idFase = idFase; }
 
 
     public Long getIdProyecto() { return idProyecto; }
