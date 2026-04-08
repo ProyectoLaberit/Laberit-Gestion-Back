@@ -1,5 +1,6 @@
 package com.example.demo.services;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -20,8 +21,8 @@ public class ProyectoService {
     @Autowired
     private GitLabService gitLabService;
 
-    public List<ProyectoDTO> obtenerTodosLosProyectos() {
-        List<Proyecto> proyectosDB = proyectoRepository.findAll();
+    public List<ProyectoDTO> obtenerTodosLosProyectos(Boolean activo, LocalDate fecha) {
+        List<Proyecto> proyectosDB = proyectoRepository.findByFiltrosOpcionales(activo,fecha);
 
         return proyectosDB.stream().map(p -> new ProyectoDTO(
             p.getId(),
