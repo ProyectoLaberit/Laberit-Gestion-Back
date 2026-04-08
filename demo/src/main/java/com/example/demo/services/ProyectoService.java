@@ -21,8 +21,8 @@ public class ProyectoService {
     @Autowired
     private GitLabService gitLabService;
 
-    public List<ProyectoDTO> obtenerTodosLosProyectos(Boolean activo, LocalDate fecha) {
-        List<Proyecto> proyectosDB = proyectoRepository.findByFiltrosOpcionales(activo,fecha);
+    public List<ProyectoDTO> obtenerTodosLosProyectos(Boolean activo, LocalDate desde, LocalDate hasta) {
+        List<Proyecto> proyectosDB = proyectoRepository.findByFiltrosOpcionales(activo, desde, hasta);
 
         return proyectosDB.stream().map(p -> new ProyectoDTO(
             p.getId(),

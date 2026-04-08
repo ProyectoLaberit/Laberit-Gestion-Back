@@ -33,7 +33,7 @@ public class UsuarioController {
         
         if (esValido) {
             // Paso 4: Recuperamos la lista de proyectos
-            List<ProyectoDTO> proyectos = proyectoService.obtenerTodosLosProyectos();
+            List<ProyectoDTO> proyectos = proyectoService.obtenerTodosLosProyectos(null, null, null); // Puedes ajustar los filtros según tus necesidades
             // La enviamos dentro del campo 'data' del ApiResponse
             return new ApiResponse("Login exitoso", true, proyectos);
         } else {
