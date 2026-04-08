@@ -52,7 +52,7 @@ public class ProyectoService {
         nuevoProyecto.setFechaFin(dto.getFechaFin());
         
         // Un proyecto nuevo siempre debería nacer "activo" por defecto si no dicen lo contrario
-        nuevoProyecto.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+        nuevoProyecto.setActivo(dto.isActivo() != null ? dto.isActivo() : true);
         
         nuevoProyecto.setGitlabId(dto.getGitlabId());
         nuevoProyecto.setClockifyId(dto.getClockifyId());
@@ -67,14 +67,22 @@ public class ProyectoService {
             guardado.getDescripcion(),
             guardado.getFechaInicio(),
             guardado.getFechaFin(),
-            guardado.getActivo(),
+            guardado.isActivo(),
             guardado.getGitlabId(),
             guardado.getClockifyId(),
             true // Ya está en base de datos
         );
     }
 
-    
+    public void eliminarProyecto(Long id) {
+        //Verificamos si el proyecto existe antes de intentar borrar
+        if (!proyectoRepository.existsById(id)) {
+            throw new RuntimeException("No se puede eliminar: El proyecto con ID " + id + " no existe.");
+        }
+        
+        //Si existe, lo borramos de la base de datos
+        proyectoRepository.deleteById(id);
+    }
 
     public ProyectoDTO actualizarProyecto(Long id, ProyectoDTO proyectoDTO) {
         // Buscar el proyecto en la base de datos por su ID
