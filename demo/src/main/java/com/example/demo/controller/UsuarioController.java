@@ -28,6 +28,10 @@ public class UsuarioController {
 
     @PostMapping("/login")
     public ApiResponse verificar(@RequestBody LoginRequest login) {
+
+        // 1. Verificamos por consola qué datos llegan realmente
+        System.out.println("Email recibido: " + login.getEmail());
+        System.out.println("Password recibido: " + login.getPassword());
         // Validamos las credenciales
         boolean esValido = usuarioService.validarUsuario(login);
         
