@@ -1,5 +1,6 @@
 package com.example.demo.services;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,6 +34,43 @@ public class ProyectoService {
             p.getClockifyId(),
             true
         )).collect(Collectors.toList());
+    }
+
+    public ProyectoDTO crearProyecto(ProyectoDTO dto) {
+        // Creamos una Entity vacía (una fila nueva para la base de datos)
+        Proyecto nuevoProyecto = new Proyecto();
+        
+        // Rellenamos los datos con lo que viene del Front-end
+        nuevoProyecto.setNombre(dto.getNombre());
+        nuevoProyecto.setDescripcion(dto.getDescripcion());
+        
+        // Si el front-end no manda fecha de inicio, ponemos la de hoy por defecto
+        nuevoProyecto.setFechaInicio(dto.getFechaInicio() != null ? dto.getFechaInicio() : LocalDate.now());
+        
+        // La fecha fin puede ser null, la metemos tal cual
+        nuevoProyecto.setFechaFin(dto.getFechaFin());
+        
+        // Un proyecto nuevo siempre debería nacer "activo" por defecto si no dicen lo contrario
+        nuevoProyecto.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+        
+        nuevoProyecto.setGitlabId(dto.getGitlabId());
+        nuevoProyecto.setClockifyId(dto.getClockifyId());
+
+        // 3. Guardamos en la base de datos (Esto genera el ID automáticamente)
+        Proyecto guardado = proyectoRepository.save(nuevoProyecto);
+
+        // 4. Devolvemos el proyecto guardado convertido en DTO para confirmar al Front-end
+        return new ProyectoDTO(
+            guardado.getId(),
+            guardado.getNombre(),
+            guardado.getDescripcion(),
+            guardado.getFechaInicio(),
+            guardado.getFechaFin(),
+            guardado.getActivo(),
+            guardado.getGitlabId(),
+            guardado.getClockifyId(),
+            true // Ya está en base de datos
+        );
     }
 
     public ProyectoDTO actualizarProyecto(Long id, ProyectoDTO proyectoDTO) {
