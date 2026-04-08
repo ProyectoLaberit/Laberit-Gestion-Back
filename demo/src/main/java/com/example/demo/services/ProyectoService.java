@@ -37,6 +37,8 @@ public class ProyectoService {
         )).collect(Collectors.toList());
     }
 
+    
+
     public ProyectoDTO actualizarProyecto(Long id, ProyectoDTO proyectoDTO) {
         // Buscar el proyecto en la base de datos por su ID
         Proyecto proyecto = proyectoRepository.findById(id)
