@@ -1,5 +1,8 @@
 package com.example.demo.entity;
 
+import java.time.LocalDate;
+
+
 import jakarta.persistence.Column;
 // Importa las herramientas de persistencia (JPA) para mapear Java con la Base de Datos
 import jakarta.persistence.Entity;
@@ -28,9 +31,15 @@ public class Proyecto {
     private Long id;
 
     private String nombre;
+
     private String descripcion;
+
     @Column(name = "fecha_inicio")
-    private String fechaInicio;
+    private LocalDate fechaInicio = LocalDate.now();
+
+    @Column(name = "fecha_fin")
+    private LocalDate fechaFin;
+
     private boolean activo;
     
     // IDs internos para las APIs
@@ -73,12 +82,20 @@ public class Proyecto {
         this.descripcion = descripcion;
     }
 
-    public String getFechaInicio() {
+    public LocalDate getFechaInicio() {
         return fechaInicio;
     }
 
-    public void setFechaInicio(String fechaInicio) {
+    public void setFechaInicio(LocalDate fechaInicio) {
         this.fechaInicio = fechaInicio;
+    }
+
+    public LocalDate getFechaFin() {
+        return fechaFin;
+    }
+
+    public void setFechaFin(LocalDate fechaFin) {
+        this.fechaFin = fechaFin;
     }
 
     public boolean isActivo() {

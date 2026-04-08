@@ -28,6 +28,7 @@ public class ProyectoService {
             p.getNombre(),
             p.getDescripcion(),
             p.getFechaInicio(),
+            p.getFechaFin(),
             p.isActivo(),
             p.getGitlabId(),
             p.getClockifyId(),
@@ -55,6 +56,7 @@ public class ProyectoService {
             actualizado.getNombre(),
             actualizado.getDescripcion(),
             actualizado.getFechaInicio(),
+            actualizado.getFechaFin(),
             actualizado.isActivo(),
             actualizado.getGitlabId(),
             actualizado.getClockifyId(),
@@ -85,6 +87,7 @@ public class ProyectoService {
                 git.get("name").toString(),
                 git.get("description") != null ? git.get("description").toString() : "Sin descripción",
                 null, // GitLab no nos da la fecha de inicio igual que nuestra DB
+                null,
                 true,
                 git.get("id").toString(), // El ID de GitLab
                 null,
