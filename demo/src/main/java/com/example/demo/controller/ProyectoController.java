@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.dto.ApiResponse;
@@ -27,7 +28,7 @@ public class ProyectoController {
     private ProyectoService proyectoService;
     
     @GetMapping
-    public ApiResponse obtenerProyectos() {
+    public ApiResponse obtenerProyectos(@RequestParam(required = false) Boolean activo, @RequestParam(required = false) String fecha) {
         List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos();
         return new ApiResponse("Listado de proyectos recuperado", true, lista);
     }
