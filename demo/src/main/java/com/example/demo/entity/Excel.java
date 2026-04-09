@@ -8,6 +8,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
@@ -18,8 +20,10 @@ public class Excel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_excel")
     private Integer id;
-    @OneToMany(mappedBy = "proyecto")
-    private List<Proyecto> proyectos;
+
+    @ManyToOne
+    @JoinColumn(name = "id_proyecto") // columna en la BD
+    private Proyecto proyecto;
 
     @Column(name = "id_usuario", nullable = false)
     private Integer idUsuario;
@@ -41,12 +45,12 @@ public class Excel {
         this.id = idExcel;
     }
 
-    public Long getIdProyecto() {
-        return idProyecto;
+    public Proyecto getProyecto() {
+        return proyecto;
     }
 
-    public void setIdProyecto(Long idProyecto) {
-        this.idProyecto = idProyecto;
+    public void setProyecto(Proyecto proyecto) {
+        this.proyecto = proyecto;
     }
 
     public Integer getIdUsuario() {

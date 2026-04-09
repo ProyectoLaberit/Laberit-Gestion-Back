@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 
@@ -53,8 +54,7 @@ public class Proyecto {
     // Mapeamos tu variable clockifyId a la columna real de la imagen
     private String clockifyId;
 
-    @ManyToOne
-    @JoinColumn(name = "excels") // columna en la BD
+    @OneToMany(mappedBy = "proyecto")
     private Excel excel;
 
     // --- CONSTRUCTOR VACÍO ---
