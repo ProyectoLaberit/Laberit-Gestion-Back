@@ -70,7 +70,7 @@ public class ProyectoService {
             guardado.isActivo(),
             guardado.getGitlabId(),
             guardado.getClockifyId(),
-            true // Ya está en base de datos
+            true
         );
     }
 
