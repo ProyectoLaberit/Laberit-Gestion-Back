@@ -8,6 +8,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 
@@ -50,6 +52,10 @@ public class Proyecto {
     @Column(name = "clockify_proyecto_id")
     // Mapeamos tu variable clockifyId a la columna real de la imagen
     private String clockifyId;
+
+    @ManyToOne
+    @JoinColumn(name = "excels") // columna en la BD
+    private Excel excel;
 
     // --- CONSTRUCTOR VACÍO ---
     // Es obligatorio para que Spring Boot pueda crear el objeto al leer la base de datos

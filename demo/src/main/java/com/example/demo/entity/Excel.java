@@ -1,12 +1,14 @@
 package com.example.demo.entity;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -16,8 +18,8 @@ public class Excel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_excel")
     private Integer id;
-    @Column(name = "id_proyecto", nullable = false)
-    private Long idProyecto;
+    @OneToMany(mappedBy = "proyecto")
+    private List<Proyecto> proyectos;
 
     @Column(name = "id_usuario", nullable = false)
     private Integer idUsuario;
