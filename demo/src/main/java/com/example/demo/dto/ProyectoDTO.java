@@ -37,6 +37,16 @@ public class ProyectoDTO {
         this.enBaseDatos = enBaseDatos;
     }
 
+    public ProyectoDTO(String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo, String gitlabId, String clockifyId) {
+        this.nombre = nombre;
+        this.descripcion = descripcion;
+        this.fechaInicio = fechaInicio;
+        this.fechaFin = fechaFin;
+        this.activo = activo;
+        this.gitlabId = gitlabId;
+        this.clockifyId = clockifyId;
+    }
+
     // Getters and Setters
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
