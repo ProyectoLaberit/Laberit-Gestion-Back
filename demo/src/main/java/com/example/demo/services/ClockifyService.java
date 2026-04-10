@@ -8,29 +8,32 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import com.example.demo.entity.ApiConfig;
+import com.example.demo.repository.ApiConfigRepository;
+
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class ClockifyService {
 
-    @Value("${clockify.api.key}")
-    private String apiKey;
+    @Autowired
+    ApiConfigRepository repositorioApi;
 
-    @Value("${clockify.workspace.id}")
-    private String workspaceId;
 
-    @Value("${clockify.api.url}")
-    private String apiUrl;
+    
 
     @Autowired
     private RestTemplate restTemplate;
 
     public List<Map<String, Object>> obtenerProyectosDeClockify() {
-        String url = apiUrl + "/workspaces/" + workspaceId + "/projects";
+        ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
+        
+        String url = clockify.getUrlReal() + "/workspaces/" + "69b7df366ceaf91e50b68673" + "/projects";
 
         HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Api-Key", apiKey);
+        headers.set("X-Api-Key", clockify.getClave());
         
         HttpEntity<String> entity = new HttpEntity<>(headers);
 

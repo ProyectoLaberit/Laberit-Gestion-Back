@@ -21,8 +21,8 @@ public class GitLabService {
 
     public List<Map<String, Object>> obtenerProyectosDeGitLab() {
         try {
-            ApiConfig config = apiRepository.findByNombre("GitLab Maestro")
-                .orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
+            ApiConfig config = apiRepository.findByNombre("GitLab Maestro");
+                //.orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
 
             String urlCompleta = config.getUrlReal() + "?owned=true&access_token=" + config.getClave();
 
