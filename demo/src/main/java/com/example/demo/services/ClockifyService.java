@@ -21,16 +21,16 @@ public class ClockifyService {
     @Autowired
     ApiConfigRepository repositorioApi;
 
-
-    
-
     @Autowired
     private RestTemplate restTemplate;
+
+    @Value("${clockify.workspace.id}")
+    private String workspaceId;
 
     public List<Map<String, Object>> obtenerProyectosDeClockify() {
         ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
         
-        String url = clockify.getUrlReal() + "/workspaces/" + "69b7df366ceaf91e50b68673" + "/projects";
+        String url = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/projects";
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Api-Key", clockify.getClave());
