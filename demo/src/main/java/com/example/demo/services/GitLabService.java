@@ -1,36 +1,47 @@
 package com.example.demo.services;
 
+import com.example.demo.entity.ApiConfig;
+import com.example.demo.repository.ApiConfigRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import java.util.List;
-import java.util.Arrays;
 import java.util.Map;
 
 @Service
 public class GitLabService {
 
-    private final String TOKEN = "glpat-inNrsKc9DN0J5Xxs_inK8m86MQp1OmwxdzV3Cw.01.1203a5ie0";
-    
-    private final String URL_GITLAB = "https://gitlab.com/api/v4/projects?owned=true&access_token=";
+    @Autowired
+    private ApiConfigRepository apiRepository;
 
-    // Lee el json con la información de los proyectos.
     private final RestTemplate restTemplate = new RestTemplate();
 
-
     public List<Map<String, Object>> obtenerProyectosDeGitLab() {
-        
-        // Juntamos la dirección con nuestra llave para poder pasar
-        String urlCompleta = URL_GITLAB + TOKEN;
-
         try {
-            // Pedimos a GitLab la lista de proyectos
-            Map[] respuesta = restTemplate.getForObject(urlCompleta, Map[].class);
+            ApiConfig config = apiRepository.findByNombre("GitLab Maestro");
+                //.orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
 
-            // Si todo ha ido bien, transformamos esos datos en una Lista fácil de leer
-            return Arrays.asList((Map<String, Object>[]) respuesta);
-            
+            String urlCompleta = config.getUrlReal() + "?owned=true&access_token=" + config.getClave();
+
+            // Esta es la clave: Le decimos a Java exactamente qué estructura esperar
+            ParameterizedTypeReference<List<Map<String, Object>>> tipoRespuesta = 
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {};
+
+            // Hacemos la llamada pidiendo una LISTA directamente
+            ResponseEntity<List<Map<String, Object>>> respuesta = restTemplate.exchange(
+                urlCompleta, 
+                HttpMethod.GET, 
+                null, 
+                tipoRespuesta
+            );
+
+            // Devolvemos el cuerpo de la respuesta (que ya es una List<Map>)
+            return respuesta.getBody() != null ? respuesta.getBody() : List.of();
+
         } catch (Exception e) {
-            // Si el token está mal o no hay internet, devolvemos una lista vacía para que no explote el programa
             System.err.println("Error al conectar con GitLab: " + e.getMessage());
             return List.of();
         }
