@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ExcelRepository extends JpaRepository<Excel, Integer> {
+
+    Excel findTopByIdProyectoOrderByIdExcelDesc(Long idProyecto);
 }
