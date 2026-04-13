@@ -9,6 +9,8 @@ public class ProyectoDTO {
     private String nombre;
     private String descripcion;
 
+    private Boolean excels;
+
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaInicio;
 
@@ -25,7 +27,7 @@ public class ProyectoDTO {
     public ProyectoDTO() {
     }
 
-    public ProyectoDTO(Long id, String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo, String gitlabId, String clockifyId, Boolean enBaseDatos) {
+    public ProyectoDTO(Long id, String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo, String gitlabId, String clockifyId, Boolean enBaseDatos, Boolean excels) {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
@@ -35,6 +37,7 @@ public class ProyectoDTO {
         this.gitlabId = gitlabId;
         this.clockifyId = clockifyId;
         this.enBaseDatos = enBaseDatos;
+        this.excels = excels;
     }
 
     public ProyectoDTO(String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo, String gitlabId, String clockifyId) {
@@ -57,6 +60,7 @@ public class ProyectoDTO {
     public String getGitlabId() { return gitlabId; }
     public String getClockifyId() { return clockifyId; }
     public Boolean isEnBaseDatos() { return enBaseDatos; }
+    public Boolean getExcels() { return excels; }
     
     public void setId(Long id) { this.id = id; }
     public void setNombre(String nombre) { this.nombre = nombre; }
@@ -67,4 +71,5 @@ public class ProyectoDTO {
     public void setGitlabId(String gitlabId) { this.gitlabId = gitlabId; }
     public void setClockifyId(String clockifyId) { this.clockifyId = clockifyId; }
     public void setEnBaseDatos(Boolean enBaseDatos) { this.enBaseDatos = enBaseDatos; }
+    public void setExcels(Boolean excels) { this.excels = excels; }
 }

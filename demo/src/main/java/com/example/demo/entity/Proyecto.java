@@ -40,7 +40,7 @@ public class Proyecto {
     @Column(name = "fecha_fin")
     private LocalDate fechaFin;
 
-    private boolean activo;
+    private Boolean activo;
     
     // IDs internos para las APIs
     @Column(name = "gitlab_proyecto_id")
@@ -50,6 +50,9 @@ public class Proyecto {
     @Column(name = "clockify_proyecto_id")
     // Mapeamos tu variable clockifyId a la columna real de la imagen
     private String clockifyId;
+
+    @Column(name = "excels")
+    private Boolean excels;
 
     // --- CONSTRUCTOR VACÍO ---
     // Es obligatorio para que Spring Boot pueda crear el objeto al leer la base de datos
@@ -98,11 +101,11 @@ public class Proyecto {
         this.fechaFin = fechaFin;
     }
 
-    public boolean isActivo() {
+    public Boolean isActivo() {
         return activo;
     }
 
-    public void setActivo(boolean activo) {
+    public void setActivo(Boolean activo) {
         this.activo = activo;
     }
 
@@ -120,6 +123,14 @@ public class Proyecto {
 
     public void setClockifyId(String clockifyId) {
         this.clockifyId = clockifyId;
+    }
+
+    public Boolean getExcels() {
+        return excels;
+    }
+
+    public void setExcels(Boolean excels) {
+        this.excels = excels;
     }
     
 }
