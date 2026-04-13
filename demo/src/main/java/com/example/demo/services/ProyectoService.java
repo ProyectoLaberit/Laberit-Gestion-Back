@@ -27,15 +27,17 @@ public class ProyectoService {
         List<Proyecto> proyectosDB = proyectoRepository.findByFiltrosOpcionales(activo, desde, hasta);
 
         return proyectosDB.stream().map(p -> new ProyectoDTO(
-                p.getId(),
-                p.getNombre(),
-                p.getDescripcion(),
-                p.getFechaInicio(),
-                p.getFechaFin(),
-                p.isActivo(),
-                p.getGitlabId(),
-                p.getClockifyId(),
-                true)).collect(Collectors.toList());
+            p.getId(),
+            p.getNombre(),
+            p.getDescripcion(),
+            p.getFechaInicio(),
+            p.getFechaFin(),
+            p.isActivo(),
+            p.getGitlabId(),
+            p.getClockifyId(),
+            true,
+            p.getExcels()
+        )).collect(Collectors.toList());
     }
 
     public ProyectoDTO crearProyecto(ProyectoDTO dto) {
@@ -48,19 +50,22 @@ public class ProyectoService {
         nuevoProyecto.setActivo(dto.isActivo() != null ? dto.isActivo() : true);
         nuevoProyecto.setGitlabId(dto.getGitlabId());
         nuevoProyecto.setClockifyId(dto.getClockifyId());
+        nuevoProyecto.setExcels(dto.getExcels());
 
         Proyecto guardado = proyectoRepository.save(nuevoProyecto);
 
         return new ProyectoDTO(
-                guardado.getId(),
-                guardado.getNombre(),
-                guardado.getDescripcion(),
-                guardado.getFechaInicio(),
-                guardado.getFechaFin(),
-                guardado.isActivo(),
-                guardado.getGitlabId(),
-                guardado.getClockifyId(),
-                true);
+            guardado.getId(),
+            guardado.getNombre(),
+            guardado.getDescripcion(),
+            guardado.getFechaInicio(),
+            guardado.getFechaFin(),
+            guardado.isActivo(),
+            guardado.getGitlabId(),
+            guardado.getClockifyId(),
+            true,
+            guardado.getExcels()
+        );
     }
 
     public void eliminarProyecto(Long id) {
@@ -77,20 +82,24 @@ public class ProyectoService {
         proyecto.setNombre(proyectoDTO.getNombre());
         proyecto.setDescripcion(proyectoDTO.getDescripcion());
         proyecto.setFechaInicio(proyectoDTO.getFechaInicio());
+        proyecto.setFechaFin(proyectoDTO.getFechaFin());
         proyecto.setActivo(proyectoDTO.isActivo());
+        proyecto.setExcels(proyectoDTO.getExcels());
 
         Proyecto actualizado = proyectoRepository.save(proyecto);
 
         return new ProyectoDTO(
-                actualizado.getId(),
-                actualizado.getNombre(),
-                actualizado.getDescripcion(),
-                actualizado.getFechaInicio(),
-                actualizado.getFechaFin(),
-                actualizado.isActivo(),
-                actualizado.getGitlabId(),
-                actualizado.getClockifyId(),
-                true);
+            actualizado.getId(),
+            actualizado.getNombre(),
+            actualizado.getDescripcion(),
+            actualizado.getFechaInicio(),
+            actualizado.getFechaFin(),
+            actualizado.isActivo(),
+            actualizado.getGitlabId(),
+            actualizado.getClockifyId(),
+            true,
+            actualizado.getExcels()
+        );
     }
 
     public List<ProyectoDTO> obtenerProyectosGitLabNoRegistrados() {
@@ -113,7 +122,9 @@ public class ProyectoService {
                         true,
                         git.get("id").toString(),
                         null,
-                        false))
+                        false,
+                        null
+                    ))
                 .collect(Collectors.toList());
     }
 
@@ -132,8 +143,7 @@ public class ProyectoService {
         // 2. Llamamos al servicio de Clockify para traer todos sus proyectos
        /* List<Map<String, Object>> proyectosClockify = clockifyService.obtenerProyectosDeClockify();
 
-        // 3. Filtramos los que NO están en nuestra lista de IDs guardados y mapeamos a
-        // DTO
+        // Filtramos los que NO están en nuestra lista de IDs guardados y mapeamos a DTO
         return proyectosClockify.stream()
                 .filter(c -> !idsYaGuardados.contains(c.get("id").toString()))
                 .map(c -> new ProyectoDTO(
@@ -145,7 +155,8 @@ public class ProyectoService {
                         true,
                         null,
                         c.get("id").toString(), // El ID original de Clockify
-                        false // Marcamos que NO está en DB
+                        false, // Marcamos que NO está en DB
+                        null
                 ))
                 .collect(Collectors.toList());
     }*/
