@@ -78,12 +78,12 @@ public class ProyectoController {
         return new ApiResponse("Proyecto actualizado correctamente", true, actualizado);
     }
 
-    @GetMapping("/externos")
-    public ApiResponse obtenerProyectosExternos() {
-        // Llamamos al nuevo método que creamos en el servicio
-        List<ProyectoDTO> listaExternos = proyectoService.obtenerProyectosGitLabNoRegistrados();
+    // @GetMapping("/externos")
+    // public ApiResponse obtenerProyectosExternos() {
+    //     // Llamamos al nuevo método que creamos en el servicio
+    //     List<ProyectoDTO> listaExternos = proyectoService.obtenerProyectosGitLabNoRegistrados();
         
-        return new ApiResponse("Proyectos de GitLab pendientes de importar", true, listaExternos);
-    }
+    //     return new ApiResponse("Proyectos de GitLab pendientes de importar", true, listaExternos);
+    // }
 
 }

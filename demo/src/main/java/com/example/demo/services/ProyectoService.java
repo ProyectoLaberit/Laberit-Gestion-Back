@@ -21,6 +21,9 @@ public class ProyectoService {
     @Autowired
     private GitLabService gitLabService;
 
+    @Autowired
+    private ClockifyService clockifyService;
+
     // Inyectamos el servicio de Clockify
 
     public List<ProyectoDTO> obtenerTodosLosProyectos(Boolean activo, LocalDate desde, LocalDate hasta) {
@@ -132,7 +135,7 @@ public class ProyectoService {
      * NUEVO MÉTODO: Trae proyectos de Clockify que no están en nuestra base de
      * datos local.
      */
-   /*  public List<ProyectoDTO> obtenerProyectosClockifyNoRegistrados() {
+     public List<ProyectoDTO> obtenerProyectosClockifyNoRegistrados() {
         // 1. Obtenemos los IDs de Clockify que ya están guardados en nuestra DB
         List<String> idsYaGuardados = proyectoRepository.findAll()
                 .stream()
@@ -141,7 +144,7 @@ public class ProyectoService {
                 .collect(Collectors.toList());
 
         // 2. Llamamos al servicio de Clockify para traer todos sus proyectos
-       /* List<Map<String, Object>> proyectosClockify = clockifyService.obtenerProyectosDeClockify();
+        List<Map<String, Object>> proyectosClockify = clockifyService.obtenerProyectosDeClockify();
 
         // Filtramos los que NO están en nuestra lista de IDs guardados y mapeamos a DTO
         return proyectosClockify.stream()
@@ -159,5 +162,5 @@ public class ProyectoService {
                         null
                 ))
                 .collect(Collectors.toList());
-    }*/
+    }
 }
