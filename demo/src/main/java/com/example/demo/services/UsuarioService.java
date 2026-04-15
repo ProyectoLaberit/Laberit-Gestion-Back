@@ -32,7 +32,6 @@ public class UsuarioService {
     public boolean validarUsuario(LoginRequest login) {
 
         if(true){
-            System.out.println("hola");
             return true;
         }else{
         // Buscamos al usuario en la base usando el email que nos pasa el Front-end
