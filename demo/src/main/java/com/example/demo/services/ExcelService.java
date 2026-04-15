@@ -23,6 +23,6 @@ public class ExcelService {
         return datos.size();
     }
     public Excel obtenerExcelVigentePorProyecto(Long idProyecto) {
-        return excelRepository.findTopByIdProyectoOrderByIdExcelDesc(idProyecto);
+        return excelRepository.findTopByIdProyectoOrderByIdDesc(idProyecto);
     }
 }

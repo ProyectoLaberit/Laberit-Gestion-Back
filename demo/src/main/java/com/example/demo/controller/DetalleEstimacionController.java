@@ -10,10 +10,9 @@ import com.example.demo.services.ExcelService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-
-import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/estimaciones")
@@ -29,25 +28,34 @@ public class DetalleEstimacionController {
     @Autowired
     private ExcelService excelService;
     
+   /**
+     * Recupera la tabla de estimaciones del Excel VIGENTE (el más reciente o activo) de un proyecto.
+     * El Frontend debe usar este endpoint por defecto para ver el estado actual.
+     * @param idProyecto ID del proyecto a consultar.
+     * @return ApiResponse con la lista de DetalleEstimacionDTO.
+     */
     @GetMapping("/proyecto/{idProyecto}")
     public ApiResponse obtenerTareasPorProyecto(@PathVariable Long idProyecto) {
-        // 1. Buscamos el Excel asociado a este proyecto
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
 
         if (excel == null) {
-            // Si no hay Excel, devolvemos una lista vacía sin dar error 500
             return new ApiResponse("El proyecto no tiene estimaciones subidas", true, java.util.List.of());
         }
 
-        // 2. Si existe, usamos su ID para buscar las estimaciones
         List<DetalleEstimacionDTO> lista = detalleEstimacionService.obtenerDetallesPorExcel(excel.getIdExcel());
-        
         return new ApiResponse("Listado de tareas recuperado", true, lista);
     }
 
+
+    /**
+         * Procesa y guarda la matriz de estimaciones desde un archivo Excel.
+         * @param archivo El archivo .xlsx cargado desde el cliente.
+         * @param proyectoId ID del proyecto al que se asocia el Excel.
+         * @param usuarioId ID del usuario que realiza la subida.
+         * @return ApiResponse con el número total de registros importados.
+    */
     @PostMapping("/importar")
     public ApiResponse importarExcel(@RequestParam("archivo") MultipartFile archivo, @RequestParam("proyectoId") long proyectoId, @RequestParam("usuarioId") Integer usuarioId) {
-        
         if(archivo.isEmpty()) {
             return new ApiResponse("El archivo está vacío.", false, null);
         }
@@ -60,41 +68,47 @@ public class DetalleEstimacionController {
         }
     }
 
+
+    /**
+         * Actualiza los valores de una tarea de estimación existente.
+         * @param id ID único del registro en la base de datos.
+         * @param detalleDTO Objeto con los nuevos valores (tarea, tiempos, fase, depto).
+         * @return ApiResponse confirmando la actualización.
+    */
     @PutMapping("/{id}")
     public ApiResponse actualizarDetalle(@PathVariable Long id, @RequestBody DetalleEstimacionDTO detalleDTO) {
         try {
-            // Buscamos el detalle. Si no existe, lanza una excepción que atrapa el 'catch'
             DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
 
-            // Si lo encuentra, actualizamos los campos
             detalle.setTarea(detalleDTO.getTarea());
             detalle.setIdDepartamento(detalleDTO.getIdDepartamento());
             detalle.setIdFase(detalleDTO.getIdFase());
             detalle.setTiempoMax(detalleDTO.getTiempoMax());
             detalle.setTiempoMin(detalleDTO.getTiempoMin());
 
-            // Guardamos los cambios (esto hace el UPDATE en la base)
             detalleEstimacionRepository.save(detalle);
 
             return new ApiResponse("Tarea actualizada correctamente", true, null);
-
         } catch (Exception e) {
             return new ApiResponse("Error al actualizar: " + e.getMessage(), false, null);
         }
     }
-    
-    // CORRECCIÓN AQUÍ: {idProyecto} coincide exactamente con @PathVariable Long idProyecto
+
+
+    /**
+        * Genera un nuevo archivo Excel basado en las estimaciones guardadas en la BD.
+        * @param idProyecto ID del proyecto cuyas estimaciones se quieren exportar.
+        * @return ApiResponse indicando si el archivo se generó correctamente.
+     */
     @GetMapping("/exportar/{idProyecto}")
     public ApiResponse exportarExcel(@PathVariable Long idProyecto) {
-        // 1. Buscamos el Excel
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
 
         if (excel == null) {
             return new ApiResponse("Error: El proyecto " + idProyecto + " no tiene un Excel asociado.", false, null);
         }
         
-        // 2. Buscamos las entidades
         List<DetalleEstimacion> estimaciones = detalleEstimacionService.obtenerDetallesEntidadPorExcel(excel.getIdExcel());
 
         if (estimaciones == null || estimaciones.isEmpty()) {
@@ -108,5 +122,48 @@ public class DetalleEstimacionController {
         }
 
         return new ApiResponse("Error al generar el archivo.", false, null);
+    }
+
+    /**
+         * Busca una estimación puntual filtrando por proyecto, subfase y nombre de tarea.
+         * @param idProyecto ID del proyecto.
+         * @param subfase Nombre de la subfase (ej. "investigacion").
+         * @param tarea Nombre de la tarea (ej. "Benchmark").
+         * @return ApiResponse con el DTO de la estimación encontrada.
+    */
+ @GetMapping("/proyecto/{idProyecto}/especifica")
+    public ApiResponse obtenerEstimacionEspecifica(
+            @PathVariable Long idProyecto,
+            @RequestParam Integer idSubfase, // Ahora pedimos el ID directamente
+            @RequestParam String tarea) {
+        
+        DetalleEstimacionDTO estimacion = detalleEstimacionService.obtenerDetallePorCriterios(idProyecto, idSubfase, tarea);
+
+        if (estimacion == null) {
+            return new ApiResponse("No se encontró la estimación.", false, null);
+        }
+
+        return new ApiResponse("Estimación recuperada con éxito", true, estimacion);
+    }
+
+    /**
+     * Recupera la tabla de estimaciones de un Excel ESPECÍFICO por su ID.
+     * Ideal para consultar el historial, auditorías o versiones antiguas de una estimación.
+     * @param idExcel ID exacto del Excel cuyas estimaciones se quieren recuperar.
+     * @return ApiResponse con la lista de DetalleEstimacionDTO con nombres legibles.
+     */
+    @GetMapping("/excel/{idExcel}")
+    public ApiResponse obtenerEstimacionesPorExcel(@PathVariable Integer idExcel) {
+        try {
+            List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallesPorExcel(idExcel);
+            
+            if (detalles.isEmpty()) {
+                return new ApiResponse("No hay estimaciones para este Excel", true, detalles);
+            }
+            
+            return new ApiResponse("Estimaciones recuperadas con éxito", true, detalles);
+        } catch (Exception e) {
+            return new ApiResponse("Error al recuperar la tabla: " + e.getMessage(), false, null);
+        }
     }
 }
