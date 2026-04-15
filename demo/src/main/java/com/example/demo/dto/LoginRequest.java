@@ -15,5 +15,5 @@ public class LoginRequest {
     // Getters and Setters
     public String getEmail() { return email; }
     public String getPassword() { return password; }
-   
+
 }
