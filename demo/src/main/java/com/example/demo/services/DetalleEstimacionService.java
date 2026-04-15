@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.DetalleEstimacionDTO;
+import com.example.demo.entity.Departamento;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
 import com.example.demo.entity.Fase;
@@ -216,16 +217,60 @@ public class DetalleEstimacionService {
     // MÉTODOS DE CONSULTA Y EXPORTACIÓN
     // ==========================================================
 
-    public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
-        return detalleEstimacionRepository.findByIdExcel(idExcel).stream().map(entidad -> {
+   public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
+        // 1. Nos traemos los datos en bruto de la estimación
+        List<DetalleEstimacion> detalles = detalleEstimacionRepository.findByIdExcel(idExcel);
+        
+        // 2. Diccionarios en memoria (Una sola consulta a BD para no saturar)
+        List<Fase> todasLasFases = faseRepository.findAll();
+        List<Departamento> todosLosDeptos = departamentoRepository.findAll();
+
+        // 3. Mapeo y cruce de datos
+        return detalles.stream().map(entidad -> {
             DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
             dto.setId(entidad.getId()); 
-            dto.setIdDepartamento(entidad.getIdDepartamento());
             dto.setIdExcel(entidad.getIdExcel());
+            dto.setIdDepartamento(entidad.getIdDepartamento());
             dto.setIdFase(entidad.getIdFase());
             dto.setTarea(entidad.getTarea());
-            dto.setTiempoMax(entidad.getTiempoMax());
             dto.setTiempoMin(entidad.getTiempoMin());
+            dto.setTiempoMax(entidad.getTiempoMax());
+
+           // A. Traducir el Departamento
+            String nombreDepto = todosLosDeptos.stream()
+                    .filter(d -> d.getId() == entidad.getIdDepartamento()) // ¡Usamos == para el int!
+                    .map(d -> d.getNombre())
+                    .findFirst()
+                    .orElse("Desconocido");
+            dto.setNombreDepartamento(nombreDepto);
+
+            // B. Traducir Subfase y Fase Padre
+            Fase subfase = todasLasFases.stream()
+                    .filter(f -> f.getId() == entidad.getIdFase()) // ¡Usamos == para el int!
+                    .findFirst()
+                    .orElse(null);
+
+            if (subfase != null) {
+                dto.setNombreSubfase(subfase.getNombre());
+
+                // Buscamos a su padre usando el ID de fasePadre
+                if (subfase.getFasePadre() != null) {
+                    String nombrePadre = todasLasFases.stream()
+                            .filter(f -> f.getId().equals(subfase.getFasePadre()))
+                            .map(f -> f.getNombre())
+                            .findFirst()
+                            .orElse("Desconocido");
+                    dto.setNombreFase(nombrePadre);
+                } else {
+                    // Por si acaso se guardó directamente en un padre
+                    dto.setNombreFase(subfase.getNombre());
+                    dto.setNombreSubfase("-");
+                }
+            } else {
+                dto.setNombreFase("Desconocido");
+                dto.setNombreSubfase("Desconocido");
+            }
+
             return dto;
         }).collect(Collectors.toList());
     }
@@ -234,41 +279,31 @@ public class DetalleEstimacionService {
         return detalleEstimacionRepository.findByIdExcel(idExcel);
     }
 
-    public DetalleEstimacionDTO obtenerDetallePorCriterios(Long idProyecto, String nombreFase, String nombreSubfase, String nombreTarea) {
+    /**
+     * Busca una estimación puntual usando los IDs directos.
+     */
+    public DetalleEstimacionDTO obtenerDetallePorCriterios(Long idProyecto, Integer idSubfase, String nombreTarea) {
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
         if (excel == null) { return null; }
 
-        List<Fase> todasLasFasesBD = faseRepository.findAll();
-        String faseLimpia = normalizarTexto(nombreFase);
-        String subfaseLimpia = normalizarTexto(nombreSubfase);
-        String tareaLimpia = normalizarTexto(nombreTarea);
-
-        // 1. Buscamos el Padre usando el texto limpio
-        Fase fasePadre = todasLasFasesBD.stream()
-                .filter(f -> f.getFasePadre() == null && normalizarTexto(f.getNombre()).equals(faseLimpia))
-                .findFirst()
-                .orElse(null);
-        if (fasePadre == null) { return null; }
-
-        // 2. Buscamos la Subfase usando el texto limpio y el ID del Padre
-        Fase subfase = todasLasFasesBD.stream()
-                .filter(f -> f.getFasePadre() != null && f.getFasePadre().equals(fasePadre.getId()) && normalizarTexto(f.getNombre()).equals(subfaseLimpia))
-                .findFirst()
-                .orElse(null);
-        if (subfase == null) { return null; }
-
-        // 3. Buscamos la Tarea (nos traemos las del Excel y filtramos limpiando el texto)
-        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
-        DetalleEstimacion entidad = todasLasEstimaciones.stream()
-                .filter(d -> d.getIdFase().equals(subfase.getId()) && normalizarTexto(d.getTarea()).equals(tareaLimpia))
-                .findFirst()
-                .orElse(null);
+        // Búsqueda directa y limpia con el ID de la subfase
+        DetalleEstimacion entidad = detalleEstimacionRepository.findFirstByIdExcelAndIdFaseAndTareaIgnoreCase(
+                excel.getIdExcel(), idSubfase, nombreTarea.trim());
 
         if (entidad == null) { return null; }
 
         return new DetalleEstimacionDTO(         
-            entidad.getIdDepartamento(), entidad.getIdExcel(), entidad.getIdFase(),
-            entidad.getTarea(), entidad.getTiempoMax(), entidad.getTiempoMin()
+            entidad.getId(),
+            entidad.getIdExcel(),
+            entidad.getIdDepartamento(),
+            entidad.getIdFase(),
+            null, // nombreDepartamento (no hace falta para esta consulta rápida)
+            null, // nombreFase
+            null, // nombreSubfase
+            entidad.getTarea(),
+            entidad.getTiempoMin(),
+            entidad.getTiempoMax()
         );
     }
+   
 } // <-- Fin de la clase DetalleEstimacionService -->

@@ -28,11 +28,12 @@ public class DetalleEstimacionController {
     @Autowired
     private ExcelService excelService;
     
-    /**
-        * Recupera todas las tareas asociadas al Excel vigente de un proyecto.
-        * @param idProyecto ID del proyecto a consultar.
-        * @return ApiResponse con la lista de DetalleEstimacionDTO.
-    */
+   /**
+     * Recupera la tabla de estimaciones del Excel VIGENTE (el más reciente o activo) de un proyecto.
+     * El Frontend debe usar este endpoint por defecto para ver el estado actual.
+     * @param idProyecto ID del proyecto a consultar.
+     * @return ApiResponse con la lista de DetalleEstimacionDTO.
+     */
     @GetMapping("/proyecto/{idProyecto}")
     public ApiResponse obtenerTareasPorProyecto(@PathVariable Long idProyecto) {
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
@@ -133,17 +134,36 @@ public class DetalleEstimacionController {
  @GetMapping("/proyecto/{idProyecto}/especifica")
     public ApiResponse obtenerEstimacionEspecifica(
             @PathVariable Long idProyecto,
-            @RequestParam String fase,
-            @RequestParam String subfase,
+            @RequestParam Integer idSubfase, // Ahora pedimos el ID directamente
             @RequestParam String tarea) {
         
-        DetalleEstimacionDTO estimacion = detalleEstimacionService.obtenerDetallePorCriterios(idProyecto, fase, subfase, tarea);
+        DetalleEstimacionDTO estimacion = detalleEstimacionService.obtenerDetallePorCriterios(idProyecto, idSubfase, tarea);
 
         if (estimacion == null) {
-            return new ApiResponse("No se encontró la estimación para esa jerarquía exacta.", false, null);
+            return new ApiResponse("No se encontró la estimación.", false, null);
         }
 
         return new ApiResponse("Estimación recuperada con éxito", true, estimacion);
     }
-    
+
+    /**
+     * Recupera la tabla de estimaciones de un Excel ESPECÍFICO por su ID.
+     * Ideal para consultar el historial, auditorías o versiones antiguas de una estimación.
+     * @param idExcel ID exacto del Excel cuyas estimaciones se quieren recuperar.
+     * @return ApiResponse con la lista de DetalleEstimacionDTO con nombres legibles.
+     */
+    @GetMapping("/excel/{idExcel}")
+    public ApiResponse obtenerEstimacionesPorExcel(@PathVariable Integer idExcel) {
+        try {
+            List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallesPorExcel(idExcel);
+            
+            if (detalles.isEmpty()) {
+                return new ApiResponse("No hay estimaciones para este Excel", true, detalles);
+            }
+            
+            return new ApiResponse("Estimaciones recuperadas con éxito", true, detalles);
+        } catch (Exception e) {
+            return new ApiResponse("Error al recuperar la tabla: " + e.getMessage(), false, null);
+        }
+    }
 }

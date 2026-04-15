@@ -8,58 +8,41 @@ public class DetalleEstimacion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_detalle_estimacion")
     private Long id;
 
-  
-    
     @Column(name = "id_excel")
     private Integer idExcel;
 
-    private String tarea;
+    @Column(name = "id_fase")
+    private Integer idFase; // Este ID apunta a la Subfase (ej: el 4 de Análisis)
 
     @Column(name = "id_departamento")
     private Integer idDepartamento;
 
-    @Column(name = "id_fase")
-    private Integer idFase;
-
-    @Column(name = "tiempo_max")
-    private Double tiempoMax;
+    @Column(name = "tarea")
+    private String tarea;
 
     @Column(name = "tiempo_min")
     private Double tiempoMin;
 
-    // Constructor vacío obligatorio
+    @Column(name = "tiempo_max")
+    private Double tiempoMax;
+
+    // Constructores, Getters y Setters
     public DetalleEstimacion() {}
 
-    // Getters y Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-
-    public int getIdDepartamento() { return idDepartamento; }
-    public void setIdDepartamento(Integer idDepartamento) { this.idDepartamento = idDepartamento; }
-
+    public Integer getIdExcel() { return idExcel; }
+    public void setIdExcel(Integer idExcel) { this.idExcel = idExcel; }
     public Integer getIdFase() { return idFase; }
     public void setIdFase(Integer idFase) { this.idFase = idFase; }
-
-
-    
-
+    public Integer getIdDepartamento() { return idDepartamento; }
+    public void setIdDepartamento(Integer idDepartamento) { this.idDepartamento = idDepartamento; }
     public String getTarea() { return tarea; }
     public void setTarea(String tarea) { this.tarea = tarea; }
-
-    public Double getTiempoMax() { return tiempoMax; }
-    public void setTiempoMax(Double tiempoMax) { this.tiempoMax = tiempoMax; }
-
     public Double getTiempoMin() { return tiempoMin; }
     public void setTiempoMin(Double tiempoMin) { this.tiempoMin = tiempoMin; }
-
-    public Integer getIdExcel() {
-        return idExcel;
-    }
-
-    public void setIdExcel(Integer idExcel) {
-        this.idExcel = idExcel;
-    }
+    public Double getTiempoMax() { return tiempoMax; }
+    public void setTiempoMax(Double tiempoMax) { this.tiempoMax = tiempoMax; }
 }
