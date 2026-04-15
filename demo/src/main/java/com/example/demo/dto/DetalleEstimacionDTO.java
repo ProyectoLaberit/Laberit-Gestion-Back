@@ -14,8 +14,17 @@ public class DetalleEstimacionDTO {
     public DetalleEstimacionDTO() {
     }
 
-    public DetalleEstimacionDTO(Long id, Integer idDepartamento, Integer idExcel, Integer idFase, String tarea, Double tiempoMax, Double tiempoMin) {
+     public DetalleEstimacionDTO(Long id, Integer idDepartamento, Integer idExcel, Integer idFase, String tarea, Double tiempoMax, Double tiempoMin) {
         this.id = id;
+        this.idDepartamento = idDepartamento;
+        this.idExcel = idExcel;
+        this.idFase = idFase;
+        this.tarea = tarea;
+        this.tiempoMax = tiempoMax;
+        this.tiempoMin = tiempoMin;
+    }
+     public DetalleEstimacionDTO( Integer idDepartamento, Integer idExcel, Integer idFase, String tarea, Double tiempoMax, Double tiempoMin) {
+        
         this.idDepartamento = idDepartamento;
         this.idExcel = idExcel;
         this.idFase = idFase;
