@@ -51,7 +51,7 @@ public class GitLabService {
 
             // Hacemos la llamada pidiendo una LISTA directamente
             ResponseEntity<List<Map<String, Object>>> respuesta = restTemplate.exchange(
-                    baseUrl + "/projects",
+                    baseUrl + "/projects?owned=true",
                     HttpMethod.GET,
                     entity,
                     tipoRespuesta);
