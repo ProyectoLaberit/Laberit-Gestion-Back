@@ -43,6 +43,8 @@ public class ProyectoService {
 
         nuevoProyecto.setNombre(dto.getNombre());
         nuevoProyecto.setDescripcion(dto.getDescripcion());
+        nuevoProyecto.setClockifyId(dto.getClockifyId());
+        nuevoProyecto.setGitlabId(dto.getGitlabId());
         nuevoProyecto.setFechaInicio(dto.getFechaInicio() != null ? dto.getFechaInicio() : LocalDate.now());
         nuevoProyecto.setFechaFin(dto.getFechaFin());
         nuevoProyecto.setActivo(dto.isActivo() != null ? dto.isActivo() : true);
