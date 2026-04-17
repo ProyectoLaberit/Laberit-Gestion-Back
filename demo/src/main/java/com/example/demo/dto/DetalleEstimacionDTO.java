@@ -1,9 +1,11 @@
 package com.example.demo.dto;
 
+import jakarta.persistence.criteria.CriteriaBuilder.In;
+
 public class DetalleEstimacionDTO {
     private Long id;
     private Integer idDepartamento;
-    private Long idProyecto;
+    private Integer idExcel;
     private Integer idFase;
     private String tarea;
     private Double tiempoMax;
@@ -12,10 +14,10 @@ public class DetalleEstimacionDTO {
     public DetalleEstimacionDTO() {
     }
 
-    public DetalleEstimacionDTO(Long id, Integer idDepartamento, Long idProyecto, Integer idFase, String tarea, Double tiempoMax, Double tiempoMin) {
+    public DetalleEstimacionDTO(Long id, Integer idDepartamento, Integer idExcel, Integer idFase, String tarea, Double tiempoMax, Double tiempoMin) {
         this.id = id;
         this.idDepartamento = idDepartamento;
-        this.idProyecto = idProyecto;
+        this.idExcel = idExcel;
         this.idFase = idFase;
         this.tarea = tarea;
         this.tiempoMax = tiempoMax;
@@ -29,8 +31,8 @@ public class DetalleEstimacionDTO {
     public Integer getIdDepartamento() { return idDepartamento; }
     public void setIdDepartamento(Integer idDepartamento) { this.idDepartamento = idDepartamento; }
 
-    public Long getIdProyecto() { return idProyecto; }
-    public void setIdProyecto(Long idProyecto) { this.idProyecto = idProyecto; }
+    public Integer getIdExcel() { return idExcel; }
+    public void setIdExcel(Integer idExcel) { this.idExcel = idExcel; }
 
     public Integer getIdFase() { return idFase; }
     public void setIdFase(Integer idFase) { this.idFase = idFase; }

@@ -38,7 +38,7 @@ public class DetalleEstimacionService {
     @Autowired
     private ExcelService excelService;
 
-    public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
+   public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
         
         Excel registroExcel = new Excel();
         registroExcel.setIdProyecto(proyectoId);
@@ -104,9 +104,8 @@ public class DetalleEstimacionService {
 
                 if (tareaEncontrada != null && (tiempo1 != null || tiempo2 != null)) {
                     DetalleEstimacion detalle = new DetalleEstimacion();
-                    detalle.setIdProyecto(proyectoId);
-                    detalle.setIdDepartamento(idDepartamento);
                     detalle.setIdExcel(idExcelGenerado);
+                    detalle.setIdDepartamento(idDepartamento);
                     detalle.setIdFase(idFaseActual != null ? idFaseActual : fasePorDefecto);
                     detalle.setTarea(tareaEncontrada);
                     
@@ -151,15 +150,14 @@ public class DetalleEstimacionService {
                 .orElse(null);
     }
 
-    public List<DetalleEstimacionDTO> obtenerDetallesPorProyecto(Long idProyecto) {
-        List<DetalleEstimacion> entidades = detalleEstimacionRepository.findByIdProyecto(idProyecto);
+   public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
+        List<DetalleEstimacion> entidades = detalleEstimacionRepository.findByIdExcel(idExcel);
 
         return entidades.stream().map(entidad -> {
             DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
-            // Mapeo corregido según tu archivo DetalleEstimacionDTO.java
             dto.setId(entidad.getId()); 
             dto.setIdDepartamento(entidad.getIdDepartamento());
-            dto.setIdProyecto(entidad.getIdProyecto());
+            dto.setIdExcel(entidad.getIdExcel());
             dto.setIdFase(entidad.getIdFase());
             dto.setTarea(entidad.getTarea());
             dto.setTiempoMax(entidad.getTiempoMax());
@@ -168,7 +166,7 @@ public class DetalleEstimacionService {
         }).collect(Collectors.toList());
     }
 
-    public List<DetalleEstimacion> obtenerDetallesEntidadPorProyecto(Long idProyecto) {
-        return detalleEstimacionRepository.findByIdProyecto(idProyecto);
+    public List<DetalleEstimacion> obtenerDetallesEntidadPorExcel(Integer idExcel) {
+        return detalleEstimacionRepository.findByIdExcel(idExcel);
     }
 }

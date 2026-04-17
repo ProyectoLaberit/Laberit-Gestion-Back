@@ -10,5 +10,5 @@ public interface DetalleEstimacionRepository extends JpaRepository<DetalleEstima
     
     // Este método buscará automáticamente todas las tareas 
     // que tengan el mismo id_proyecto
-    List<DetalleEstimacion> findByIdProyecto(Long idProyecto);
+    List<DetalleEstimacion> findByIdExcel(Integer idExcel);
 }

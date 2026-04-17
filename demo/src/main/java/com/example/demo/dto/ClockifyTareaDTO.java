@@ -1,35 +1,18 @@
 package com.example.demo.dto;
 
 public class ClockifyTareaDTO {
-    private String idGitlab;
-    private String faseExcel;
     private String titulo;
     private double horasTrabajadas;
+    private int idGit;
 
+    //nombre tiempos
     public ClockifyTareaDTO() {
     }
 
-    public ClockifyTareaDTO(String idGitlab, String faseExcel, String titulo, double horasTrabajadas) {
-        this.idGitlab = idGitlab;
-        this.faseExcel = faseExcel;
+    public ClockifyTareaDTO( String titulo, double horasTrabajadas, int idGit) {
         this.titulo = titulo;
         this.horasTrabajadas = horasTrabajadas;
-    }
-
-    public String getIdGitlab() {
-        return idGitlab;
-    }
-
-    public void setIdGitlab(String idGitlab) {
-        this.idGitlab = idGitlab;
-    }
-
-    public String getFaseExcel() {
-        return faseExcel;
-    }
-
-    public void setFaseExcel(String faseExcel) {
-        this.faseExcel = faseExcel;
+        this.idGit = idGit;
     }
 
     public String getTitulo() {
@@ -46,6 +29,14 @@ public class ClockifyTareaDTO {
 
     public void setHorasTrabajadas(double horasTrabajadas) {
         this.horasTrabajadas = horasTrabajadas;
+    }
+
+    public int getIdGit() {
+        return idGit;
+    }
+
+    public void setIdGit(int idGit) {
+        this.idGit = idGit;
     }
 
     

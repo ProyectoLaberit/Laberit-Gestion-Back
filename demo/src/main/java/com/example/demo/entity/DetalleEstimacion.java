@@ -11,8 +11,7 @@ public class DetalleEstimacion {
     @Column(name = "id_detalle_estimacion")
     private Long id;
 
-    @Column(name = "id_proyecto")
-    private Long idProyecto;
+  
     
     @Column(name = "id_excel")
     private Integer idExcel;
@@ -45,8 +44,7 @@ public class DetalleEstimacion {
     public void setIdFase(Integer idFase) { this.idFase = idFase; }
 
 
-    public Long getIdProyecto() { return idProyecto; }
-    public void setIdProyecto(Long idProyecto) { this.idProyecto = idProyecto; }
+    
 
     public String getTarea() { return tarea; }
     public void setTarea(String tarea) { this.tarea = tarea; }
