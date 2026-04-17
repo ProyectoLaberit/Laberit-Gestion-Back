@@ -21,9 +21,6 @@ public class ProyectoService {
     @Autowired
     private GitLabService gitLabService;
 
-    @Autowired
-    private GitLabService clockifyService;
-
 
     // Inyectamos el servicio de Clockify
 
@@ -118,29 +115,4 @@ public class ProyectoService {
                 .collect(Collectors.toList());
     }
 
-    // public List<ProyectoDTO> obtenerProyectosClockifyNoRegistrados() {
-    //     // Obtenemos los IDs de Clockify que ya están guardados en nuestra DB
-    //     List<String> idsYaGuardados = proyectoRepository.findAll()
-    //             .stream()
-    //             .map(p -> p.getClockifyId())
-    //             .filter(id -> id != null)
-    //             .collect(Collectors.toList());
-
-    //     // Llamamos al servicio de Clockify para traer todos sus proyectos
-    //     List<Map<String, Object>> proyectosClockify = clockifyService.obtenerProyectosDeClockify();
-
-    //     // Filtramos los que NO están en nuestra lista de IDs guardados y mapeamos a DTO
-    //     return proyectosClockify.stream()
-    //             .filter(c -> !idsYaGuardados.contains(c.get("id").toString()))
-    //             .map(c -> new ProyectoDTO(
-    //                     null, // No tiene ID de DB aún
-    //                     c.get("name").toString(),
-    //                     "Importado desde Clockify", // Clockify API no siempre devuelve descripción en este endpoint
-    //                     null,
-    //                     null,
-    //                     true,
-    //                     false
-    //             ))
-    //             .collect(Collectors.toList());
-    // }
 }
