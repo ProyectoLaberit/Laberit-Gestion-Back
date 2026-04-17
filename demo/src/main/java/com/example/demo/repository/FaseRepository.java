@@ -9,5 +9,5 @@ import com.example.demo.entity.Fase;
 
 @Repository
 public interface FaseRepository extends JpaRepository<Fase, Integer> {
-    Optional<Fase> findByNombre(String nombre);
+    
 }

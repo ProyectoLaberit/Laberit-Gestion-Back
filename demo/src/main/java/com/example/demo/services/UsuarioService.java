@@ -30,6 +30,7 @@ public class UsuarioService {
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public boolean validarUsuario(LoginRequest login) {
+
         // Buscamos al usuario en la base usando el email que nos pasa el Front-end
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(login.getEmail());
 
@@ -45,6 +46,25 @@ public class UsuarioService {
         return passwordEncoder.matches(login.getPassword(), usuarioDB.getPassword());
     }
 
+    public UsuarioDTO obtenerUsuarioPorEmail(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado."));
+
+        UsuarioDTO dto = new UsuarioDTO();
+        dto.setId(usuario.getId());
+        dto.setNombre(usuario.getNombre());
+        dto.setEmail(usuario.getEmail());
+        dto.setExcels(usuario.getExcels());
+        dto.setFoto(usuario.getFoto());
+
+        // Extraemos el rol si lo tiene asignado
+        if (usuario.getRoles() != null && !usuario.getRoles().isEmpty()) {
+            Rol rol = usuario.getRoles().iterator().next();
+            dto.setRol(rol.getNombre()); // Ajusta getNombre() si tu entidad Rol usa otro nombre para el campo
+        }
+
+        return dto;
+    }
 
     public UsuarioDTO crearUsuario(UsuarioDTO dto) {
         // Verificamos que no exista ya alguien con ese correo

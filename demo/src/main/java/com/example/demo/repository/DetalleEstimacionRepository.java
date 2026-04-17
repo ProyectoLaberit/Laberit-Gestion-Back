@@ -8,7 +8,14 @@ import java.util.List;
 @Repository
 public interface DetalleEstimacionRepository extends JpaRepository<DetalleEstimacion, Long> {
     
-    // Este método buscará automáticamente todas las tareas 
-    // que tengan el mismo id_proyecto
+   /**
+     * Recupera todos los detalles asociados a un ID de Excel.
+     * Es la base para mostrar la tabla en el Frontend.
+     */
     List<DetalleEstimacion> findByIdExcel(Integer idExcel);
+
+    /**
+     * Busca un detalle específico. Útil para la búsqueda puntual que comentamos.
+     */
+    DetalleEstimacion findFirstByIdExcelAndIdFaseAndTareaIgnoreCase(Integer idExcel, Integer idFase, String tarea);
 }
