@@ -31,9 +31,6 @@ public class UsuarioService {
 
     public boolean validarUsuario(LoginRequest login) {
 
-        if(true){
-            return true;
-        }else{
         // Buscamos al usuario en la base usando el email que nos pasa el Front-end
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(login.getEmail());
 
@@ -47,7 +44,6 @@ public class UsuarioService {
 
         // Comparamos que las contraseñas sean sean iguales
         return passwordEncoder.matches(login.getPassword(), usuarioDB.getPassword());
-    }
     }
 
 
