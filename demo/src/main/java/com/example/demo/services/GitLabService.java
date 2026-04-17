@@ -1,5 +1,6 @@
 package com.example.demo.services;
 
+import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.entity.ApiConfig;
 import com.example.demo.entity.Proyecto;
 import com.example.demo.repository.ApiConfigRepository;
@@ -91,39 +92,6 @@ public class GitLabService {
     }
 
     /**
-     * Consulta los proyectos en GitLab usando un token de usuario y devuelve solo
-     * aquellos que aún NO están registrados en nuestra base de datos local.
-     */
-    public List<Map<String, Object>> filtrarProyectosExternos(String tokenGitlab) {
-        // 1. Obtenemos la URL base configurada para GitLab
-        ApiConfig config = apiRepository.findByNombre("GitLab Maestro");
-        String baseUrl = config.getUrlReal().endsWith("/")
-                ? config.getUrlReal().substring(0, config.getUrlReal().length() - 1)
-                : config.getUrlReal();
-
-        // 2. Construimos la URL para traer los proyectos donde el usuario es dueño
-        // (owned=true)
-        // Usamos el token que llega desde el frontend (específico del usuario actual)
-        String urlGitLab = baseUrl + "/projects?owned=true&access_token=" + tokenGitlab;
-
-        // 3. Obtenemos todos los proyectos disponibles en la cuenta de GitLab del
-        // usuario
-        List<Map<String, Object>> proyectosGitLab = ejecutarConsultaLista(urlGitLab);
-
-        // 4. Obtenemos de nuestra DB todos los IDs de GitLab que ya tenemos guardados
-        List<String> idsLocales = proyectoRepository.findAll().stream()
-                .map(Proyecto::getGitlabId)
-                .filter(id -> id != null) // Evitamos nulos para que no falle la comparación
-                .collect(Collectors.toList());
-
-        // 5. Filtramos la lista de GitLab: solo dejamos los que NO existan en
-        // 'idsLocales'
-        return proyectosGitLab.stream()
-                .filter(p -> !idsLocales.contains(p.get("id").toString()))
-                .collect(Collectors.toList());
-    }
-
-    /**
      * Método genérico privado para realizar peticiones GET a la API y
      * deserializar la respuesta en una lista de mapas (JSON).
      */
@@ -151,5 +119,30 @@ public class GitLabService {
             // System.out.println(e.getMessage());
             return List.of();
         }
+    }
+
+    public List<ProyectoDTO> obtenerProyectosGitLabNoRegistrados() {
+        List<String> idsYaGuardados = proyectoRepository.findAll()
+                .stream()
+                .map(p -> p.getGitlabId())
+                .filter(id -> id != null)
+                .collect(Collectors.toList());
+
+        List<Map<String, Object>> proyectosGitLab = obtenerProyectosDeGitLab();
+
+        return proyectosGitLab.stream()
+                .filter(git -> !idsYaGuardados.contains(git.get("id").toString()))
+                .map(git -> new ProyectoDTO(
+                        null,
+                        git.get("name").toString(),
+                        git.get("description") != null ? git.get("description").toString() : "Sin descripción",
+                        null,
+                        null,
+                        true,
+                        git.get("id").toString(),
+                        null,
+                        false,
+                        null))
+                .collect(Collectors.toList());
     }
 }

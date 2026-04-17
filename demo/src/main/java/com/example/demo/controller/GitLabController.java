@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
+import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.services.GitLabService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -32,15 +33,14 @@ public class GitLabController {
     }
 
     /**
-     * Consulta los proyectos en la cuenta de GitLab del usuario (usando su token)
-     * y devuelve solo aquellos que todavía no han sido registrados en nuestro
-     * sistema.
+     * Obtiene la lista de proyectos que existen en GitLab pero que aún no han sido
+     * registrados en nuestra base de datos local.
      */
-    @GetMapping("/externos/{token_gitlab}")
-    public ResponseEntity<ApiResponse> getExternos(@PathVariable String token_gitlab) {
+    @GetMapping("/externos")
+    public ResponseEntity<ApiResponse> getProyectosExternos() {
         try {
-            List<Map<String, Object>> externos = gitLabService.filtrarProyectosExternos(token_gitlab);
-            return ResponseEntity.ok(new ApiResponse("Proyectos externos filtrados", true, externos));
+            List<ProyectoDTO> proyectosExternos = gitLabService.obtenerProyectosGitLabNoRegistrados();
+            return ResponseEntity.ok(new ApiResponse("Proyectos externos recuperados", true, proyectosExternos));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ApiResponse(e.getMessage(), false, null));
         }
