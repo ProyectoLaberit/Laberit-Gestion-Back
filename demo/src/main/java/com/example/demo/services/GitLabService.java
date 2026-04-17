@@ -31,15 +31,18 @@ public class GitLabService {
             ApiConfig config = apiRepository.findByNombre("GitLab Maestro");
             // .orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
 
-            String urlCompleta = config.getUrlReal() + "?owned=true&access_token=" + config.getClave();
+            // Limpiamos la URL para asegurar que no termine en '/' y evitar errores al concatenar
 
+            String baseUrl = config.getUrlReal().endsWith("/")
+                    ? config.getUrlReal().substring(0, config.getUrlReal().length() - 1)
+                    : config.getUrlReal();
             // Esta es la clave: Le decimos a Java exactamente qué estructura esperar
             ParameterizedTypeReference<List<Map<String, Object>>> tipoRespuesta = new ParameterizedTypeReference<List<Map<String, Object>>>() {
             };
 
             // Hacemos la llamada pidiendo una LISTA directamente
             ResponseEntity<List<Map<String, Object>>> respuesta = restTemplate.exchange(
-                    urlCompleta,
+                    baseUrl + "?owned=true&access_token=" + config.getClave(),
                     HttpMethod.GET,
                     null,
                     tipoRespuesta);
@@ -52,8 +55,6 @@ public class GitLabService {
             return List.of();
         }
     }
-
-    // --- MÉTODOS PARA INTEGRACIÓN CON GITLAB ---
 
     /**
      * Obtiene la lista de incidencias (issues/tareas) de un proyecto específico en
@@ -121,28 +122,39 @@ public class GitLabService {
         }
     }
 
+    /**
+     * Devuelve los proyectos de GitLab que aún no están registrados en la base de
+     * datos.
+     */
     public List<ProyectoDTO> obtenerProyectosGitLabNoRegistrados() {
+
+        // 1. Obtenemos todos los gitlabId que ya tenemos guardados en la DB
+        // Filtramos los nulos para evitar errores en la comparación posterior
         List<String> idsYaGuardados = proyectoRepository.findAll()
                 .stream()
                 .map(p -> p.getGitlabId())
                 .filter(id -> id != null)
                 .collect(Collectors.toList());
 
+        // 2. Llamamos a GitLab usando el token "GitLab Maestro" de la DB
+        // y obtenemos todos los proyectos de esa cuenta
         List<Map<String, Object>> proyectosGitLab = obtenerProyectosDeGitLab();
 
+        // 3. Filtramos los proyectos de GitLab que NO están en nuestra DB
+        // y los convertimos a ProyectoDTO para devolverlos al frontend
         return proyectosGitLab.stream()
                 .filter(git -> !idsYaGuardados.contains(git.get("id").toString()))
                 .map(git -> new ProyectoDTO(
-                        null,
-                        git.get("name").toString(),
+                        null, // id: null porque aún no está en la DB
+                        git.get("name").toString(), // nombre del proyecto en GitLab
                         git.get("description") != null ? git.get("description").toString() : "Sin descripción",
-                        null,
-                        null,
-                        true,
-                        git.get("id").toString(),
-                        null,
-                        false,
-                        null))
+                        null, // fechaInicio: pendiente de asignar al importar
+                        null, // fechaFin: pendiente de asignar al importar
+                        true, // activo por defecto
+                        git.get("id").toString(), // gitlabId: el ID que tiene en GitLab
+                        null, // clockifyId: aún no vinculado
+                        false, // enBaseDatos: false porque aún no está registrado
+                        null)) // excels: pendiente de asignar al importar
                 .collect(Collectors.toList());
     }
 }
