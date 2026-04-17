@@ -1,6 +1,9 @@
 package com.example.demo.controller;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,36 +23,45 @@ import com.example.demo.dto.UsuarioDTO;
 import com.example.demo.services.ProyectoService;
 import com.example.demo.services.UsuarioService;
 
-
 @RestController
 @RequestMapping("/api/usuarios")
 @CrossOrigin(origins = "*")
+
 public class UsuarioController {
 
     @Autowired
     private UsuarioService usuarioService;
 
     @Autowired
-    private ProyectoService proyectoService; // Paso 3: Inyección necesaria
+    private ProyectoService proyectoService;
 
     @PostMapping("/login")
     public ApiResponse verificar(@RequestBody LoginRequest login) {
-
-        // Verificamos por consola qué datos llegan realmente
         System.out.println("Email recibido: " + login.getEmail());
         System.out.println("Password recibido: " + login.getPassword());
-        // Validamos las credenciales
+        
         boolean esValido = usuarioService.validarUsuario(login);
         
         if (esValido) {
             // Recuperamos la lista de proyectos
             List<ProyectoDTO> proyectos = proyectoService.obtenerTodosLosProyectos(null, null, null);
-            // La enviamos dentro del campo 'data' del ApiResponse
-            return new ApiResponse("Login exitoso", true, proyectos);
+            
+            // Recuperamos los datos del usuario autenticado
+            UsuarioDTO usuarioData = usuarioService.obtenerUsuarioPorEmail(login.getEmail());
+            
+            // Creamos un mapa para devolver ambos objetos en la propiedad 'data'
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("usuario", usuarioData);
+            responseData.put("proyectos", proyectos);
+            
+            return new ApiResponse("Login exitoso", true, responseData);
         } else {
             return new ApiResponse("Credenciales inválidas", false, null);
         }
     }
+
+    // ... (El resto de tus endpoints se mantienen exactamente igual: crearUsuario, eliminarUsuario, etc.)
+
 
     @PostMapping
     public ApiResponse crearUsuario(@RequestBody UsuarioDTO usuarioDTO) {
