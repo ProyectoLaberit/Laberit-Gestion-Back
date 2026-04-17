@@ -33,8 +33,7 @@ public class GitLabService {
             ApiConfig config = apiRepository.findByNombre("GitLab Maestro");
             // .orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
 
-            // Limpiamos la URL para asegurar que no termine en '/' y evitar errores al
-            // concatenar
+            // Limpiamos la URL para asegurar que no termine en '/' y evitar errores al concatenar
             String baseUrl = config.getUrlReal().endsWith("/")
                     ? config.getUrlReal().substring(0, config.getUrlReal().length() - 1)
                     : config.getUrlReal();
