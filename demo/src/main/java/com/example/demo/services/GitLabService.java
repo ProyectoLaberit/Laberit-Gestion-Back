@@ -8,12 +8,11 @@ import com.example.demo.repository.ProyectoRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
-import org.springframework.http.HttpHeaders;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,23 +31,33 @@ public class GitLabService {
     public List<Map<String, Object>> obtenerProyectosDeGitLab() {
         try {
             ApiConfig config = apiRepository.findByNombre("GitLab Maestro");
+            // .orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
 
+            // Limpiamos la URL para asegurar que no termine en '/' y evitar errores al
+            // concatenar
             String baseUrl = config.getUrlReal().endsWith("/")
                     ? config.getUrlReal().substring(0, config.getUrlReal().length() - 1)
                     : config.getUrlReal();
 
-            ParameterizedTypeReference<List<Map<String, Object>>> tipoRespuesta = new ParameterizedTypeReference<>() {
+            // Esta es la clave: Le decimos a Java exactamente qué estructura esperar
+            ParameterizedTypeReference<List<Map<String, Object>>> tipoRespuesta = new ParameterizedTypeReference<List<Map<String, Object>>>() {
             };
 
-            HttpEntity<String> entity = crearEntityConToken(config.getClave());
+            // Configuramos las cabeceras (headers) para incluir la clave de autenticación.
+            // Esto permite que el servidor valide nuestra identidad de forma segura
+            // sin exponer el token directamente en la URL.
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("PRIVATE-TOKEN", config.getClave());
+            HttpEntity<String> entity = new HttpEntity<>(headers);
 
-            // Ya no necesitas ?access_token= en la URL, el token va en el header
+            // Hacemos la llamada pidiendo una LISTA directamente
             ResponseEntity<List<Map<String, Object>>> respuesta = restTemplate.exchange(
                     baseUrl + "/projects",
                     HttpMethod.GET,
                     entity,
                     tipoRespuesta);
 
+            // Devolvemos el cuerpo de la respuesta (que ya es una List<Map>)
             return respuesta.getBody() != null ? respuesta.getBody() : List.of();
 
         } catch (Exception e) {
@@ -63,23 +72,32 @@ public class GitLabService {
      * Utiliza el ID local del proyecto para buscar su equivalente en GitLab.
      */
     public List<Map<String, Object>> obtenerTareasPorProyecto(Long proyectoIdLocal) {
+        // 1. Buscamos el proyecto en nuestra base de datos local
         Proyecto proyecto = proyectoRepository.findById(proyectoIdLocal)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado en la base de datos"));
 
+        // 2. Verificamos que el proyecto tenga vinculado un ID de GitLab (importante
+        // para la API externa)
         if (proyecto.getGitlabId() == null || proyecto.getGitlabId().isEmpty()) {
             throw new RuntimeException("El proyecto no tiene un ID de GitLab asociado.");
         }
 
+        // 3. Recuperamos la configuración maestra de la API (URL y Token Maestro) desde
+        // la DB
         ApiConfig config = apiRepository.findByNombre("GitLab Maestro");
 
+        // Limpiamos la URL para asegurar que no termine en '/' y evitar errores al
+        // concatenar
         String baseUrl = config.getUrlReal().endsWith("/")
                 ? config.getUrlReal().substring(0, config.getUrlReal().length() - 1)
                 : config.getUrlReal();
 
-        // ✅ URL limpia, sin access_token
+        // 4. Construimos la URL específica para obtener los "issues" del proyecto en
+        // GitLab
+        // Se concatena el gitlabId del proyecto (sin exponer el token en la URL)
         String urlIssues = baseUrl + "/projects/" + proyecto.getGitlabId() + "/issues";
 
-        // ✅ Se pasa la URL y el TOKEN por separado
+        // 5. Ejecutamos la petición HTTP y devolvemos la lista de tareas
         return ejecutarConsultaLista(urlIssues, config.getClave());
     }
 
@@ -89,21 +107,31 @@ public class GitLabService {
      */
     private List<Map<String, Object>> ejecutarConsultaLista(String url, String token) {
         try {
+            // Definimos el tipo de retorno esperado: una Lista de Mapas (List<Map<String,
+            // Object>>)
             ParameterizedTypeReference<List<Map<String, Object>>> tipoRespuesta = new ParameterizedTypeReference<>() {
             };
 
-            HttpEntity<String> entity = crearEntityConToken(token);
+            // Configuramos las cabeceras con el token de autenticación
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("PRIVATE-TOKEN", token);
+            HttpEntity<String> entity = new HttpEntity<>(headers);
 
+            // Realizamos la llamada HTTP mediante RestTemplate
             ResponseEntity<List<Map<String, Object>>> respuesta = restTemplate.exchange(
                     url,
                     HttpMethod.GET,
                     entity,
                     tipoRespuesta);
 
+            // Si el cuerpo de la respuesta es nulo, devolvemos una lista vacía para evitar
+            // NullPointerException
             return respuesta.getBody() != null ? respuesta.getBody() : List.of();
 
         } catch (Exception e) {
-            System.err.println("Error en consulta: " + e.getMessage());
+            // En caso de error (401, 404, error de red), devolvemos lista vacía
+            // Podrías añadir un log aquí para depuración:
+            // System.out.println(e.getMessage());
             return List.of();
         }
     }
@@ -137,11 +165,5 @@ public class GitLabService {
                         proy.get("id").toString(),
                         proy.get("name").toString()))
                 .collect(Collectors.toList());
-    }
-
-    private HttpEntity<String> crearEntityConToken(String token) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("PRIVATE-TOKEN", token);
-        return new HttpEntity<>(headers);
     }
 }
