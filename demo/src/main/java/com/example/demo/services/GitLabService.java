@@ -1,7 +1,6 @@
 package com.example.demo.services;
 
 import com.example.demo.dto.GitLabProyectoDTO;
-import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.entity.ApiConfig;
 import com.example.demo.entity.Proyecto;
 import com.example.demo.repository.ApiConfigRepository;
@@ -44,7 +43,7 @@ public class GitLabService {
 
             // Hacemos la llamada pidiendo una LISTA directamente
             ResponseEntity<List<Map<String, Object>>> respuesta = restTemplate.exchange(
-                    baseUrl + "?owned=true&access_token=" + config.getClave(),
+                    baseUrl + "/projects?access_token=" + config.getClave(),
                     HttpMethod.GET,
                     null,
                     tipoRespuesta);

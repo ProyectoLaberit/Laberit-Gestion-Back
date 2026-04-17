@@ -1,7 +1,5 @@
 package com.example.demo.dto;
 
-import jakarta.persistence.criteria.CriteriaBuilder.In;
-
 public class DetalleEstimacionDTO {
     private Long id;
     private Integer idDepartamento;
