@@ -31,7 +31,13 @@ public class ProyectoController {
     @Autowired
     private ProyectoService proyectoService;
     
-    @GetMapping("/{activo}/{desde}/{hasta}")
+    @GetMapping("/cargar")
+    public ApiResponse obtenerProyectos() {
+        List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(null, null, null);
+        return new ApiResponse("Listado de proyectos recuperado", true, lista);
+    }
+
+    /*@GetMapping("/{activo}/{desde}/{hasta}")
     public ApiResponse obtenerProyectos(
     @RequestParam(required = false) Boolean activo,
     @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
@@ -40,7 +46,7 @@ public class ProyectoController {
 
         List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(activo, desde, hasta);
         return new ApiResponse("Listado de proyectos recuperado", true, lista);
-    }
+    }*/
 
     @PostMapping
     // @RequestBody: Recibe el JSON del formulario y lo convierte en el ProyectoDTO
