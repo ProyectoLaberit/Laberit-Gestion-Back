@@ -1,5 +1,6 @@
 package com.example.demo.services;
 
+import com.example.demo.dto.GitLabProyectoDTO;
 import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.entity.ApiConfig;
 import com.example.demo.entity.Proyecto;
@@ -31,7 +32,8 @@ public class GitLabService {
             ApiConfig config = apiRepository.findByNombre("GitLab Maestro");
             // .orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
 
-            // Limpiamos la URL para asegurar que no termine en '/' y evitar errores al concatenar
+            // Limpiamos la URL para asegurar que no termine en '/' y evitar errores al
+            // concatenar
 
             String baseUrl = config.getUrlReal().endsWith("/")
                     ? config.getUrlReal().substring(0, config.getUrlReal().length() - 1)
@@ -126,7 +128,7 @@ public class GitLabService {
      * Devuelve los proyectos de GitLab que aún no están registrados en la base de
      * datos.
      */
-    public List<ProyectoDTO> obtenerProyectosGitLabNoRegistrados() {
+    public List<GitLabProyectoDTO> obtenerProyectosGitLabNoRegistrados() {
 
         // 1. Obtenemos todos los gitlabId que ya tenemos guardados en la DB
         // Filtramos los nulos para evitar errores en la comparación posterior
@@ -141,20 +143,15 @@ public class GitLabService {
         List<Map<String, Object>> proyectosGitLab = obtenerProyectosDeGitLab();
 
         // 3. Filtramos los proyectos de GitLab que NO están en nuestra DB
-        // y los convertimos a ProyectoDTO para devolverlos al frontend
+        // y los convertimos al DTO con solo id y nombre
         return proyectosGitLab.stream()
-                .filter(git -> !idsYaGuardados.contains(git.get("id").toString()))
-                .map(git -> new ProyectoDTO(
-                        null, // id: null porque aún no está en la DB
-                        git.get("name").toString(), // nombre del proyecto en GitLab
-                        git.get("description") != null ? git.get("description").toString() : "Sin descripción",
-                        null, // fechaInicio: pendiente de asignar al importar
-                        null, // fechaFin: pendiente de asignar al importar
-                        true, // activo por defecto
-                        git.get("id").toString(), // gitlabId: el ID que tiene en GitLab
-                        null, // clockifyId: aún no vinculado
-                        false, // enBaseDatos: false porque aún no está registrado
-                        null)) // excels: pendiente de asignar al importar
+                .filter(proy -> {
+                    Object idGitLab = proy.get("id");
+                    return idGitLab != null && !idsYaGuardados.contains(idGitLab.toString());
+                })
+                .map(proy -> new GitLabProyectoDTO(
+                        proy.get("id").toString(),
+                        proy.get("name").toString()))
                 .collect(Collectors.toList());
     }
 }

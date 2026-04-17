@@ -1,7 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
-import com.example.demo.dto.ProyectoDTO;
+import com.example.demo.dto.GitLabProyectoDTO;
 import com.example.demo.services.GitLabService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -39,7 +39,7 @@ public class GitLabController {
     @GetMapping("/externos")
     public ResponseEntity<ApiResponse> getProyectosExternos() {
         try {
-            List<ProyectoDTO> proyectosExternos = gitLabService.obtenerProyectosGitLabNoRegistrados();
+            List<GitLabProyectoDTO> proyectosExternos = gitLabService.obtenerProyectosGitLabNoRegistrados();
             return ResponseEntity.ok(new ApiResponse("Proyectos externos recuperados", true, proyectosExternos));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ApiResponse(e.getMessage(), false, null));
