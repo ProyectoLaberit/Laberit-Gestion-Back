@@ -34,9 +34,6 @@ public class ProyectoService {
             p.getFechaInicio(),
             p.getFechaFin(),
             p.isActivo(),
-            p.getGitlabId(),
-            p.getClockifyId(),
-            true,
             p.getExcels()
         )).collect(Collectors.toList());
     }
@@ -49,8 +46,6 @@ public class ProyectoService {
         nuevoProyecto.setFechaInicio(dto.getFechaInicio() != null ? dto.getFechaInicio() : LocalDate.now());
         nuevoProyecto.setFechaFin(dto.getFechaFin());
         nuevoProyecto.setActivo(dto.isActivo() != null ? dto.isActivo() : true);
-        nuevoProyecto.setGitlabId(dto.getGitlabId());
-        nuevoProyecto.setClockifyId(dto.getClockifyId());
         nuevoProyecto.setExcels(dto.getExcels());
 
         Proyecto guardado = proyectoRepository.save(nuevoProyecto);
@@ -62,9 +57,6 @@ public class ProyectoService {
             guardado.getFechaInicio(),
             guardado.getFechaFin(),
             guardado.isActivo(),
-            guardado.getGitlabId(),
-            guardado.getClockifyId(),
-            true,
             guardado.getExcels()
         );
     }
@@ -96,9 +88,6 @@ public class ProyectoService {
             actualizado.getFechaInicio(),
             actualizado.getFechaFin(),
             actualizado.isActivo(),
-            actualizado.getGitlabId(),
-            actualizado.getClockifyId(),
-            true,
             actualizado.getExcels()
         );
     }
@@ -121,10 +110,7 @@ public class ProyectoService {
                         null,
                         null,
                         true,
-                        git.get("id").toString(),
-                        null,
-                        false,
-                        null
+                        false
                     ))
                 .collect(Collectors.toList());
     }
@@ -150,10 +136,7 @@ public class ProyectoService {
                         null,
                         null,
                         true,
-                        null,
-                        c.get("id").toString(), // El ID original de Clockify
-                        false, // Marcamos que NO está en DB
-                        null
+                        false
                 ))
                 .collect(Collectors.toList());
     }

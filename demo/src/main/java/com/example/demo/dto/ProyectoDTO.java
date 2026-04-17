@@ -19,35 +19,26 @@ public class ProyectoDTO {
 
     private Boolean activo;
 
-    //No se enseña pero se guarda
-    private String gitlabId;
-    private String clockifyId;
-    private Boolean enBaseDatos; // Para saber si existe en Neon
 
     public ProyectoDTO() {
     }
 
-    public ProyectoDTO(Long id, String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo, String gitlabId, String clockifyId, Boolean enBaseDatos, Boolean excels) {
+    public ProyectoDTO(Long id, String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo, Boolean excels) {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.fechaInicio = fechaInicio;
         this.fechaFin = fechaFin;
         this.activo = activo;
-        this.gitlabId = gitlabId;
-        this.clockifyId = clockifyId;
-        this.enBaseDatos = enBaseDatos;
         this.excels = excels;
     }
 
-    public ProyectoDTO(String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo, String gitlabId, String clockifyId) {
+    public ProyectoDTO(String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo) {
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.fechaInicio = fechaInicio;
         this.fechaFin = fechaFin;
         this.activo = activo;
-        this.gitlabId = gitlabId;
-        this.clockifyId = clockifyId;
     }
 
     // Getters and Setters
@@ -57,9 +48,6 @@ public class ProyectoDTO {
     public LocalDate getFechaInicio() { return fechaInicio; }
     public LocalDate getFechaFin() { return fechaFin; }
     public Boolean isActivo() { return activo; }
-    public String getGitlabId() { return gitlabId; }
-    public String getClockifyId() { return clockifyId; }
-    public Boolean isEnBaseDatos() { return enBaseDatos; }
     public Boolean getExcels() { return excels; }
     
     public void setId(Long id) { this.id = id; }
@@ -68,8 +56,5 @@ public class ProyectoDTO {
     public void setFechaInicio(LocalDate fechaInicio) { this.fechaInicio = fechaInicio; }
     public void setFechaFin(LocalDate fechaFin) { this.fechaFin = fechaFin; }
     public void setActivo(Boolean activo) { this.activo = activo; }
-    public void setGitlabId(String gitlabId) { this.gitlabId = gitlabId; }
-    public void setClockifyId(String clockifyId) { this.clockifyId = clockifyId; }
-    public void setEnBaseDatos(Boolean enBaseDatos) { this.enBaseDatos = enBaseDatos; }
     public void setExcels(Boolean excels) { this.excels = excels; }
 }
