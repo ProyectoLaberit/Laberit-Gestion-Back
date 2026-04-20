@@ -6,13 +6,12 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.demo.dto.ClockifyTareaDTO;
-import com.example.demo.dto.ProyectoDTO;
+import com.example.demo.dto.ProyectoClockifyDTO;
 import com.example.demo.entity.ApiConfig;
 import com.example.demo.entity.Proyecto;
 import com.example.demo.repository.ApiConfigRepository;
@@ -23,7 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -146,4 +145,54 @@ public class ClockifyService {
                 long segundos = d.getSeconds();
                 return segundos / 3600.0; // horas en decimal
         }
+
+        public List<ProyectoClockifyDTO> obtenerProyectosNuevosDTO() {
+
+                ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
+
+                String url = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/projects";
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("X-Api-Key", clockify.getClave());
+
+                HttpEntity<String> entity = new HttpEntity<>(headers);
+
+                // 🔹 1. Llamada a Clockify
+                ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                                url,
+                                HttpMethod.GET,
+                                entity,
+                                new ParameterizedTypeReference<List<Map<String, Object>>>() {
+                                });
+
+                List<Map<String, Object>> proyectosClockify = response.getBody();
+
+                // 🔹 2. Proyectos en BD
+                List<Proyecto> proyectosBD = proyectoRepository.findAll();
+
+                Set<String> idsBD = proyectosBD.stream()
+                                .map(Proyecto::getClockifyId)
+                                .collect(Collectors.toSet());
+
+                // 🔹 3. Construir DTOs solo de los nuevos
+                List<ProyectoClockifyDTO> resultado = new ArrayList<>();
+
+                for (Map<String, Object> proyecto : proyectosClockify) {
+
+                        String id = (String) proyecto.get("id");
+                        String nombre = (String) proyecto.get("name");
+
+                        if (!idsBD.contains(id)) {
+
+                                ProyectoClockifyDTO dto = new ProyectoClockifyDTO();
+                                dto.setId(id);
+                                dto.setNombre(nombre);
+
+                                resultado.add(dto);
+                        }
+                }
+
+                return resultado;
+        }
+
 }
