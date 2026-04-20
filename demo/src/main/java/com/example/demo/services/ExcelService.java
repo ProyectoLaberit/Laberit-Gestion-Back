@@ -3,16 +3,23 @@ package com.example.demo.services;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
 import com.example.demo.repository.ExcelRepository;
+
 @Service
 public class ExcelService {
 
-  @Autowired
+    @Autowired
     private ExcelRepository excelRepository;
 
+    @Transactional
     public Excel guardarDatosExcel(Excel excel) {
+        if (excel.getIdProyecto() != null) {
+            excelRepository.desactivarExcelsAnteriores(excel.getIdProyecto());
+        }
         return excelRepository.save(excel);
     }
    
@@ -22,7 +29,8 @@ public class ExcelService {
         }
         return datos.size();
     }
+
     public Excel obtenerExcelVigentePorProyecto(Long idProyecto) {
-        return excelRepository.findTopByIdProyectoOrderByIdDesc(idProyecto);
+        return excelRepository.findFirstByIdProyectoAndVigenteTrue(idProyecto);
     }
 }
