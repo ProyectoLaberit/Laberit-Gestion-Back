@@ -26,7 +26,7 @@ public class DetalleEstimacionService {
 
     @Autowired
     private DetalleEstimacionRepository detalleEstimacionRepository;
-    
+
     @Autowired
     private DepartamentoRepository departamentoRepository;
 
@@ -37,13 +37,17 @@ public class DetalleEstimacionService {
     private ExcelService excelService;
 
     public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
+<<<<<<< HEAD
         // 1. Guardar el Excel en la BD (Esto lo tenías bien)
+=======
+
+>>>>>>> SacarTareasYProyectosSinRegGitLab
         Excel registroExcel = new Excel();
         registroExcel.setIdProyecto(proyectoId);
         registroExcel.setIdUsuario(usuarioId);
         registroExcel.setFechaSubida(LocalDate.now());
         registroExcel.setRutaArchivo("uploads/" + archivo.getOriginalFilename());
-        
+
         Excel excelGuardado = excelService.guardarDatosExcel(registroExcel);
         Integer idExcelGenerado = excelGuardado.getIdExcel();
 
@@ -65,6 +69,7 @@ public class DetalleEstimacionService {
             new RangoDepartamento(19, 20, "wp-maq")
         );
 
+<<<<<<< HEAD
         for (RangoDepartamento rango : mapaColumnas) {
             rango.setIdBD(determinarDepartamento(rango.getNombreExcel()));
         }
@@ -158,10 +163,76 @@ public class DetalleEstimacionService {
             }
         } // Fin del bucle for de filas
 
+=======
+            Integer idFaseActual = fasePorDefecto;
+
+            for (Row fila : hoja) {
+                if (fila.getRowNum() < 1) {
+                    continue;
+                }
+
+                String tareaEncontrada = null;
+                Double tiempo1 = null;
+                Double tiempo2 = null;
+
+                Cell cell0 = fila.getCell(0);
+                if (cell0 != null && cell0.getCellType() == CellType.STRING) {
+                    String contenido0 = cell0.getStringCellValue().trim();
+                    if (!contenido0.isEmpty()) {
+                        Integer idFaseEncontrada = determinarFase(contenido0);
+                        if (idFaseEncontrada != null) {
+                            idFaseActual = idFaseEncontrada;
+                        }
+                    }
+                }
+
+                for (Cell celda : fila) {
+                    if (celda.getCellType() == CellType.STRING) {
+                        String texto = celda.getStringCellValue().trim();
+                        if (!texto.isEmpty() && determinarFase(texto) == null && tareaEncontrada == null) {
+                            tareaEncontrada = texto;
+                        }
+                    } else if (celda.getCellType() == CellType.NUMERIC) {
+                        if (tiempo1 == null) {
+                            tiempo1 = celda.getNumericCellValue();
+                        } else if (tiempo2 == null) {
+                            tiempo2 = celda.getNumericCellValue();
+                        }
+                    }
+                }
+
+                if (tareaEncontrada != null && (tiempo1 != null || tiempo2 != null)) {
+                    DetalleEstimacion detalle = new DetalleEstimacion();
+                    detalle.setIdExcel(idExcelGenerado);
+                    detalle.setIdDepartamento(idDepartamento);
+                    detalle.setIdFase(idFaseActual != null ? idFaseActual : fasePorDefecto);
+                    detalle.setTarea(tareaEncontrada);
+
+                    if (tiempo1 != null && tiempo2 != null) {
+                        detalle.setTiempoMin(Math.min(tiempo1, tiempo2));
+                        detalle.setTiempoMax(Math.max(tiempo1, tiempo2));
+                    } else {
+                        double valorFinal = (tiempo1 != null) ? tiempo1 : tiempo2;
+                        detalle.setTiempoMin(valorFinal);
+                        detalle.setTiempoMax(valorFinal);
+                    }
+
+                    listaParaGuardar.add(detalle);
+                }
+            }
+        }
+
+>>>>>>> SacarTareasYProyectosSinRegGitLab
         workbook.close();
         if (!listaParaGuardar.isEmpty()) {
             detalleEstimacionRepository.saveAll(listaParaGuardar);
         }
+<<<<<<< HEAD
+=======
+
+        detalleEstimacionRepository.saveAll(listaParaGuardar);
+
+>>>>>>> SacarTareasYProyectosSinRegGitLab
         return listaParaGuardar.size();
     } // Fin del método procesarExcel
 
@@ -207,11 +278,16 @@ public class DetalleEstimacionService {
         return null;
     }
 
+<<<<<<< HEAD
     private boolean esFilaFinal(Row fila) {
         if (fila == null) { return true; }
         Cell cellA = fila.getCell(0);
         return cellA != null && normalizarTexto(cellA.toString()).contains("total");
     }
+=======
+    public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
+        List<DetalleEstimacion> entidades = detalleEstimacionRepository.findByIdExcel(idExcel);
+>>>>>>> SacarTareasYProyectosSinRegGitLab
 
     // ==========================================================
     // MÉTODOS DE CONSULTA Y EXPORTACIÓN
@@ -228,7 +304,12 @@ public class DetalleEstimacionService {
         // 3. Mapeo y cruce de datos
         return detalles.stream().map(entidad -> {
             DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
+<<<<<<< HEAD
             dto.setId(entidad.getId()); 
+=======
+            dto.setId(entidad.getId());
+            dto.setIdDepartamento(entidad.getIdDepartamento());
+>>>>>>> SacarTareasYProyectosSinRegGitLab
             dto.setIdExcel(entidad.getIdExcel());
             dto.setIdDepartamento(entidad.getIdDepartamento());
             dto.setIdFase(entidad.getIdFase());

@@ -5,8 +5,6 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.ClockifyTareaDTO;
 import com.example.demo.dto.ProyectoClockifyDTO;
