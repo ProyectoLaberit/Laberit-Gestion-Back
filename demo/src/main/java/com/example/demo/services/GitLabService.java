@@ -33,7 +33,8 @@ public class GitLabService {
             ApiConfig config = apiRepository.findByNombre("GitLab Maestro");
             // .orElseThrow(() -> new RuntimeException("Configuración no encontrada"));
 
-            // Limpiamos la URL para asegurar que no termine en '/' y evitar errores al concatenar
+            // Limpiamos la URL para asegurar que no termine en '/' y evitar errores al
+            // concatenar
             String baseUrl = config.getUrlReal().endsWith("/")
                     ? config.getUrlReal().substring(0, config.getUrlReal().length() - 1)
                     : config.getUrlReal();
@@ -141,28 +142,30 @@ public class GitLabService {
      */
     public List<GitLabProyectoDTO> obtenerProyectosGitLabNoRegistrados() {
 
-        // 1. Obtenemos todos los gitlabId que ya tenemos guardados en la DB
-        // Filtramos los nulos para evitar errores en la comparación posterior
+        // 1. Forzamos que la lista sea de Strings limpios
         List<String> idsYaGuardados = proyectoRepository.findAll()
                 .stream()
-                .map(p -> p.getGitlabId())
-                .filter(id -> id != null)
+                .map(p -> p.getGitlabId() != null ? p.getGitlabId().trim() : "")
+                .filter(id -> !id.isEmpty())
                 .collect(Collectors.toList());
 
-        // 2. Llamamos a GitLab usando el token "GitLab Maestro" de la DB
-        // y obtenemos todos los proyectos de esa cuenta
         List<Map<String, Object>> proyectosGitLab = obtenerProyectosDeGitLab();
 
-        // 3. Filtramos los proyectos de GitLab que NO están en nuestra DB
-        // y los convertimos al DTO con solo id y nombre
         return proyectosGitLab.stream()
                 .filter(proy -> {
-                    Object idGitLab = proy.get("id");
-                    return idGitLab != null && !idsYaGuardados.contains(idGitLab.toString());
+                    Object idObj = proy.get("id");
+                    if (idObj == null)
+                        return false;
+
+                    // IMPORTANTE: GitLab devuelve IDs numéricos,
+                    // String.valueOf asegura que se conviertan bien a texto para comparar
+                    String idGitLabStr = String.valueOf(idObj).trim();
+
+                    return !idsYaGuardados.contains(idGitLabStr);
                 })
                 .map(proy -> new GitLabProyectoDTO(
-                        proy.get("id").toString(),
-                        proy.get("name").toString()))
+                        String.valueOf(proy.get("id")).trim(),
+                        String.valueOf(proy.get("name")).trim()))
                 .collect(Collectors.toList());
     }
 }

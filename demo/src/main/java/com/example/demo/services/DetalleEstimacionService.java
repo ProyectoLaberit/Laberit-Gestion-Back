@@ -28,7 +28,7 @@ public class DetalleEstimacionService {
 
     @Autowired
     private DetalleEstimacionRepository detalleEstimacionRepository;
-    
+
     @Autowired
     private DepartamentoRepository departamentoRepository;
 
@@ -38,14 +38,14 @@ public class DetalleEstimacionService {
     @Autowired
     private ExcelService excelService;
 
-   public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
-        
+    public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
+
         Excel registroExcel = new Excel();
         registroExcel.setIdProyecto(proyectoId);
         registroExcel.setIdUsuario(usuarioId);
         registroExcel.setFechaSubida(LocalDate.now());
         registroExcel.setRutaArchivo("uploads/" + archivo.getOriginalFilename());
-        
+
         Excel excelGuardado = excelService.guardarDatosExcel(registroExcel);
         Integer idExcelGenerado = excelGuardado.getIdExcel();
 
@@ -68,7 +68,7 @@ public class DetalleEstimacionService {
             Integer idFaseActual = fasePorDefecto;
 
             for (Row fila : hoja) {
-                if (fila.getRowNum() < 1) { 
+                if (fila.getRowNum() < 1) {
                     continue;
                 }
 
@@ -108,7 +108,7 @@ public class DetalleEstimacionService {
                     detalle.setIdDepartamento(idDepartamento);
                     detalle.setIdFase(idFaseActual != null ? idFaseActual : fasePorDefecto);
                     detalle.setTarea(tareaEncontrada);
-                    
+
                     if (tiempo1 != null && tiempo2 != null) {
                         detalle.setTiempoMin(Math.min(tiempo1, tiempo2));
                         detalle.setTiempoMax(Math.max(tiempo1, tiempo2));
@@ -122,7 +122,7 @@ public class DetalleEstimacionService {
                 }
             }
         }
-        
+
         workbook.close();
 
         if (listaParaGuardar.isEmpty()) {
@@ -130,7 +130,7 @@ public class DetalleEstimacionService {
         }
 
         detalleEstimacionRepository.saveAll(listaParaGuardar);
-        
+
         return listaParaGuardar.size();
     }
 
@@ -150,12 +150,12 @@ public class DetalleEstimacionService {
                 .orElse(null);
     }
 
-   public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
+    public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
         List<DetalleEstimacion> entidades = detalleEstimacionRepository.findByIdExcel(idExcel);
 
         return entidades.stream().map(entidad -> {
             DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
-            dto.setId(entidad.getId()); 
+            dto.setId(entidad.getId());
             dto.setIdDepartamento(entidad.getIdDepartamento());
             dto.setIdExcel(entidad.getIdExcel());
             dto.setIdFase(entidad.getIdFase());
