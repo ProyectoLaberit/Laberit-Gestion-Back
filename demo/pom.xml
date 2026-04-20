@@ -86,6 +86,35 @@
 			<artifactId>spring-security-crypto</artifactId>
 		</dependency>
 
+		<!-- Activa el escudo de seguridad de Spring para proteger las rutas e interceptar peticiones -->
+		<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+		<!-- Herramientas e interfaces principales para poder crear y validar tokens JWT -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.5</version>
+        </dependency>
+        
+		<!-- Motor interno que ejecuta la lógica de los tokens en segundo plano -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.5</version>
+            <scope>runtime</scope>
+        </dependency>
+        
+		<!-- Permite que los tokens JWT puedan convertirse hacia y desde formato JSON usando Jackson -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.5</version>
+            <scope>runtime</scope>
+        </dependency>
+
 	</dependencies>
 
 	<build>

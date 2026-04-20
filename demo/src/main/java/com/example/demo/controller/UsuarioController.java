@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.Map;
+import java.util.HashMap;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.LoginRequest;
@@ -19,6 +21,8 @@ import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.dto.UsuarioDTO;
 import com.example.demo.services.ProyectoService;
 import com.example.demo.services.UsuarioService;
+import com.example.demo.entity.Usuario;
+import com.example.demo.security.JwtUtil;
 
 
 @RestController
@@ -30,22 +34,30 @@ public class UsuarioController {
     private UsuarioService usuarioService;
 
     @Autowired
-    private ProyectoService proyectoService; // Paso 3: Inyección necesaria
+    private ProyectoService proyectoService;
+    
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @PostMapping("/login")
     public ApiResponse verificar(@RequestBody LoginRequest login) {
 
-        // Verificamos por consola qué datos llegan realmente
-        System.out.println("Email recibido: " + login.getEmail());
-        System.out.println("Password recibido: " + login.getPassword());
-        // Validamos las credenciales
-        boolean esValido = usuarioService.validarUsuario(login);
+        Usuario usuario = usuarioService.validarUsuario(login);
         
-        if (esValido) {
-            // Recuperamos la lista de proyectos
-            List<ProyectoDTO> proyectos = proyectoService.obtenerTodosLosProyectos(null, null, null);
-            // La enviamos dentro del campo 'data' del ApiResponse
-            return new ApiResponse("Login exitoso", true, proyectos);
+        if (usuario != null) {
+            // Como no es null, sabemos que el login fue un éxito. Generamos su Token.
+            String token = jwtUtil.generarToken(usuario);
+            
+            // Empaquetamos la respuesta para el Front-end
+            Map<String, Object> data = new HashMap<>();
+            data.put("token", token);
+            data.put("id", usuario.getId());
+            data.put("nombre", usuario.getNombre());
+            if (!usuario.getRoles().isEmpty()) {
+                data.put("rol", usuario.getRoles().get(0).getNombre());
+            }
+            
+            return new ApiResponse("Login exitoso", true, data);
         } else {
             return new ApiResponse("Credenciales inválidas", false, null);
         }
