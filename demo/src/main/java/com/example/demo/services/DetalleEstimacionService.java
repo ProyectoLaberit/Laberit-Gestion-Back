@@ -287,28 +287,45 @@ public class DetalleEstimacionService {
      * @param nombreTarea Nombre exacto (o casi exacto) de la tarea a buscar.
      * @return DTO ligero con la información matemática y de IDs.
      */
-    public DetalleEstimacionDTO obtenerDetallePorCriterios(Long idProyecto, Integer idSubfase, String nombreTarea) {
-        Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
-        if (excel == null) { return null; }
-
-        DetalleEstimacion entidad = detalleEstimacionRepository.findFirstByIdExcelAndIdFaseAndTareaIgnoreCase(
-                excel.getIdExcel(), idSubfase, nombreTarea.trim());
-
-        if (entidad == null) { return null; }
-
-        return new DetalleEstimacionDTO(         
-            entidad.getId(),
-            entidad.getIdExcel(),
-            entidad.getIdDepartamento(),
-            entidad.getIdFase(),
-            null, 
-            null, 
-            null, 
-            entidad.getTarea(),
-            entidad.getTiempoMin(),
-            entidad.getTiempoMax()
-        );
+   public List<DetalleEstimacionDTO> obtenerDetallePorCriterios(Long idProyecto, Integer idSubfase, String nombreTarea) {
+    // 1. Obtener el Excel vigente
+    Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
+    if (excel == null) {
+        return new java.util.ArrayList<>();
     }
+
+    // 2. Traer todas las estimaciones y los departamentos para cruzar nombres
+    List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
+    List<com.example.demo.entity.Departamento> todosLosDeptos = departamentoRepository.findAll();
+
+    // 3. Filtrar todas las filas que coincidan con la subfase y el nombre de la tarea
+    return todasLasEstimaciones.stream()
+            .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
+            .filter(d -> d.getTarea() != null && d.getTarea().equalsIgnoreCase(nombreTarea.trim()))
+            .map(entidad -> {
+                // Usamos tu clase DetalleEstimacionDTO
+                DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
+                dto.setId(entidad.getId());
+                dto.setIdExcel(entidad.getIdExcel());
+                dto.setIdDepartamento(entidad.getIdDepartamento());
+                dto.setIdFase(entidad.getIdFase());
+                dto.setTarea(entidad.getTarea());
+                dto.setTiempoMin(entidad.getTiempoMin());
+                dto.setTiempoMax(entidad.getTiempoMax());
+
+                // Buscamos el nombre del departamento en la lista para rellenar el DTO
+             // Buscamos el nombre del departamento de forma segura
+            // Sustituye esa línea por esta:
+            String nombreDepto = todosLosDeptos.stream()
+                .filter(d -> d.getId() == entidad.getIdDepartamento())
+                .map(d -> d.getNombre())
+                .findFirst()
+                .orElse("Desconocido");
+                        dto.setNombreDepartamento(nombreDepto);
+                        return dto;
+            })
+            .collect(java.util.stream.Collectors.toList());
+}
 
     public List<TareaSubfaseDTO> obtenerTareasSubfase(long idProyecto, Integer idSubfase){
 

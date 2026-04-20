@@ -134,19 +134,20 @@ public class DetalleEstimacionController {
          * @return ApiResponse con el DTO de la estimación encontrada.
     */
  @PostMapping("/proyecto/{idProyecto}/especifica")
-    public ApiResponse obtenerEstimacionEspecifica(
-            @PathVariable Long idProyecto,
-            @RequestParam Integer idSubfase, // Ahora pedimos el ID directamente
-            @RequestParam String tarea) {
-        
-        DetalleEstimacionDTO estimacion = detalleEstimacionService.obtenerDetallePorCriterios(idProyecto, idSubfase, tarea);
+   public ApiResponse obtenerEstimacionEspecifica(
+        @PathVariable Long idProyecto,
+        @RequestParam Integer idSubfase,
+        @RequestParam String tarea) {
+    
+    // Ahora recibimos una lista de DTOs con cada departamento y sus tiempos
+    List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallePorCriterios(idProyecto, idSubfase, tarea);
 
-        if (estimacion == null) {
-            return new ApiResponse("No se encontró la estimación.", false, null);
-        }
-
-        return new ApiResponse("Estimación recuperada con éxito", true, estimacion);
+    if (detalles.isEmpty()) {
+        return new ApiResponse("No se encontraron registros para esta tarea y subfase", false, detalles);
     }
+
+    return new ApiResponse("Desglose por departamentos recuperado con éxito", true, detalles);
+}
 
     /**
      * Recupera la tabla de estimaciones de un Excel ESPECÍFICO por su ID.
