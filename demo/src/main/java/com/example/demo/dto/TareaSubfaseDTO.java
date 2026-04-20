@@ -2,6 +2,7 @@ package com.example.demo.dto;
 
 public class TareaSubfaseDTO {
 
+    private Long idTarea;
     private String nombreTarea;
     private double tiempoTotalMin;
     private double tiempoTotalMax;
@@ -15,6 +16,12 @@ public class TareaSubfaseDTO {
         this.tiempoTotalMax = tiempoTotalMax;
     }
 
+        public Long getIdTarea() {
+            return idTarea;
+        }
+        public void setIdTarea(Long idTarea) {
+            this.idTarea = idTarea;
+        }
     public String getNombreTarea() {
         return nombreTarea;
     }
@@ -33,5 +40,5 @@ public class TareaSubfaseDTO {
     public void setTiempoTotalMax(double tiempoTotalMax) {
         this.tiempoTotalMax = tiempoTotalMax;
     }
-    
+
 }

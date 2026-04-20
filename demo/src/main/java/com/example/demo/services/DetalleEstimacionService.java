@@ -334,6 +334,8 @@ public class DetalleEstimacionService {
             TareaSubfaseDTO dto = new TareaSubfaseDTO();
             dto.setNombreTarea(entry.getKey());
 
+            dto.setIdTarea(entry.getValue().get(0).getId());// ID de una de las tareas (podrían ser varias con el mismo nombre)
+
             // Sumamos todos los mínimos de este grupo
             double sumaMin = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMin).sum();
             // Sumamos todos los máximos de este grupo
