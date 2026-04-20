@@ -26,7 +26,7 @@ public class DetalleEstimacionService {
 
     @Autowired
     private DetalleEstimacionRepository detalleEstimacionRepository;
-
+    
     @Autowired
     private DepartamentoRepository departamentoRepository;
 
@@ -37,17 +37,13 @@ public class DetalleEstimacionService {
     private ExcelService excelService;
 
     public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
-<<<<<<< HEAD
-        // 1. Guardar el Excel en la BD (Esto lo tenías bien)
-=======
-
->>>>>>> SacarTareasYProyectosSinRegGitLab
         Excel registroExcel = new Excel();
         registroExcel.setIdProyecto(proyectoId);
         registroExcel.setIdUsuario(usuarioId);
         registroExcel.setFechaSubida(LocalDate.now());
         registroExcel.setRutaArchivo("uploads/" + archivo.getOriginalFilename());
-
+        registroExcel.setVigente(true);
+        
         Excel excelGuardado = excelService.guardarDatosExcel(registroExcel);
         Integer idExcelGenerado = excelGuardado.getIdExcel();
 
@@ -56,11 +52,8 @@ public class DetalleEstimacionService {
         FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
         DataFormatter formatter = new DataFormatter();
 
-        // --- LA MAGIA: EL DICCIONARIO EN MEMORIA ---
-        // Nos traemos TODAS las fases de la BD de una sola vez
         List<Fase> todasLasFasesBD = faseRepository.findAll();
 
-        // 2. Mapeo de columnas (Esto también lo tenías bien)
         List<RangoDepartamento> mapaColumnas = Arrays.asList(
             new RangoDepartamento(3, 4, "Comercial"), new RangoDepartamento(5, 6, "Direccion"),
             new RangoDepartamento(7, 8, "back"), new RangoDepartamento(9, 10, "front"),
@@ -69,29 +62,24 @@ public class DetalleEstimacionService {
             new RangoDepartamento(19, 20, "wp-maq")
         );
 
-<<<<<<< HEAD
         for (RangoDepartamento rango : mapaColumnas) {
             rango.setIdBD(determinarDepartamento(rango.getNombreExcel()));
         }
 
         Sheet hoja = workbook.getSheetAt(0);
         
-        // --- ESTADOS DE MEMORIA JERÁRQUICA ---
         Integer idFasePadreActual = null;
         Integer idSubfaseActual = null;
         String nombreTareaActual = null; 
 
-        // 3. Bucle principal de lectura
         for (Row fila : hoja) {
             if (fila.getRowNum() < 4) { continue; }
             if (esFilaFinal(fila)) { break; }
 
-            // A. EVALUAR CAMBIO DE ESTADO: FASE PADRE (Columna 0)
             String valFase = formatter.formatCellValue(fila.getCell(0));
             String faseLimpia = normalizarTexto(valFase);
             
             if (!faseLimpia.isEmpty()) {
-                // Buscamos en nuestra memoria (todasLasFasesBD) en lugar de en el repositorio
                 idFasePadreActual = todasLasFasesBD.stream()
                     .filter(f -> f.getFasePadre() == null && normalizarTexto(f.getNombre()).equals(faseLimpia))
                     .map(Fase::getId)
@@ -102,12 +90,11 @@ public class DetalleEstimacionService {
                 nombreTareaActual = null; 
             }
 
-            // B. EVALUAR CAMBIO DE ESTADO: SUBFASE (Columna 1)
             String valSubfase = formatter.formatCellValue(fila.getCell(1));
             String subfaseLimpia = normalizarTexto(valSubfase);
             
             if (!subfaseLimpia.isEmpty() && idFasePadreActual != null) {
-                final Integer idPadre = idFasePadreActual; // Necesario para el lambda
+                final Integer idPadre = idFasePadreActual;
                 idSubfaseActual = todasLasFasesBD.stream()
                     .filter(f -> f.getFasePadre() != null && f.getFasePadre().equals(idPadre) && normalizarTexto(f.getNombre()).equals(subfaseLimpia))
                     .map(Fase::getId)
@@ -117,25 +104,14 @@ public class DetalleEstimacionService {
                 nombreTareaActual = null; 
             }
 
-           // C. EVALUAR CAMBIO DE ESTADO: TAREA (Columna 2)
             String valTarea = formatter.formatCellValue(fila.getCell(2)).trim();
             
             if (!valTarea.isEmpty() && !normalizarTexto(valTarea).equals("analisis")) {
                 nombreTareaActual = valTarea;
-            } else if (valTarea.isEmpty() && idSubfaseActual != null) {
-                
-                // SOLUCIÓN: Creamos una copia congelada (final) para que el lambda no se queje
-                final Integer idSubfaseParaLambda = idSubfaseActual;
-                
-                // Si la Tarea está vacía, hereda automáticamente el nombre de la Subfase
-                nombreTareaActual = todasLasFasesBD.stream()
-                    .filter(f -> f.getId().equals(idSubfaseParaLambda))
-                    .map(Fase::getNombre)
-                    .findFirst()
-                    .orElse("Sin Tarea");
+            } else {
+                nombreTareaActual = null;
             }
 
-            // 4. PROCESAMIENTO DE DATOS MATRICIALES (Solo si hay Subfase y Tarea en memoria)
             if (idSubfaseActual != null && nombreTareaActual != null) {
                 for (RangoDepartamento depto : mapaColumnas) {
                     if (depto.getIdBD() == null || depto.getIdBD() == -1) {
@@ -145,15 +121,13 @@ public class DetalleEstimacionService {
                     Double min = extraerNumeroDeCelda(fila.getCell(depto.getColMin()), evaluator);
                     Double max = extraerNumeroDeCelda(fila.getCell(depto.getColMax()), evaluator);
 
-                    // FILTRO CORREGIDO: Guardamos si la celda NO está vacía (acepta los 0 literales)
-                    if (min != null || max != null) {
+                    if ((min != null && min > 0) || (max != null && max > 0)) {
                         DetalleEstimacion detalle = new DetalleEstimacion();
                         detalle.setIdExcel(idExcelGenerado);
                         detalle.setIdDepartamento(depto.getIdBD());
                         detalle.setIdFase(idSubfaseActual);
                         detalle.setTarea(nombreTareaActual);
                         
-                        // Si uno de los dos está vacío pero el otro tiene valor, le ponemos 0.0 al vacío
                         detalle.setTiempoMin(min != null ? min : 0.0);
                         detalle.setTiempoMax(max != null ? max : 0.0);
                         
@@ -161,89 +135,19 @@ public class DetalleEstimacionService {
                     }
                 }
             }
-        } // Fin del bucle for de filas
-
-=======
-            Integer idFaseActual = fasePorDefecto;
-
-            for (Row fila : hoja) {
-                if (fila.getRowNum() < 1) {
-                    continue;
-                }
-
-                String tareaEncontrada = null;
-                Double tiempo1 = null;
-                Double tiempo2 = null;
-
-                Cell cell0 = fila.getCell(0);
-                if (cell0 != null && cell0.getCellType() == CellType.STRING) {
-                    String contenido0 = cell0.getStringCellValue().trim();
-                    if (!contenido0.isEmpty()) {
-                        Integer idFaseEncontrada = determinarFase(contenido0);
-                        if (idFaseEncontrada != null) {
-                            idFaseActual = idFaseEncontrada;
-                        }
-                    }
-                }
-
-                for (Cell celda : fila) {
-                    if (celda.getCellType() == CellType.STRING) {
-                        String texto = celda.getStringCellValue().trim();
-                        if (!texto.isEmpty() && determinarFase(texto) == null && tareaEncontrada == null) {
-                            tareaEncontrada = texto;
-                        }
-                    } else if (celda.getCellType() == CellType.NUMERIC) {
-                        if (tiempo1 == null) {
-                            tiempo1 = celda.getNumericCellValue();
-                        } else if (tiempo2 == null) {
-                            tiempo2 = celda.getNumericCellValue();
-                        }
-                    }
-                }
-
-                if (tareaEncontrada != null && (tiempo1 != null || tiempo2 != null)) {
-                    DetalleEstimacion detalle = new DetalleEstimacion();
-                    detalle.setIdExcel(idExcelGenerado);
-                    detalle.setIdDepartamento(idDepartamento);
-                    detalle.setIdFase(idFaseActual != null ? idFaseActual : fasePorDefecto);
-                    detalle.setTarea(tareaEncontrada);
-
-                    if (tiempo1 != null && tiempo2 != null) {
-                        detalle.setTiempoMin(Math.min(tiempo1, tiempo2));
-                        detalle.setTiempoMax(Math.max(tiempo1, tiempo2));
-                    } else {
-                        double valorFinal = (tiempo1 != null) ? tiempo1 : tiempo2;
-                        detalle.setTiempoMin(valorFinal);
-                        detalle.setTiempoMax(valorFinal);
-                    }
-
-                    listaParaGuardar.add(detalle);
-                }
-            }
         }
 
->>>>>>> SacarTareasYProyectosSinRegGitLab
         workbook.close();
         if (!listaParaGuardar.isEmpty()) {
             detalleEstimacionRepository.saveAll(listaParaGuardar);
         }
-<<<<<<< HEAD
-=======
-
-        detalleEstimacionRepository.saveAll(listaParaGuardar);
-
->>>>>>> SacarTareasYProyectosSinRegGitLab
         return listaParaGuardar.size();
-    } // Fin del método procesarExcel
+    }
 
-
-  // ==========================================================
+    // ==========================================================
     // MÉTODOS AUXILIARES Y NORMALIZACIÓN
     // ==========================================================
 
-    /**
-     * Limpia un texto: quita espacios a los lados, lo pasa a minúsculas y elimina tildes.
-     */
     private String normalizarTexto(String texto) {
         if (texto == null || texto.trim().isEmpty()) {
             return "";
@@ -278,38 +182,24 @@ public class DetalleEstimacionService {
         return null;
     }
 
-<<<<<<< HEAD
     private boolean esFilaFinal(Row fila) {
         if (fila == null) { return true; }
         Cell cellA = fila.getCell(0);
         return cellA != null && normalizarTexto(cellA.toString()).contains("total");
     }
-=======
-    public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
-        List<DetalleEstimacion> entidades = detalleEstimacionRepository.findByIdExcel(idExcel);
->>>>>>> SacarTareasYProyectosSinRegGitLab
 
     // ==========================================================
     // MÉTODOS DE CONSULTA Y EXPORTACIÓN
     // ==========================================================
 
    public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
-        // 1. Nos traemos los datos en bruto de la estimación
         List<DetalleEstimacion> detalles = detalleEstimacionRepository.findByIdExcel(idExcel);
-        
-        // 2. Diccionarios en memoria (Una sola consulta a BD para no saturar)
         List<Fase> todasLasFases = faseRepository.findAll();
         List<Departamento> todosLosDeptos = departamentoRepository.findAll();
 
-        // 3. Mapeo y cruce de datos
         return detalles.stream().map(entidad -> {
             DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
-<<<<<<< HEAD
             dto.setId(entidad.getId()); 
-=======
-            dto.setId(entidad.getId());
-            dto.setIdDepartamento(entidad.getIdDepartamento());
->>>>>>> SacarTareasYProyectosSinRegGitLab
             dto.setIdExcel(entidad.getIdExcel());
             dto.setIdDepartamento(entidad.getIdDepartamento());
             dto.setIdFase(entidad.getIdFase());
@@ -317,24 +207,21 @@ public class DetalleEstimacionService {
             dto.setTiempoMin(entidad.getTiempoMin());
             dto.setTiempoMax(entidad.getTiempoMax());
 
-           // A. Traducir el Departamento
             String nombreDepto = todosLosDeptos.stream()
-                    .filter(d -> d.getId() == entidad.getIdDepartamento()) // ¡Usamos == para el int!
+                    .filter(d -> d.getId() == entidad.getIdDepartamento()) 
                     .map(d -> d.getNombre())
                     .findFirst()
                     .orElse("Desconocido");
             dto.setNombreDepartamento(nombreDepto);
 
-            // B. Traducir Subfase y Fase Padre
             Fase subfase = todasLasFases.stream()
-                    .filter(f -> f.getId() == entidad.getIdFase()) // ¡Usamos == para el int!
+                    .filter(f -> f.getId().equals(entidad.getIdFase()))
                     .findFirst()
                     .orElse(null);
 
             if (subfase != null) {
                 dto.setNombreSubfase(subfase.getNombre());
 
-                // Buscamos a su padre usando el ID de fasePadre
                 if (subfase.getFasePadre() != null) {
                     String nombrePadre = todasLasFases.stream()
                             .filter(f -> f.getId().equals(subfase.getFasePadre()))
@@ -343,7 +230,6 @@ public class DetalleEstimacionService {
                             .orElse("Desconocido");
                     dto.setNombreFase(nombrePadre);
                 } else {
-                    // Por si acaso se guardó directamente en un padre
                     dto.setNombreFase(subfase.getNombre());
                     dto.setNombreSubfase("-");
                 }
@@ -360,14 +246,10 @@ public class DetalleEstimacionService {
         return detalleEstimacionRepository.findByIdExcel(idExcel);
     }
 
-    /**
-     * Busca una estimación puntual usando los IDs directos.
-     */
     public DetalleEstimacionDTO obtenerDetallePorCriterios(Long idProyecto, Integer idSubfase, String nombreTarea) {
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
         if (excel == null) { return null; }
 
-        // Búsqueda directa y limpia con el ID de la subfase
         DetalleEstimacion entidad = detalleEstimacionRepository.findFirstByIdExcelAndIdFaseAndTareaIgnoreCase(
                 excel.getIdExcel(), idSubfase, nombreTarea.trim());
 
@@ -378,13 +260,12 @@ public class DetalleEstimacionService {
             entidad.getIdExcel(),
             entidad.getIdDepartamento(),
             entidad.getIdFase(),
-            null, // nombreDepartamento (no hace falta para esta consulta rápida)
-            null, // nombreFase
-            null, // nombreSubfase
+            null, 
+            null, 
+            null, 
             entidad.getTarea(),
             entidad.getTiempoMin(),
             entidad.getTiempoMax()
         );
     }
-   
-} // <-- Fin de la clase DetalleEstimacionService -->
+}

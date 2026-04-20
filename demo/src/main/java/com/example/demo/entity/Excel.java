@@ -1,21 +1,17 @@
 package com.example.demo.entity;
 
+import jakarta.persistence.*;
 import java.time.LocalDate;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "excel")
 public class Excel {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_excel")
-    private Integer id;
+    private Integer idExcel;
+
     @Column(name = "id_proyecto", nullable = false)
     private Long idProyecto;
 
@@ -25,18 +21,29 @@ public class Excel {
     @Column(name = "fecha_subida", nullable = false)
     private LocalDate fechaSubida;
 
-    @Column(name = "ruta_archivo", nullable = false, length = 2000)
+    @Column(name = "ruta_archivo", length = 2000, nullable = false)
     private String rutaArchivo;
 
+    // Aquí está nuestra variable estrella
+    @Column(name = "vigente", nullable = false)
+    private Boolean vigente = false;
+
+    // ==========================================================
+    // CONSTRUCTOR
+    // ==========================================================
     public Excel() {
     }
 
+    // ==========================================================
+    // GETTERS Y SETTERS
+    // ==========================================================
+
     public Integer getIdExcel() {
-        return id;
+        return idExcel;
     }
 
     public void setIdExcel(Integer idExcel) {
-        this.id = idExcel;
+        this.idExcel = idExcel;
     }
 
     public Long getIdProyecto() {
@@ -71,4 +78,11 @@ public class Excel {
         this.rutaArchivo = rutaArchivo;
     }
 
+    public Boolean getVigente() {
+        return vigente;
+    }
+
+    public void setVigente(Boolean vigente) {
+        this.vigente = vigente;
+    }
 }
