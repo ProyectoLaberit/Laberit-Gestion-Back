@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.DetalleEstimacionDTO;
+import com.example.demo.dto.TareaSubfaseDTO;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
 import com.example.demo.repository.DetalleEstimacionRepository;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+
 
 @RestController
 @RequestMapping("/api/estimaciones")
@@ -166,4 +168,30 @@ public class DetalleEstimacionController {
             return new ApiResponse("Error al recuperar la tabla: " + e.getMessage(), false, null);
         }
     }
-}
+    /**
+     * Endpoint para obtener todas las tareas de una subfase con sus estimaciones totales.
+     * Recibe un JSON por POST con idProyecto e idSubfase.
+     */
+    @PostMapping("/subfase/tareas") 
+    public ApiResponse obtenerTareasSubfase(@RequestParam Long idProyecto, 
+            @RequestParam Integer idSubfase) {
+            
+        try {
+            // Llamamos directamente a tu lógica pasándole los dos IDs
+            List<TareaSubfaseDTO> tareas = detalleEstimacionService.obtenerTareasSubfase(idProyecto, idSubfase);
+            
+            if (tareas.isEmpty()) {
+                return new ApiResponse("No hay tareas para esta subfase o el proyecto no tiene Excel activo", true, tareas);
+            }
+            
+            return new ApiResponse("Tareas recuperadas con éxito", true, tareas);
+            
+        } catch (Exception e) {
+            return new ApiResponse("Error al recuperar las tareas: " + e.getMessage(), false, null);
+        }
+    }
+    
+
+
+
+} // <-- fin del controlador -->

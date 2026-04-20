@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.*;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.DetalleEstimacionDTO;
+import com.example.demo.dto.TareaSubfaseDTO;
 import com.example.demo.entity.Departamento;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
@@ -307,4 +309,46 @@ public class DetalleEstimacionService {
             entidad.getTiempoMax()
         );
     }
-}
+
+    public List<TareaSubfaseDTO> obtenerTareasSubfase(long idProyecto, Integer idSubfase){
+
+       // 1. Con el id del proyecto buscar su excel vigente
+        Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
+        if (excel == null) {
+            return new ArrayList<>(); // Si no hay excel, devolvemos lista vacía
+        }
+
+        // 2. Con el excel vigente ir a la tabla de estimaciones y buscar las tareas asociadas
+        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
+
+        // 3. Filtrar por la subfase que queremos y agruparlas por su nombre
+        Map<String, List<DetalleEstimacion>> tareasAgrupadas = todasLasEstimaciones.stream()
+                .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
+                .filter(d -> d.getTarea() != null)
+                .collect(Collectors.groupingBy(DetalleEstimacion::getTarea));
+
+        // 4. Sumar los tiempos minimos y maximos para devolver solamente el nombre y esos tiempos
+        List<TareaSubfaseDTO> resultado = new ArrayList<>();
+        
+        for (Map.Entry<String, List<DetalleEstimacion>> entry : tareasAgrupadas.entrySet()) {
+            TareaSubfaseDTO dto = new TareaSubfaseDTO();
+            dto.setNombreTarea(entry.getKey());
+
+            // Sumamos todos los mínimos de este grupo
+            double sumaMin = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMin).sum();
+            // Sumamos todos los máximos de este grupo
+            double sumaMax = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMax).sum();
+
+            dto.setTiempoTotalMin(sumaMin);
+            dto.setTiempoTotalMax(sumaMax);
+            
+            resultado.add(dto);
+        }
+
+        return resultado;
+    }
+
+
+
+
+} //<-- fin del servicio DetalleEstimacionService.java
