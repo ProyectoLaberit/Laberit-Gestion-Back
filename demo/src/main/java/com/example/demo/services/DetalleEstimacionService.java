@@ -36,6 +36,13 @@ public class DetalleEstimacionService {
     @Autowired
     private ExcelService excelService;
 
+    /**
+     * Procesa un archivo Excel físico, extrae las estimaciones y las guarda en BD.
+     * * @param archivo El archivo MultipartFile subido desde el cliente.
+     * @param proyectoId ID del proyecto al que pertenece la estimación.
+     * @param usuarioId ID del usuario que sube el archivo.
+     * @return El número total de tareas válidas insertadas en la base de datos.
+     */
     public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
         Excel registroExcel = new Excel();
         registroExcel.setIdProyecto(proyectoId);
@@ -148,6 +155,10 @@ public class DetalleEstimacionService {
     // MÉTODOS AUXILIARES Y NORMALIZACIÓN
     // ==========================================================
 
+    /**
+     * Limpia un texto: quita espacios, pasa a minúsculas y elimina tildes.
+     * Vital para comparar cadenas del Excel (ej. "Análisis") con BD ("analisis").
+     */
     private String normalizarTexto(String texto) {
         if (texto == null || texto.trim().isEmpty()) {
             return "";
@@ -157,6 +168,9 @@ public class DetalleEstimacionService {
         return normalizado.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 
+    /**
+     * Busca el ID de un departamento en la BD basándose en su nombre limpio.
+     */
     private int determinarDepartamento(String nombre) {
         String nombreLimpio = normalizarTexto(nombre);
         return departamentoRepository.findAll().stream()
@@ -166,6 +180,10 @@ public class DetalleEstimacionService {
                 .orElse(-1);
     }
 
+    /**
+     * Extrae el valor numérico de una celda con extrema seguridad.
+     * Evalúa fórmulas dinámicas, recoge números crudos y parsea Strings (sustituyendo comas por puntos).
+     */
     private Double extraerNumeroDeCelda(Cell celda, FormulaEvaluator evaluator) {
         if (celda == null) { return null; }
         CellType type = celda.getCellType();
@@ -182,6 +200,10 @@ public class DetalleEstimacionService {
         return null;
     }
 
+    /**
+     * Detiene el procesado si encuentra la palabra "total" en la primera columna, 
+     * evitando leer filas basura al final del Excel.
+     */
     private boolean esFilaFinal(Row fila) {
         if (fila == null) { return true; }
         Cell cellA = fila.getCell(0);
@@ -192,6 +214,12 @@ public class DetalleEstimacionService {
     // MÉTODOS DE CONSULTA Y EXPORTACIÓN
     // ==========================================================
 
+    /**
+     * Obtiene el listado completo de estimaciones para mostrar en una tabla visual del Frontend.
+     * Carga los nombres bonitos (String) de Departamentos y Fases para facilitar el pintado.
+     * * @param idExcel ID del Excel vigente a consultar.
+     * @return Lista de DTOs enriquecidos con datos de texto.
+     */
    public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
         List<DetalleEstimacion> detalles = detalleEstimacionRepository.findByIdExcel(idExcel);
         List<Fase> todasLasFases = faseRepository.findAll();
@@ -242,10 +270,21 @@ public class DetalleEstimacionService {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * Obtiene los registros puros de la BD (sin transformar a DTO).
+     */
     public List<DetalleEstimacion> obtenerDetallesEntidadPorExcel(Integer idExcel) {
         return detalleEstimacionRepository.findByIdExcel(idExcel);
     }
 
+    /**
+     * Consulta súper ligera para verificar tiempos u horas de una tarea en concreto.
+     * No carga los nombres de diccionarios (Departamentos/Fases) por rendimiento.
+     * * @param idProyecto Para buscar su excel vigente.
+     * @param idSubfase Fase en la que se encuentra la tarea.
+     * @param nombreTarea Nombre exacto (o casi exacto) de la tarea a buscar.
+     * @return DTO ligero con la información matemática y de IDs.
+     */
     public DetalleEstimacionDTO obtenerDetallePorCriterios(Long idProyecto, Integer idSubfase, String nombreTarea) {
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
         if (excel == null) { return null; }
