@@ -131,7 +131,7 @@ public class DetalleEstimacionController {
          * @param tarea Nombre de la tarea (ej. "Benchmark").
          * @return ApiResponse con el DTO de la estimación encontrada.
     */
- @GetMapping("/proyecto/{idProyecto}/especifica")
+ @PostMapping("/proyecto/{idProyecto}/especifica")
     public ApiResponse obtenerEstimacionEspecifica(
             @PathVariable Long idProyecto,
             @RequestParam Integer idSubfase, // Ahora pedimos el ID directamente
