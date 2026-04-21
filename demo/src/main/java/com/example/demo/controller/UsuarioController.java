@@ -1,7 +1,6 @@
 package com.example.demo.controller;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +17,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.LoginRequest;
-import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.dto.UsuarioDTO;
-import com.example.demo.services.ProyectoService;
 import com.example.demo.services.UsuarioService;
+import com.example.demo.entity.Usuario;
+import com.example.demo.security.JwtUtil;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -31,30 +30,30 @@ public class UsuarioController {
 
     @Autowired
     private UsuarioService usuarioService;
-
+    
     @Autowired
-    private ProyectoService proyectoService;
+    private JwtUtil jwtUtil;
 
     @PostMapping("/login")
     public ApiResponse verificar(@RequestBody LoginRequest login) {
-        System.out.println("Email recibido: " + login.getEmail());
-        System.out.println("Password recibido: " + login.getPassword());
+
+        Usuario usuario = usuarioService.validarUsuario(login);
         
-        boolean esValido = usuarioService.validarUsuario(login);
-        
-        if (esValido) {
-            // Recuperamos la lista de proyectos
-            List<ProyectoDTO> proyectos = proyectoService.obtenerTodosLosProyectos(null, null, null);
+        if (usuario != null) {
+            // Como no es null, sabemos que el login fue un éxito. Generamos su Token.
+            String token = jwtUtil.generarToken(usuario);
             
-            // Recuperamos los datos del usuario autenticado
-            UsuarioDTO usuarioData = usuarioService.obtenerUsuarioPorEmail(login.getEmail());
+            // Empaquetamos la respuesta para el Front-end
+            Map<String, Object> data = new HashMap<>();
+            data.put("token", token);
+            data.put("id", usuario.getId());
+            data.put("nombre", usuario.getNombre());
+            data.put("email", usuario.getEmail());
+            if (!usuario.getRoles().isEmpty()) {
+                data.put("rol", usuario.getRoles().get(0).getNombre());
+            }
             
-            // Creamos un mapa para devolver ambos objetos en la propiedad 'data'
-            Map<String, Object> responseData = new HashMap<>();
-            responseData.put("usuario", usuarioData);
-            responseData.put("proyectos", proyectos);
-            
-            return new ApiResponse("Login exitoso", true, responseData);
+            return new ApiResponse("Login exitoso", true, data);
         } else {
             return new ApiResponse("Credenciales inválidas", false, null);
         }

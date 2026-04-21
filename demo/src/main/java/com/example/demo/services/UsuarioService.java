@@ -29,21 +29,24 @@ public class UsuarioService {
     // Herramienta para encriptar las contraseñas
     private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-    public boolean validarUsuario(LoginRequest login) {
-
+    public Usuario validarUsuario(LoginRequest login) {
         // Buscamos al usuario en la base usando el email que nos pasa el Front-end
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(login.getEmail());
 
         // Si el Optional está vacío (no hay nadie con ese correo), devolvemos false
         if (usuarioOpt.isEmpty()) {
-            return false;
+            return null;
         }
 
         // Si existe, sacamos el usuario de la base de datos
         Usuario usuarioDB = usuarioOpt.get();
 
-        // Comparamos que las contraseñas sean sean iguales
-        return passwordEncoder.matches(login.getPassword(), usuarioDB.getPassword());
+        if (passwordEncoder.matches(login.getPassword(), usuarioDB.getPassword())) {
+            return usuarioDB;
+        }else {
+            // Si es incorrecta, devolvemos null
+            return null;
+        }
     }
 
     public UsuarioDTO obtenerUsuarioPorEmail(String email) {
