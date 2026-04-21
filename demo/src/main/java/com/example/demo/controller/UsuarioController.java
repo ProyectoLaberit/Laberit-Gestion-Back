@@ -1,6 +1,8 @@
 package com.example.demo.controller;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,29 +14,22 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
-import java.util.Map;
-import java.util.HashMap;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.LoginRequest;
-import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.dto.UsuarioDTO;
-import com.example.demo.services.ProyectoService;
 import com.example.demo.services.UsuarioService;
 import com.example.demo.entity.Usuario;
 import com.example.demo.security.JwtUtil;
 
-
 @RestController
 @RequestMapping("/api/usuarios")
 @CrossOrigin(origins = "*")
+
 public class UsuarioController {
 
     @Autowired
     private UsuarioService usuarioService;
-
-    @Autowired
-    private ProyectoService proyectoService;
     
     @Autowired
     private JwtUtil jwtUtil;
@@ -63,6 +58,9 @@ public class UsuarioController {
             return new ApiResponse("Credenciales inválidas", false, null);
         }
     }
+
+    // ... (El resto de tus endpoints se mantienen exactamente igual: crearUsuario, eliminarUsuario, etc.)
+
 
     @PostMapping
     public ApiResponse crearUsuario(@RequestBody UsuarioDTO usuarioDTO) {

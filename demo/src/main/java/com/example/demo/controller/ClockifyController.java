@@ -5,10 +5,9 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.ClockifyTareaDTO;
+import com.example.demo.dto.ProyectoClockifyDTO;
 import com.example.demo.services.ClockifyService;
 
 
@@ -22,7 +21,7 @@ public class ClockifyController {
     private ClockifyService clockifyService;
 
     @GetMapping("/{id}/{subfase}")
-    public ApiResponse getMethodName(@PathVariable Long id, @PathVariable String subfase) {
+    public ApiResponse obtenerTareas(@PathVariable Long id, @PathVariable String subfase) {
 
         List<ClockifyTareaDTO> todasLasTareas = clockifyService.obtenerTareasPorSubfase(id, subfase);
 
@@ -30,6 +29,16 @@ public class ClockifyController {
 
 
         return new ApiResponse("a", false, todasLasTareas);
+    }
+    
+
+    @GetMapping("/externos")
+    public ApiResponse obtenerProyectosClockifyNoBD() {
+
+        List<ProyectoClockifyDTO> proyectosClockify = clockifyService.obtenerProyectosNuevosDTO();
+
+        return new ApiResponse(null, true, proyectosClockify);
+        
     }
     
     

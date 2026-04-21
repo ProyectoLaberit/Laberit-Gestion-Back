@@ -18,10 +18,6 @@ public class ProyectoService {
     @Autowired
     private ProyectoRepository proyectoRepository;
 
-    @Autowired
-    private GitLabService gitLabService;
-
-
     // Inyectamos el servicio de Clockify
 
     public List<ProyectoDTO> obtenerTodosLosProyectos(Boolean activo, LocalDate desde, LocalDate hasta) {
@@ -92,29 +88,6 @@ public class ProyectoService {
             actualizado.isActivo(),
             actualizado.getExcels()
         );
-    }
-
-    public List<ProyectoDTO> obtenerProyectosGitLabNoRegistrados() {
-        List<String> idsYaGuardados = proyectoRepository.findAll()
-                .stream()
-                .map(p -> p.getGitlabId())
-                .filter(id -> id != null)
-                .collect(Collectors.toList());
-
-        List<Map<String, Object>> proyectosGitLab = gitLabService.obtenerProyectosDeGitLab();
-
-        return proyectosGitLab.stream()
-                .filter(git -> !idsYaGuardados.contains(git.get("id").toString()))
-                .map(git -> new ProyectoDTO(
-                        null,
-                        git.get("name").toString(),
-                        git.get("description") != null ? git.get("description").toString() : "Sin descripción",
-                        null,
-                        null,
-                        true,
-                        false
-                    ))
-                .collect(Collectors.toList());
     }
 
 }

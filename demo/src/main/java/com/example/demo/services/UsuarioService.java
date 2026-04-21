@@ -49,6 +49,25 @@ public class UsuarioService {
         }
     }
 
+    public UsuarioDTO obtenerUsuarioPorEmail(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado."));
+
+        UsuarioDTO dto = new UsuarioDTO();
+        dto.setId(usuario.getId());
+        dto.setNombre(usuario.getNombre());
+        dto.setEmail(usuario.getEmail());
+        dto.setExcels(usuario.getExcels());
+        dto.setFoto(usuario.getFoto());
+
+        // Extraemos el rol si lo tiene asignado
+        if (usuario.getRoles() != null && !usuario.getRoles().isEmpty()) {
+            Rol rol = usuario.getRoles().iterator().next();
+            dto.setRol(rol.getNombre()); // Ajusta getNombre() si tu entidad Rol usa otro nombre para el campo
+        }
+
+        return dto;
+    }
 
     public UsuarioDTO crearUsuario(UsuarioDTO dto) {
         // Verificamos que no exista ya alguien con ese correo

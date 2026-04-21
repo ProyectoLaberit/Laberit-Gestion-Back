@@ -13,19 +13,19 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ProyectoRepository extends JpaRepository<Proyecto, Long> {
 
-    /**
-     * Busca un proyecto por el ID único que nos da Clockify.
-     * Es vital para la sincronización: si lo encuentra, actualizamos;
-     * si no, creamos uno nuevo.
-     */
-    Optional<Proyecto> findByClockifyId(String clockifyId);
+        /**
+         * Busca un proyecto por el ID único que nos da Clockify.
+         * Es vital para la sincronización: si lo encuentra, actualizamos;
+         * si no, creamos uno nuevo.
+         */
+        Optional<Proyecto> findByClockifyId(String clockifyId);
 
-    @Query("SELECT p FROM Proyecto p WHERE " +
-            "(:activo IS NULL OR p.activo = :activo) AND " +
-            "(:desde IS NULL OR p.fechaInicio >= :desde) AND " +
-            "(:hasta IS NULL OR p.fechaInicio <= :hasta)")
-    List<Proyecto> findByFiltrosOpcionales(
-            @Param("activo") Boolean activo,
-            @Param("desde") LocalDate desde,
-            @Param("hasta") LocalDate hasta);
+        @Query("SELECT p FROM Proyecto p WHERE " +
+                        "(:activo IS NULL OR p.activo = :activo) AND " +
+                        "(:desde IS NULL OR p.fechaInicio >= :desde) AND " +
+                        "(:hasta IS NULL OR p.fechaInicio <= :hasta)")
+        List<Proyecto> findByFiltrosOpcionales(
+                        @Param("activo") Boolean activo,
+                        @Param("desde") LocalDate desde,
+                        @Param("hasta") LocalDate hasta);
 }

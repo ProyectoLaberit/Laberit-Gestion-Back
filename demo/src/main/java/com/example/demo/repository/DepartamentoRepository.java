@@ -9,9 +9,7 @@ import com.example.demo.entity.Departamento;
 
 @Repository
 public interface DepartamentoRepository extends JpaRepository<Departamento, Integer> {
-    // Aquí puedes agregar métodos personalizados si es necesario
-    
-    Optional<Departamento> findByNombre(String nombre);
+  
     
 }
 
