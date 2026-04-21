@@ -53,6 +53,7 @@ public class UsuarioController {
             data.put("token", token);
             data.put("id", usuario.getId());
             data.put("nombre", usuario.getNombre());
+            data.put("email", usuario.getEmail());
             if (!usuario.getRoles().isEmpty()) {
                 data.put("rol", usuario.getRoles().get(0).getNombre());
             }
