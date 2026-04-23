@@ -83,11 +83,22 @@ public class DetalleEstimacionController {
             DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
 
-            detalle.setTarea(detalleDTO.getTarea());
-            detalle.setIdDepartamento(detalleDTO.getIdDepartamento());
-            detalle.setIdFase(detalleDTO.getIdFase());
-            detalle.setTiempoMax(detalleDTO.getTiempoMax());
-            detalle.setTiempoMin(detalleDTO.getTiempoMin());
+            // SOLO actualizamos si el front-end nos envía el dato
+            if (detalleDTO.getTarea() != null) {
+                detalle.setTarea(detalleDTO.getTarea());
+            }
+            if (detalleDTO.getIdDepartamento() != null) {
+                detalle.setIdDepartamento(detalleDTO.getIdDepartamento());
+            }
+            if (detalleDTO.getIdFase() != null) {
+                detalle.setIdFase(detalleDTO.getIdFase());
+            }
+            if (detalleDTO.getTiempoMax() != null) {
+                detalle.setTiempoMax(detalleDTO.getTiempoMax());
+            }
+            if (detalleDTO.getTiempoMin() != null) {
+                detalle.setTiempoMin(detalleDTO.getTiempoMin());
+            }
 
             detalleEstimacionRepository.save(detalle);
 
