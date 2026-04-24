@@ -29,7 +29,8 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/usuarios/login").permitAll() // Puerta abierta para el login
-                .anyRequest().authenticated() // CERRADO: Todo lo demás exige estar autenticado
+                .anyRequest().permitAll()
+                //.anyRequest().authenticated() // CERRADO: Todo lo demás exige estar autenticado
             )
             // Añadimos tu filtro antes de la validación por defecto de Spring
             .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
