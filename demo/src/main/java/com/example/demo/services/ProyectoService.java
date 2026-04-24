@@ -20,19 +20,19 @@ public class ProyectoService {
 
     // Inyectamos el servicio de Clockify
 
-    public List<ProyectoDTO> obtenerTodosLosProyectos(Boolean activo, LocalDate desde, LocalDate hasta) {
-        List<Proyecto> proyectosDB = proyectoRepository.findByFiltrosOpcionales(activo, desde, hasta);
+   public List<ProyectoDTO> obtenerTodosLosProyectos(Boolean activo, LocalDate desde, LocalDate hasta) {
+    List<Proyecto> proyectosDB = proyectoRepository.findByFiltrosOpcionales(activo, desde, hasta);
 
-        return proyectosDB.stream().map(p -> new ProyectoDTO(
-            p.getId(),
-            p.getNombre(),
-            p.getDescripcion(),
-            p.getFechaInicio(),
-            p.getFechaFin(),
-            p.isActivo(),
-            p.getExcels()
-        )).collect(Collectors.toList());
-    }
+    return proyectosDB.stream().map(p -> new ProyectoDTO(
+        p.getId(),
+        p.getNombre(),
+        p.getDescripcion(),
+        p.getFechaInicio(),
+        p.getFechaFin(),
+        p.isActivo(), 
+        p.getExcels()
+    )).collect(Collectors.toList());
+}
 
     public ProyectoDTO crearProyecto(ProyectoDTO dto) {
         Proyecto nuevoProyecto = new Proyecto();

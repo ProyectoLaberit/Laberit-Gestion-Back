@@ -31,11 +31,15 @@ public class ProyectoController {
     @Autowired
     private ProyectoService proyectoService;
     
-    @GetMapping("/cargar")
-    public ApiResponse obtenerProyectos() {
-        List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(null, null, null);
-        return new ApiResponse("Listado de proyectos recuperado", true, lista);
-    }
+   @GetMapping("/cargar")
+public ApiResponse obtenerProyectos(
+        @RequestParam(required = false) Boolean activo,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+
+    List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(activo, desde, hasta);
+    return new ApiResponse("Listado de proyectos recuperado", true, lista);
+}
 
     /*@GetMapping("/cargar")
     public ApiResponse obtenerProyectos(
