@@ -212,12 +212,17 @@ public class UsuarioService {
             usuario.setEmail(dto.getEmail());
         }
 
+        if (dto.getFoto() != null && !dto.getFoto().trim().isEmpty()) {
+    usuario.setFoto(dto.getFoto());
+}
+
         Usuario actualizado = usuarioRepository.save(usuario);
 
         UsuarioDTO response = new UsuarioDTO();
         response.setId(actualizado.getId());
         response.setNombre(actualizado.getNombre());
         response.setEmail(actualizado.getEmail());
+        response.setFoto(actualizado.getFoto());
         return response;
     }
 }
