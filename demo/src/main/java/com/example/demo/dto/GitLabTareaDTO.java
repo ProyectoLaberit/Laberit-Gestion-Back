@@ -1,5 +1,10 @@
 package com.example.demo.dto;
 
+/**
+ * Objeto de transferencia de datos para representar una tarea (Issue/Work Item) de GitLab.
+ * Este DTO se utiliza para simplificar la respuesta de la API externa y
+ * adaptarla a las necesidades de nuestro sistema de gestión de tiempos.
+ */
 public class GitLabTareaDTO {
     private String id;     // ID global de GitLab (ej: 12345678)
     private Long iid;      // ID interno del proyecto (el que ve el usuario, ej: #42)
