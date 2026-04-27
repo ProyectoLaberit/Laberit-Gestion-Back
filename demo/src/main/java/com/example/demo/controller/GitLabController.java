@@ -19,15 +19,25 @@ public class GitLabController {
     private GitLabService gitLabService;
 
     /**
-     * [ACTUALIZADO] Obtiene la lista de tareas (issues) usando GitLabTareaDTO.
-     * Mapea el resultado del servicio que ya devuelve objetos limpios.
+     * Endpoint para obtener el listado de tareas vinculadas a un proyecto de
+     * GitLab.
+     * * Consulta la configuración del proyecto en la base de datos local y utiliza
+     * el
+     * Token Maestro para recuperar los Issues/Work Items directamente desde la API
+     * v4 de GitLab.
+     *
+     * @param proyectoId Identificador único del proyecto en el sistema local.
+     * @return ResponseEntity con ApiResponse que contiene:
+     *         - 200 OK: Si la conexión fue exitosa y se recuperaron los datos.
+     *         - 500 Internal Server Error: Si hubo un fallo en la comunicación con
+     *         GitLab o error de configuración.
      */
     @GetMapping("/tareas/{proyectoId}")
     public ResponseEntity<ApiResponse> getTareas(@PathVariable Long proyectoId) {
         try {
             // Ahora 'tareas' es una lista de objetos tipo GitLabTareaDTO
             List<GitLabTareaDTO> tareas = gitLabService.obtenerTareasPorProyecto(proyectoId);
-            
+
             return ResponseEntity.ok(new ApiResponse("Tareas recuperadas de GitLab", true, tareas));
         } catch (Exception e) {
             // Capturamos cualquier error (como proyecto no encontrado o fallo de API)
@@ -36,8 +46,17 @@ public class GitLabController {
     }
 
     /**
-     * Obtiene la lista de proyectos que existen en GitLab pero que aún no han sido
-     * registrados en nuestra base de datos local.
+     * Obtiene los proyectos de GitLab que aún no han sido vinculados en el sistema.
+     * * Compara la lista total de proyectos accesibles mediante el Token Maestro
+     * contra los registros existentes en la tabla 'proyectos'. Este filtrado
+     * evita la duplicidad de registros al permitir al usuario importar solo
+     * proyectos nuevos.
+     *
+     * @return ResponseEntity con ApiResponse que contiene:
+     *         - 200 OK: Lista recuperada (puede estar vacía si todos ya están
+     *         registrados).
+     *         - 500 Internal Server Error: Error de comunicación con la API de
+     *         GitLab.
      */
     @GetMapping("/externos")
     public ResponseEntity<ApiResponse> getProyectosExternos() {

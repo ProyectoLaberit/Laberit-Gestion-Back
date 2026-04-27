@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.DetalleEstimacionDTO;
+import com.example.demo.dto.HistorialExcelDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
@@ -202,8 +203,19 @@ public class DetalleEstimacionController {
             return new ApiResponse("Error al recuperar las tareas: " + e.getMessage(), false, null);
         }
     }
+   /**
+     * Recupera el historial de archivos Excel subidos a un proyecto específico.
+     * Permite al Frontend listar todas las versiones disponibles, indicando quién lo subió y si es la versión vigente.
+     * @param id ID del proyecto a consultar.
+     * @return ApiResponse con la lista de HistorialExcelDTO ordenada por fecha de subida.
+     */
+    @GetMapping("/{id}/historial-excels")
+    public ApiResponse obtenerHistorialExcels(@PathVariable("id") Long id) {
+    // Llamamos al servicio que ya usa la query del repositorio
+    List<HistorialExcelDTO> historial = excelService.obtenerHistorialExcels(id);
     
-
+    return new ApiResponse("Historial recuperado con éxito", true, historial);
+}
 
 
 } // <-- fin del controlador -->

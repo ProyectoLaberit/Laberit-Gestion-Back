@@ -30,7 +30,7 @@ public class UsuarioController {
 
     @Autowired
     private UsuarioService usuarioService;
-    
+
     @Autowired
     private JwtUtil jwtUtil;
 
@@ -38,43 +38,44 @@ public class UsuarioController {
     public ApiResponse verificar(@RequestBody LoginRequest login) {
 
         Usuario usuario = usuarioService.validarUsuario(login);
-        
+
         if (usuario != null) {
             // Como no es null, sabemos que el login fue un éxito. Generamos su Token.
             String token = jwtUtil.generarToken(usuario);
-            
+
             // Empaquetamos la respuesta para el Front-end
             Map<String, Object> data = new HashMap<>();
             data.put("token", token);
             data.put("id", usuario.getId());
             data.put("nombre", usuario.getNombre());
             data.put("email", usuario.getEmail());
+            data.put("foto", usuario.getFoto());
             if (!usuario.getRoles().isEmpty()) {
                 data.put("rol", usuario.getRoles().get(0).getNombre());
             }
-            
+
             return new ApiResponse("Login exitoso", true, data);
         } else {
             return new ApiResponse("Credenciales inválidas", false, null);
         }
     }
 
-    // ... (El resto de tus endpoints se mantienen exactamente igual: crearUsuario, eliminarUsuario, etc.)
-
+    // ... (El resto de tus endpoints se mantienen exactamente igual: crearUsuario,
+    // eliminarUsuario, etc.)
 
     @PostMapping
     public ApiResponse crearUsuario(@RequestBody UsuarioDTO usuarioDTO) {
         try {
             // Llamamos al servicio que hashea la contraseña y comprueba el email
             UsuarioDTO usuarioCreado = usuarioService.crearUsuario(usuarioDTO);
-            
+
             // Si todo va bien, devolvemos el usuario creado
             return new ApiResponse("Usuario creado con éxito", true, usuarioCreado);
-            
+
         } catch (RuntimeException e) {
             // Si salta el error de "Ya existe un usuario con este email"
             return new ApiResponse(e.getMessage(), false, null);
-            
+
         } catch (Exception e) {
             // Por si hay algún fallo de conexión con la base de datos
             return new ApiResponse("Error inesperado al crear el usuario: " + e.getMessage(), false, null);
@@ -86,14 +87,14 @@ public class UsuarioController {
         try {
             // Llamamos al servicio para que ejecute el borrado
             usuarioService.eliminarUsuario(id);
-            
+
             // Si llega hasta aquí, es que no ha habido errores
             return new ApiResponse("Usuario eliminado correctamente", true, null);
-            
+
         } catch (RuntimeException e) {
             // Capturamos el error "El usuario no existe"
             return new ApiResponse(e.getMessage(), false, null);
-            
+
         } catch (Exception e) {
             // Por si hay algún fallo general de base de datos
             return new ApiResponse("Error al intentar eliminar el usuario: " + e.getMessage(), false, null);
@@ -110,13 +111,13 @@ public class UsuarioController {
 
             // Llamamos al servicio
             usuarioService.cambiarContrasena(id, dto.getPasswordVieja(), dto.getPasswordNueva());
-            
+
             return new ApiResponse("Contraseña actualizada correctamente.", true, null);
-            
+
         } catch (RuntimeException e) {
             // Capturamos el error si la contraseña actual no coincide
             return new ApiResponse(e.getMessage(), false, null);
-            
+
         } catch (Exception e) {
             return new ApiResponse("Error inesperado al cambiar la contraseña: " + e.getMessage(), false, null);
         }
@@ -124,19 +125,20 @@ public class UsuarioController {
 
     @PutMapping(value = "/{id}/foto", consumes = "multipart/form-data")
     public ApiResponse cambiarFoto(
-            @PathVariable Integer id, 
+            @PathVariable Integer id,
             @RequestParam(value = "archivo", required = false) MultipartFile archivo) {
-        
+
         try {
-            // Llamamos al servicio (él ya se encarga de ignorarlo si el archivo viene nulo o vacío)
+            // Llamamos al servicio (él ya se encarga de ignorarlo si el archivo viene nulo
+            // o vacío)
             usuarioService.cambiarFoto(id, archivo);
-            
+
             return new ApiResponse("Proceso de actualización de foto completado.", true, null);
-            
+
         } catch (RuntimeException e) {
             // Capturamos si el usuario no existe o hay algún error de validación
             return new ApiResponse(e.getMessage(), false, null);
-            
+
         } catch (Exception e) {
             return new ApiResponse("Error inesperado al guardar la foto: " + e.getMessage(), false, null);
         }
@@ -152,15 +154,25 @@ public class UsuarioController {
 
             // Llamamos al servicio
             usuarioService.cambiarRol(id, dto.getRol());
-            
+
             return new ApiResponse("Rol actualizado correctamente.", true, null);
-            
+
         } catch (RuntimeException e) {
             // Capturamos si el usuario o el rol no existen
             return new ApiResponse(e.getMessage(), false, null);
-            
+
         } catch (Exception e) {
             return new ApiResponse("Error inesperado al cambiar el rol: " + e.getMessage(), false, null);
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ApiResponse actualizarUsuario(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
+        try {
+            UsuarioDTO actualizado = usuarioService.actualizarUsuario(id, dto);
+            return new ApiResponse("Usuario actualizado correctamente", true, actualizado);
+        } catch (Exception e) {
+            return new ApiResponse(e.getMessage(), false, null);
         }
     }
 }

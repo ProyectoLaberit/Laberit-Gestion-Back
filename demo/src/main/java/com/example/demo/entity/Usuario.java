@@ -14,7 +14,10 @@ public class Usuario {
     @Column(name = "id_usuario")
     private Integer id;
 
+    @Column(name = "nombre")
     private String nombre;
+    
+    @Column(name = "email")
     private String email;
 
     @Column(name = "contraseña")
