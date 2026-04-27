@@ -8,5 +8,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
 
     // Este método es vital para el Login y para evitar correos duplicados
     Optional<Usuario> findByEmail(String email);
+    Optional<Usuario> findByPasswordResetTokenHash(String passwordResetTokenHash);
+
 
 }

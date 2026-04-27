@@ -63,6 +63,31 @@ public class UsuarioController {
     // ... (El resto de tus endpoints se mantienen exactamente igual: crearUsuario,
     // eliminarUsuario, etc.)
 
+    @PostMapping("/forgot-password")
+    public ApiResponse forgotPassword(@RequestBody UsuarioDTO dto) {
+        try {
+            usuarioService.solicitarRecuperacionPassword(dto.getEmail());
+            return new ApiResponse(
+                    "Si el email existe en el sistema, recibirás un enlace para restablecer la contraseña.",
+                    true,
+                    null);
+        } catch (Exception e) {
+            return new ApiResponse("No se pudo procesar la solicitud: " + e.getMessage(), false, null);
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse resetPassword(@RequestBody UsuarioDTO dto) {
+        try {
+            usuarioService.resetearPassword(dto.getResetToken(), dto.getPasswordNueva());
+            return new ApiResponse("Contraseña restablecida correctamente.", true, null);
+        } catch (RuntimeException e) {
+            return new ApiResponse(e.getMessage(), false, null);
+        } catch (Exception e) {
+            return new ApiResponse("Error inesperado al restablecer la contraseña: " + e.getMessage(), false, null);
+        }
+    }
+
     @PostMapping
     public ApiResponse crearUsuario(@RequestBody UsuarioDTO usuarioDTO) {
         try {
