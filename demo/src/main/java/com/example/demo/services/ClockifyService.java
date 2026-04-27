@@ -12,13 +12,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import com.example.demo.dto.ClockifyTareaDTO;
+import com.example.demo.dto.DetalleEstimacionDTO;
 import com.example.demo.dto.FaseDTO;
 import com.example.demo.dto.GitLabTareaDTO;
 import com.example.demo.dto.ProyectoClockifyDTO;
 import com.example.demo.dto.SubFaseDTO;
 import com.example.demo.entity.ApiConfig;
+import com.example.demo.entity.Excel;
 import com.example.demo.entity.Proyecto;
 import com.example.demo.repository.ApiConfigRepository;
+import com.example.demo.repository.ExcelRepository;
 import com.example.demo.repository.ProyectoRepository;
 
 import java.time.Duration;
@@ -48,6 +51,9 @@ public class ClockifyService {
 
         @Autowired
         private GitLabService gitLabService;
+
+        @Autowired
+        private ExcelRepository excelRepository;
 
         @Value("${clockify.workspace.id}")
         private String workspaceId;
@@ -239,6 +245,35 @@ public class ClockifyService {
 
                 System.out.println(ids);
 
+                Excel exc = excelRepository.findFirstByIdProyectoAndVigenteTrue(projectId);
+
+                List<DetalleEstimacionDTO> detalles = detalleEstimacionService
+                                .obtenerDetallesPorExcel(exc.getIdExcel());
+
+                ArrayList<String> tareas = new ArrayList<>();
+                detalles.forEach(s -> {
+                        tareas.addLast(s.getTarea());
+                });
+
+                ArrayList<String> subfasesValidas = new ArrayList<>();
+                detalles.forEach(s -> {
+                        subfasesValidas.addLast(s.getNombreSubfase());
+                });
+
+                ArrayList<String> subValidas = new ArrayList<>();
+                subfasesValidas.forEach(s -> {
+                        subValidas.addLast(detalleEstimacionService.normalizarTexto(s));
+                });
+                ArrayList<String> tarValidas = new ArrayList<>();
+                tareas.forEach(s -> {
+                        tarValidas.addLast(detalleEstimacionService.normalizarTexto(s));
+                });
+
+
+                System.out.println(subValidas);
+
+                System.out.println(tarValidas);
+
                 // 🔹 1. Obtener userId
                 ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
                                 clockify.getUrlReal() + "/user",
@@ -261,27 +296,9 @@ public class ClockifyService {
                                 });
 
                 List<Map<String, Object>> body = response.getBody();
-
-                // 🟢 3. Obtener subfases válidas del proyecto
-                List<FaseDTO> fases = faseService.obtenerJerarquiaFasesPorProyecto(projectId);
-
-
-                Set<String> subfasesValidas = fases.stream()
-                                .flatMap(f -> f.getSubfases().stream())
-                                .map(SubFaseDTO::getNombre)
-                                .map(String::toLowerCase) // evitar problemas de mayúsculas
-                                .collect(Collectors.toSet());
-
                 List<ClockifyTareaDTO> tareasInvalidas = new ArrayList<>();
 
-                ArrayList<String> validas = new ArrayList<>();
-                subfasesValidas.forEach(s -> {
-                        validas.addLast(detalleEstimacionService.normalizarTexto(s));
-                });
-
-
                 for (Map<String, Object> entry : body) {
-
 
                         // 🔹 Filtrar por proyecto
                         if (!clockifyId.equals(entry.get("projectId")))
@@ -293,7 +310,6 @@ public class ClockifyService {
 
                         // 🔹 1. Validar formato completo
                         boolean formatoCorrecto = description.matches("^\\[.+\\]#\\d+\\s.+$");
-
 
                         String subfase = null;
 
@@ -319,24 +335,49 @@ public class ClockifyService {
                                 }
                         }
 
-                        boolean subfaseValida = subfase != null && validas.contains(subfase.toLowerCase()) && ids.contains(idGit);
+                        String titulo = null;
 
+                        if (description.contains("#")) {
+                                int start = description.indexOf("#");
+                                int firstSpace = description.indexOf(" ", start);
 
+                                if (firstSpace != -1) {
+                                        titulo = description.substring(firstSpace + 1).trim();
+                                }
+                        }
 
+                        String tituloNormalizado = titulo != null
+                                        ? detalleEstimacionService.normalizarTexto(titulo)
+                                        : null;
+
+                        System.out.println(tituloNormalizado);
+
+                        String subfaseNormalizada = subfase != null
+                                        ? detalleEstimacionService.normalizarTexto(subfase)
+                                        : null;
+
+                        boolean tareaValida = tituloNormalizado != null
+                                        && tarValidas.contains(tituloNormalizado);
+                        boolean subfaseValida = subfaseNormalizada != null
+                                        && subValidas.contains(subfaseNormalizada);
+
+                        boolean idValido = idGit != -1 && ids.contains(idGit);
+
+                        boolean esValida = formatoCorrecto && subfaseValida && idValido && tareaValida;
 
                         // 🟥 INVALIDA si:
                         // - formato incorrecto
                         // - o subfase no existe en BD
-                        if (!formatoCorrecto || !subfaseValida) {
+                        if (!esValida) {
 
-                                
                                 Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
                                 String duration = (String) timeInterval.get("duration");
                                 double horas = convertirDuracionAHoras(duration);
 
                                 ClockifyTareaDTO dto = new ClockifyTareaDTO(description, horas, 0);
                                 tareasInvalidas.add(dto);
-                        }else{
+
+                        } else {
                                 ids.remove(idGit);
                         }
                 }
