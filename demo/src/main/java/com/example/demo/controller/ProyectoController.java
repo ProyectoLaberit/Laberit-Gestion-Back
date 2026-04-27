@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.ProyectoDTO;
+import com.example.demo.services.ExcelService;
 import com.example.demo.services.ProyectoService;
 
 
@@ -30,7 +31,9 @@ public class ProyectoController {
 
     @Autowired
     private ProyectoService proyectoService;
+
     
+
    @GetMapping("/cargar")
 public ApiResponse obtenerProyectos(
         @RequestParam(required = false) Boolean activo,
@@ -41,16 +44,7 @@ public ApiResponse obtenerProyectos(
     return new ApiResponse("Listado de proyectos recuperado", true, lista);
 }
 
-    /*@GetMapping("/cargar")
-    public ApiResponse obtenerProyectos(
-    @RequestParam(required = false) Boolean activo,
-    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
-    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
-
-
-        List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(activo, desde, hasta);
-        return new ApiResponse("Listado de proyectos recuperado", true, lista);
-    }*/
+    
 
     @PostMapping
     // @RequestBody: Recibe el JSON del formulario y lo convierte en el ProyectoDTO
@@ -88,5 +82,7 @@ public ApiResponse obtenerProyectos(
         // Devuelve una respuesta con el proyecto ya actualizado
         return new ApiResponse("Proyecto actualizado correctamente", true, actualizado);
     }
+
+
 
 }

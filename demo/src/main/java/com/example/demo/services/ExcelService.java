@@ -1,10 +1,13 @@
 package com.example.demo.services;
 
 import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.dto.HistorialExcelDTO;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
 import com.example.demo.repository.ExcelRepository;
@@ -51,5 +54,15 @@ public class ExcelService {
      */
     public Excel obtenerExcelVigentePorProyecto(Long idProyecto) {
         return excelRepository.findFirstByIdProyectoAndVigenteTrue(idProyecto);
+    }
+
+
+    /**
+     * Método para obtener el historial de excels de un proyecto.
+     * @param proyectoId ID del proyecto a consultar.
+     * @return Lista de DTOs con la info lista para el Frontend.
+     */
+    public List<HistorialExcelDTO> obtenerHistorialExcels(Long proyectoId) {
+        return excelRepository.obtenerHistorialDirecto(proyectoId);
     }
 }
