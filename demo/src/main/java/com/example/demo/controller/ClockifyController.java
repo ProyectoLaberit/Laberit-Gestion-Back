@@ -4,7 +4,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.GetMapping;
+
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.ClockifyTareaDTO;
 import com.example.demo.dto.ProyectoClockifyDTO;
@@ -40,7 +40,12 @@ public class ClockifyController {
         return new ApiResponse(null, true, proyectosClockify);
         
     }
-    
-    
+
+    @GetMapping("/fallos/{id}")
+    public ApiResponse getFallidos(@PathVariable Long id) {
+
+        List<ClockifyTareaDTO> tareasFallidas = clockifyService.obtenerEntradasInvalidas(id);
+        return new ApiResponse("tareasFaliidas", true, tareasFallidas);
+    }
     
 }

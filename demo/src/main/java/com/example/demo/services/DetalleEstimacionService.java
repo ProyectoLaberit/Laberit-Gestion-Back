@@ -161,7 +161,7 @@ public class DetalleEstimacionService {
      * Limpia un texto: quita espacios, pasa a minúsculas y elimina tildes.
      * Vital para comparar cadenas del Excel (ej. "Análisis") con BD ("analisis").
      */
-    private String normalizarTexto(String texto) {
+    public String normalizarTexto(String texto) {
         if (texto == null || texto.trim().isEmpty()) {
             return "";
         }
