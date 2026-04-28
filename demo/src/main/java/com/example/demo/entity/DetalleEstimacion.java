@@ -28,6 +28,12 @@ public class DetalleEstimacion {
     @Column(name = "tiempo_max")
     private Double tiempoMax;
 
+    @Column(name = "tiempo_real", nullable = true)
+    private Double tiempoReal;
+
+    @Column(name = "gitlab_issue_id", length = 45, nullable = true)
+    private String gitlabIssueId;
+
     // Constructores, Getters y Setters
     public DetalleEstimacion() {}
 
@@ -45,4 +51,8 @@ public class DetalleEstimacion {
     public void setTiempoMin(Double tiempoMin) { this.tiempoMin = tiempoMin; }
     public Double getTiempoMax() { return tiempoMax; }
     public void setTiempoMax(Double tiempoMax) { this.tiempoMax = tiempoMax; }
+    public Double getTiempoReal() { return tiempoReal; }
+    public void setTiempoReal(Double tiempoReal) { this.tiempoReal = tiempoReal; }
+    public String getGitlabIssueId() { return gitlabIssueId; }
+    public void setGitlabIssueId(String gitlabIssueId) { this.gitlabIssueId = gitlabIssueId; }
 }
