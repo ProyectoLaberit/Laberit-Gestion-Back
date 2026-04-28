@@ -106,7 +106,13 @@
             <version>0.12.5</version>
             <scope>runtime</scope>
         </dependency>
-        
+		
+        <dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-mail</artifactId>
+</dependency>
+
+
 		<!-- Permite que los tokens JWT puedan convertirse hacia y desde formato JSON usando Jackson -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
