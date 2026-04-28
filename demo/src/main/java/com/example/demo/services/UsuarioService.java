@@ -81,6 +81,18 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado."));
 
+        return mapearADTO(usuario);
+    }
+
+    public UsuarioDTO obtenerUsuarioPorId(Integer id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElse(null);
+
+        if (usuario == null) return null;
+        return mapearADTO(usuario);
+    }
+
+    private UsuarioDTO mapearADTO(Usuario usuario) {
         UsuarioDTO dto = new UsuarioDTO();
         dto.setId(usuario.getId());
         dto.setNombre(usuario.getNombre());
@@ -107,10 +119,32 @@ public class UsuarioService {
         nuevoUsuario.setFoto("default1.png");
         nuevoUsuario.setExcels(dto.getExcels() != null ? dto.getExcels() : false);
 
-        Rol rolPorDefecto = rolRepository.findById(3)
-                .orElseThrow(() -> new RuntimeException("Error critico: El rol 3 no existe en la base de datos."));
+        // Determinar rol a asignar
+        Rol rolAsignado;
+        if (dto.getRol() != null && !dto.getRol().trim().isEmpty()) {
+            // Buscar por nombre
+            String nombreRol = dto.getRol().trim().toUpperCase();
+            rolAsignado = rolRepository.findAll().stream()
+                    .filter(r -> r.getNombre().equalsIgnoreCase(nombreRol))
+                    .findFirst()
+                    .orElse(null);
+            if (rolAsignado == null) {
+                // Intentar por ID numérico
+                try {
+                    int idRol = Integer.parseInt(dto.getRol().trim());
+                    rolAsignado = rolRepository.findById(idRol)
+                            .orElseThrow(() -> new RuntimeException("Error: El rol especificado no existe."));
+                } catch (NumberFormatException e) {
+                    throw new RuntimeException("Error: El rol especificado no existe en el sistema.");
+                }
+            }
+        } else {
+            // Rol por defecto: USER (id=3 según código original)
+            rolAsignado = rolRepository.findById(3)
+                    .orElseThrow(() -> new RuntimeException("Error critico: El rol 3 no existe en la base de datos."));
+        }
 
-        nuevoUsuario.getRoles().add(rolPorDefecto);
+        nuevoUsuario.getRoles().add(rolAsignado);
         nuevoUsuario.setPassword(passwordEncoder.encode(dto.getPassword()));
 
         Usuario guardado = usuarioRepository.save(nuevoUsuario);
