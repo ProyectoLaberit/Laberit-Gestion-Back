@@ -1,20 +1,33 @@
 package com.example.demo.services;
 
-import org.springframework.stereotype.Service;
 import com.example.demo.dto.LoginRequest;
+import com.example.demo.dto.UsuarioDTO;
+import com.example.demo.entity.Rol;
+import com.example.demo.entity.Usuario;
+import com.example.demo.repository.RolRepository;
+import com.example.demo.repository.UsuarioRepository;
+import jakarta.mail.internet.MimeMessage;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-
-import com.example.demo.entity.Rol;
-import com.example.demo.entity.Usuario;
-import com.example.demo.dto.UsuarioDTO;
-import com.example.demo.repository.RolRepository;
-import com.example.demo.repository.UsuarioRepository;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Optional;
 
 @Service
@@ -26,33 +39,60 @@ public class UsuarioService {
     @Autowired
     private RolRepository rolRepository;
 
-    // Herramienta para encriptar las contraseñas
-    private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    @Autowired
+    private JavaMailSender mailSender;
+
+    @Value("${spring.mail.username:}")
+    private String smtpUsername;
+
+    @Value("${spring.mail.password:}")
+    private String smtpPassword;
+
+    @Value("${brevo.sender.email:${SENDER_EMAIL:}}")
+    private String senderEmailConfigurado;
+
+    @Value("${brevo.sender.name:${SENDER_NAME:Labertir}}")
+    private String senderNameConfigurado;
+
+    @Value("${app.reset-password-url}")
+    private String resetPasswordUrl;
+
+    private static final int PASSWORD_RESET_TOKEN_BYTES = 32;
+    private static final String CARPETA_FOTOS = "uploads/fotos_perfil/";
+
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final SecureRandom secureRandom = new SecureRandom();
 
     public Usuario validarUsuario(LoginRequest login) {
-        // Buscamos al usuario en la base usando el email que nos pasa el Front-end
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(login.getEmail());
-
-        // Si el Optional está vacío (no hay nadie con ese correo), devolvemos false
         if (usuarioOpt.isEmpty()) {
             return null;
         }
 
-        // Si existe, sacamos el usuario de la base de datos
         Usuario usuarioDB = usuarioOpt.get();
-
         if (passwordEncoder.matches(login.getPassword(), usuarioDB.getPassword())) {
             return usuarioDB;
-        } else {
-            // Si es incorrecta, devolvemos null
-            return null;
         }
+
+        return null;
     }
 
     public UsuarioDTO obtenerUsuarioPorEmail(String email) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado."));
 
+        return mapearADTO(usuario);
+    }
+
+    public UsuarioDTO obtenerUsuarioPorId(Integer id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElse(null);
+
+        if (usuario == null) return null;
+        return mapearADTO(usuario);
+    }
+
+    private UsuarioDTO mapearADTO(Usuario usuario) {
         UsuarioDTO dto = new UsuarioDTO();
         dto.setId(usuario.getId());
         dto.setNombre(usuario.getNombre());
@@ -60,85 +100,134 @@ public class UsuarioService {
         dto.setExcels(usuario.getExcels());
         dto.setFoto(usuario.getFoto());
 
-        // Extraemos el rol si lo tiene asignado
         if (usuario.getRoles() != null && !usuario.getRoles().isEmpty()) {
             Rol rol = usuario.getRoles().iterator().next();
-            dto.setRol(rol.getNombre()); // Ajusta getNombre() si tu entidad Rol usa otro nombre para el campo
+            dto.setRol(rol.getNombre());
         }
 
         return dto;
     }
 
     public UsuarioDTO crearUsuario(UsuarioDTO dto) {
-        // Verificamos que no exista ya alguien con ese correo
         if (usuarioRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new RuntimeException("Error: Ya existe un usuario registrado con este email.");
         }
 
-        // Creamos el objeto para la base de datos
         Usuario nuevoUsuario = new Usuario();
         nuevoUsuario.setNombre(dto.getNombre());
         nuevoUsuario.setEmail(dto.getEmail());
         nuevoUsuario.setFoto("default1.png");
         nuevoUsuario.setExcels(dto.getExcels() != null ? dto.getExcels() : false);
 
-        // Buscamos el rol 3 (Empleado) en la base de datos
-        Rol rolPorDefecto = rolRepository.findById(3)
-                .orElseThrow(() -> new RuntimeException("Error crítico: El rol 3 no existe en la base de datos."));
+        // Determinar rol a asignar
+        Rol rolAsignado;
+        if (dto.getRol() != null && !dto.getRol().trim().isEmpty()) {
+            // Buscar por nombre
+            String nombreRol = dto.getRol().trim().toUpperCase();
+            rolAsignado = rolRepository.findAll().stream()
+                    .filter(r -> r.getNombre().equalsIgnoreCase(nombreRol))
+                    .findFirst()
+                    .orElse(null);
+            if (rolAsignado == null) {
+                // Intentar por ID numérico
+                try {
+                    int idRol = Integer.parseInt(dto.getRol().trim());
+                    rolAsignado = rolRepository.findById(idRol)
+                            .orElseThrow(() -> new RuntimeException("Error: El rol especificado no existe."));
+                } catch (NumberFormatException e) {
+                    throw new RuntimeException("Error: El rol especificado no existe en el sistema.");
+                }
+            }
+        } else {
+            // Rol por defecto: USER (id=3 según código original)
+            rolAsignado = rolRepository.findById(3)
+                    .orElseThrow(() -> new RuntimeException("Error critico: El rol 3 no existe en la base de datos."));
+        }
 
-        // Se lo asignamos al nuevo usuario
-        nuevoUsuario.getRoles().add(rolPorDefecto);
+        nuevoUsuario.getRoles().add(rolAsignado);
+        nuevoUsuario.setPassword(passwordEncoder.encode(dto.getPassword()));
 
-        // Encriptamos la contraseña antes de guardarla
-        String contrasenaHasheada = passwordEncoder.encode(dto.getPassword());
-        nuevoUsuario.setPassword(contrasenaHasheada);
-
-        // Guardamos en la tabla
         Usuario guardado = usuarioRepository.save(nuevoUsuario);
 
-        // 5. Devolvemos la confirmación
         UsuarioDTO respuesta = new UsuarioDTO();
         respuesta.setId(guardado.getId());
         respuesta.setNombre(guardado.getNombre());
         respuesta.setEmail(guardado.getEmail());
         respuesta.setExcels(guardado.getExcels());
-
         return respuesta;
     }
 
     public void eliminarUsuario(Integer id) {
-        // Comprobamos si el usuario existe
         if (!usuarioRepository.existsById(id)) {
-            // Si no existe, lanzamos un error que capturaremos en el Controller
             throw new RuntimeException("Error: No se puede eliminar. El usuario con ID " + id + " no existe.");
         }
 
-        // Si existe, lo borramos
-        // Al borrar el usuario, gracias a JPA y la configuración por defecto,
-        // también se deberían borrar sus relaciones en la tabla usuario_x_rol
-        // automáticamente
         usuarioRepository.deleteById(id);
     }
 
     public void cambiarContrasena(Integer id, String passwordVieja, String passwordNueva) {
-        // Buscamos al usuario en la base de datos
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado."));
 
-        // Comprobamos que la contraseña "vieja" que ha introducido coincide con la real
         if (!passwordEncoder.matches(passwordVieja, usuario.getPassword())) {
-            throw new RuntimeException("Error: La contraseña actual es incorrecta.");
+            throw new RuntimeException("Error: La contrasena actual es incorrecta.");
         }
 
-        // Encriptamos la contraseña
-        String nuevaHasheada = passwordEncoder.encode(passwordNueva);
-
-        // La actualizamos y guardamos
-        usuario.setPassword(nuevaHasheada);
+        usuario.setPassword(passwordEncoder.encode(passwordNueva));
         usuarioRepository.save(usuario);
     }
 
-    private final String CARPETA_FOTOS = "uploads/fotos_perfil/";
+    @Transactional
+    public void solicitarRecuperacionPassword(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return;
+        }
+
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(email.trim());
+        if (usuarioOpt.isEmpty()) {
+            return;
+        }
+
+        Usuario usuario = usuarioOpt.get();
+        String tokenPlano = generarResetToken();
+        usuario.setPasswordResetTokenHash(hashToken(tokenPlano));
+        usuario.setPasswordResetExpiresAt(LocalDateTime.now().plusHours(1));
+        usuarioRepository.save(usuario);
+
+        try {
+            enviarCorreoRecuperacion(usuario, tokenPlano);
+        } catch (RuntimeException e) {
+            limpiarDatosRecuperacion(usuario);
+            usuarioRepository.save(usuario);
+            throw e;
+        }
+    }
+
+    @Transactional
+    public void resetearPassword(String tokenPlano, String passwordNueva) {
+        if (tokenPlano == null || tokenPlano.trim().isEmpty()) {
+            throw new RuntimeException("El token de recuperacion es obligatorio.");
+        }
+
+        if (passwordNueva == null || passwordNueva.trim().isEmpty()) {
+            throw new RuntimeException("La nueva contrasena es obligatoria.");
+        }
+
+        String tokenHash = hashToken(tokenPlano.trim());
+        Usuario usuario = usuarioRepository.findByPasswordResetTokenHash(tokenHash)
+                .orElseThrow(() -> new RuntimeException("El token es invalido o ya no esta disponible."));
+
+        if (usuario.getPasswordResetExpiresAt() == null
+                || usuario.getPasswordResetExpiresAt().isBefore(LocalDateTime.now())) {
+            limpiarDatosRecuperacion(usuario);
+            usuarioRepository.save(usuario);
+            throw new RuntimeException("El token ha expirado. Solicita uno nuevo.");
+        }
+
+        usuario.setPassword(passwordEncoder.encode(passwordNueva));
+        limpiarDatosRecuperacion(usuario);
+        usuarioRepository.save(usuario);
+    }
 
     public void cambiarFoto(Integer id, MultipartFile archivo) {
         Usuario usuario = usuarioRepository.findById(id)
@@ -149,51 +238,40 @@ public class UsuarioService {
         }
 
         try {
-            // Aseguramos que la carpeta exista en el programa
             Path directorio = Paths.get(CARPETA_FOTOS);
             if (!Files.exists(directorio)) {
                 Files.createDirectories(directorio);
             }
 
-            // Creamos el nombre con milisegundos para que sea único
             String nombreOriginal = archivo.getOriginalFilename();
             String nombreFinal = System.currentTimeMillis() + nombreOriginal;
 
-            // Guardamos el archivo en el programa
             Path rutaArchivo = directorio.resolve(nombreFinal);
             Files.copy(archivo.getInputStream(), rutaArchivo, StandardCopyOption.REPLACE_EXISTING);
 
-            // Guardamos el nombre en la base de datos
             usuario.setFoto(nombreFinal);
             usuarioRepository.save(usuario);
-
         } catch (Exception e) {
             throw new RuntimeException("Error al procesar la foto: " + e.getMessage());
         }
     }
 
     public void cambiarRol(Integer idUsuario, String rolNuevo) {
-        // Buscamos al usuario
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado."));
 
-        // Convertimos el texto del DTO (ej: "1") a número entero
         Integer idRol;
         try {
             idRol = Integer.parseInt(rolNuevo);
         } catch (NumberFormatException e) {
-            throw new RuntimeException("Error: El rol enviado no es un número válido.");
+            throw new RuntimeException("Error: El rol enviado no es un numero valido.");
         }
 
-        // Buscamos que el nuevo rol exista de verdad en la base de datos
         Rol nuevoRolObj = rolRepository.findById(idRol)
                 .orElseThrow(() -> new RuntimeException("Error: El rol especificado no existe en el sistema."));
 
-        // Le quitamos los roles viejos y le ponemos el nuevo
         usuario.getRoles().clear();
         usuario.getRoles().add(nuevoRolObj);
-
-        // Guardamos en la base
         usuarioRepository.save(usuario);
     }
 
@@ -207,14 +285,14 @@ public class UsuarioService {
 
         if (dto.getEmail() != null && !dto.getEmail().equalsIgnoreCase(usuario.getEmail())) {
             if (usuarioRepository.findByEmail(dto.getEmail()).isPresent()) {
-                throw new RuntimeException("El email ya está en uso");
+                throw new RuntimeException("El email ya esta en uso");
             }
             usuario.setEmail(dto.getEmail());
         }
 
         if (dto.getFoto() != null && !dto.getFoto().trim().isEmpty()) {
-    usuario.setFoto(dto.getFoto());
-}
+            usuario.setFoto(dto.getFoto());
+        }
 
         Usuario actualizado = usuarioRepository.save(usuario);
 
@@ -224,5 +302,80 @@ public class UsuarioService {
         response.setEmail(actualizado.getEmail());
         response.setFoto(actualizado.getFoto());
         return response;
+    }
+
+    private String generarResetToken() {
+        byte[] bytes = new byte[PASSWORD_RESET_TOKEN_BYTES];
+        secureRandom.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private String hashToken(String tokenPlano) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(tokenPlano.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("No se pudo generar el hash del token.", e);
+        }
+    }
+
+    private void limpiarDatosRecuperacion(Usuario usuario) {
+        usuario.setPasswordResetTokenHash(null);
+        usuario.setPasswordResetExpiresAt(null);
+    }
+
+    private void enviarCorreoRecuperacion(Usuario usuario, String tokenPlano) {
+        if (smtpUsername == null || smtpUsername.isBlank() || smtpPassword == null || smtpPassword.isBlank()) {
+            throw new RuntimeException("Falta configurar el SMTP en las variables de entorno.");
+        }
+
+        String separador = resetPasswordUrl.contains("?") ? "&" : "?";
+        String enlaceReset = resetPasswordUrl + separador + "token="
+                + URLEncoder.encode(tokenPlano, StandardCharsets.UTF_8);
+
+        String senderEmail = (senderEmailConfigurado != null && !senderEmailConfigurado.isBlank())
+                ? senderEmailConfigurado
+                : smtpUsername;
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+
+            helper.setTo(usuario.getEmail());
+            helper.setSubject("Recuperacion de contrasena");
+            helper.setFrom(senderEmail, senderNameConfigurado);
+            helper.setText(construirHtmlRecuperacion(usuario.getNombre(), enlaceReset), true);
+            mailSender.send(message);
+        } catch (MailException | jakarta.mail.MessagingException | java.io.UnsupportedEncodingException e) {
+            throw new RuntimeException("No se pudo enviar el correo de recuperacion. " + obtenerMensajeRaiz(e), e);
+        }
+    }
+
+    private String construirHtmlRecuperacion(String nombre, String enlaceReset) {
+        String saludo = (nombre != null && !nombre.isBlank()) ? nombre : "usuario";
+        return "<html><body style=\"font-family:Arial,sans-serif;color:#1f2937;\">"
+                + "<h2>Recuperacion de contrasena</h2>"
+                + "<p>Hola " + saludo + ",</p>"
+                + "<p>Hemos recibido una solicitud para restablecer tu contrasena.</p>"
+                + "<p><a href=\"" + enlaceReset + "\" "
+                + "style=\"display:inline-block;padding:12px 20px;background:#111827;color:#ffffff;text-decoration:none;border-radius:6px;\">"
+                + "Restablecer contrasena</a></p>"
+                + "<p>Si el boton no funciona, copia y pega este enlace en tu navegador:</p>"
+                + "<p>" + enlaceReset + "</p>"
+                + "<p>Este enlace caduca en 1 hora.</p>"
+                + "</body></html>";
+    }
+
+    private String obtenerMensajeRaiz(Throwable error) {
+        Throwable actual = error;
+        while (actual.getCause() != null) {
+            actual = actual.getCause();
+        }
+        return actual.getMessage() != null ? actual.getMessage() : error.getMessage();
     }
 }

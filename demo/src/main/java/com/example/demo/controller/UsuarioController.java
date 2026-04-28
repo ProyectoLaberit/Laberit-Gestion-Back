@@ -4,6 +4,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -25,7 +29,6 @@ import com.example.demo.security.JwtUtil;
 @RestController
 @RequestMapping("/api/usuarios")
 @CrossOrigin(origins = "*")
-
 public class UsuarioController {
 
     @Autowired
@@ -34,16 +37,37 @@ public class UsuarioController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    // ── Helpers de autenticación ──────────────────────────────────────────────
+
+    private String getEmailAutenticado() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (auth != null) ? auth.getName() : null;
+    }
+
+    private boolean tieneRol(String rol) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return false;
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(a -> a.equals("ROLE_" + rol));
+    }
+
+    private boolean esAdmin() {
+        return tieneRol("ADMINISTRADOR") || tieneRol("SUPERADMINISTRADOR");
+    }
+    private boolean esSuperAdmin() {
+        return tieneRol("SUPERADMINISTRADOR");
+    }
+
+    // ── Endpoints ─────────────────────────────────────────────────────────────
+
     @PostMapping("/login")
     public ApiResponse verificar(@RequestBody LoginRequest login) {
-
         Usuario usuario = usuarioService.validarUsuario(login);
 
         if (usuario != null) {
-            // Como no es null, sabemos que el login fue un éxito. Generamos su Token.
             String token = jwtUtil.generarToken(usuario);
 
-            // Empaquetamos la respuesta para el Front-end
             Map<String, Object> data = new HashMap<>();
             data.put("token", token);
             data.put("id", usuario.getId());
@@ -60,119 +84,187 @@ public class UsuarioController {
         }
     }
 
-    // ... (El resto de tus endpoints se mantienen exactamente igual: crearUsuario,
-    // eliminarUsuario, etc.)
+    @PostMapping("/forgot-password")
+    public ApiResponse forgotPassword(@RequestBody UsuarioDTO dto) {
+        try {
+            usuarioService.solicitarRecuperacionPassword(dto.getEmail());
+            return new ApiResponse(
+                    "Si el email existe en el sistema, recibirás un enlace para restablecer la contraseña.",
+                    true, null);
+        } catch (Exception e) {
+            return new ApiResponse("No se pudo procesar la solicitud: " + e.getMessage(), false, null);
+        }
+    }
 
+    @PostMapping("/reset-password")
+    public ApiResponse resetPassword(@RequestBody UsuarioDTO dto) {
+        try {
+            usuarioService.resetearPassword(dto.getResetToken(), dto.getPasswordNueva());
+            return new ApiResponse("Contraseña restablecida correctamente.", true, null);
+        } catch (RuntimeException e) {
+            return new ApiResponse(e.getMessage(), false, null);
+        } catch (Exception e) {
+            return new ApiResponse("Error inesperado al restablecer la contraseña: " + e.getMessage(), false, null);
+        }
+    }
+
+    /**
+     * Crear usuario: solo ADMIN.
+     * El check de rol se hace aquí para evitar que Spring Security devuelva 401/403
+     * antes de llegar al controller y redirija al login.
+     */
     @PostMapping
     public ApiResponse crearUsuario(@RequestBody UsuarioDTO usuarioDTO) {
+        if (!esAdmin()) {
+            return new ApiResponse("No tienes permisos para crear usuarios. Se requiere rol ADMIN.", false, null);
+        }
         try {
-            // Llamamos al servicio que hashea la contraseña y comprueba el email
             UsuarioDTO usuarioCreado = usuarioService.crearUsuario(usuarioDTO);
-
-            // Si todo va bien, devolvemos el usuario creado
             return new ApiResponse("Usuario creado con éxito", true, usuarioCreado);
-
         } catch (RuntimeException e) {
-            // Si salta el error de "Ya existe un usuario con este email"
             return new ApiResponse(e.getMessage(), false, null);
-
         } catch (Exception e) {
-            // Por si hay algún fallo de conexión con la base de datos
             return new ApiResponse("Error inesperado al crear el usuario: " + e.getMessage(), false, null);
         }
     }
 
+    /**
+     * Eliminar usuario: solo ADMIN (garantizado por SecurityConfig).
+     * ADMIN no puede eliminarse a sí mismo.
+     */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMINISTRADOR')")
     public ApiResponse eliminarUsuario(@PathVariable Integer id) {
         try {
-            // Llamamos al servicio para que ejecute el borrado
+            String emailAuth = getEmailAutenticado();
+            UsuarioDTO propio = usuarioService.obtenerUsuarioPorEmail(emailAuth);
+            if (propio.getId().equals(id)) {
+                return new ApiResponse("No puedes eliminarte a ti mismo.", false, null);
+            }
             usuarioService.eliminarUsuario(id);
-
-            // Si llega hasta aquí, es que no ha habido errores
             return new ApiResponse("Usuario eliminado correctamente", true, null);
-
         } catch (RuntimeException e) {
-            // Capturamos el error "El usuario no existe"
             return new ApiResponse(e.getMessage(), false, null);
-
         } catch (Exception e) {
-            // Por si hay algún fallo general de base de datos
             return new ApiResponse("Error al intentar eliminar el usuario: " + e.getMessage(), false, null);
         }
     }
 
+    /**
+     * Cambiar contraseña:
+     * - USER solo puede cambiar la suya propia.
+     * - MANAGER puede cambiar la de usuarios con rol USER.
+     * - ADMIN puede cambiar la de cualquiera.
+     */
     @PutMapping("/{id}/password")
     public ApiResponse cambiarContrasena(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
         try {
-            // Verificamos que nos hayan enviado ambas contraseñas
             if (dto.getPasswordVieja() == null || dto.getPasswordNueva() == null) {
                 return new ApiResponse("Faltan datos: Debes enviar la contraseña vieja y la nueva.", false, null);
             }
 
-            // Llamamos al servicio
+            String emailAuth = getEmailAutenticado();
+            if (!puedeEditarUsuario(id, emailAuth)) {
+                return new ApiResponse("No tienes permisos para modificar este usuario.", false, null);
+            }
+
             usuarioService.cambiarContrasena(id, dto.getPasswordVieja(), dto.getPasswordNueva());
-
             return new ApiResponse("Contraseña actualizada correctamente.", true, null);
-
         } catch (RuntimeException e) {
-            // Capturamos el error si la contraseña actual no coincide
             return new ApiResponse(e.getMessage(), false, null);
-
         } catch (Exception e) {
             return new ApiResponse("Error inesperado al cambiar la contraseña: " + e.getMessage(), false, null);
         }
     }
 
+    /**
+     * Cambiar foto:
+     * Mismas reglas que cambiar contraseña.
+     */
     @PutMapping(value = "/{id}/foto", consumes = "multipart/form-data")
     public ApiResponse cambiarFoto(
             @PathVariable Integer id,
             @RequestParam(value = "archivo", required = false) MultipartFile archivo) {
-
         try {
-            // Llamamos al servicio (él ya se encarga de ignorarlo si el archivo viene nulo
-            // o vacío)
+            String emailAuth = getEmailAutenticado();
+            if (!puedeEditarUsuario(id, emailAuth)) {
+                return new ApiResponse("No tienes permisos para modificar este usuario.", false, null);
+            }
+
             usuarioService.cambiarFoto(id, archivo);
-
             return new ApiResponse("Proceso de actualización de foto completado.", true, null);
-
         } catch (RuntimeException e) {
-            // Capturamos si el usuario no existe o hay algún error de validación
             return new ApiResponse(e.getMessage(), false, null);
-
         } catch (Exception e) {
             return new ApiResponse("Error inesperado al guardar la foto: " + e.getMessage(), false, null);
         }
     }
 
+    /**
+     * Cambiar rol: solo ADMIN.
+     */
     @PutMapping("/{id}/rol")
+    @PreAuthorize("hasRole('SUPERADMINISTRADOR')")
     public ApiResponse cambiarRol(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
+        if (!esAdmin()) {
+            return new ApiResponse("No tienes permisos para cambiar roles. Se requiere rol ADMIN.", false, null);
+        }
         try {
-            // Verificamos que nos hayan mandado algo en el campo rol
             if (dto.getRol() == null || dto.getRol().trim().isEmpty()) {
                 return new ApiResponse("No se solicitó cambio de rol.", true, null);
             }
 
-            // Llamamos al servicio
+            String emailAuth = getEmailAutenticado();
+            UsuarioDTO propio = usuarioService.obtenerUsuarioPorEmail(emailAuth);
+            if (propio.getId().equals(id)) {
+                return new ApiResponse("No puedes cambiar tu propio rol.", false, null);
+            }
+
             usuarioService.cambiarRol(id, dto.getRol());
-
             return new ApiResponse("Rol actualizado correctamente.", true, null);
-
         } catch (RuntimeException e) {
-            // Capturamos si el usuario o el rol no existen
             return new ApiResponse(e.getMessage(), false, null);
-
         } catch (Exception e) {
             return new ApiResponse("Error inesperado al cambiar el rol: " + e.getMessage(), false, null);
         }
     }
 
+    /**
+     * Actualizar nombre/email/foto del perfil:
+     * Mismas reglas que cambiar contraseña.
+     */
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMINISTRADOR')")
     public ApiResponse actualizarUsuario(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
         try {
+            String emailAuth = getEmailAutenticado();
+            if (!puedeEditarUsuario(id, emailAuth)) {
+                return new ApiResponse("No tienes permisos para modificar este usuario.", false, null);
+            }
+
             UsuarioDTO actualizado = usuarioService.actualizarUsuario(id, dto);
             return new ApiResponse("Usuario actualizado correctamente", true, actualizado);
         } catch (Exception e) {
             return new ApiResponse(e.getMessage(), false, null);
         }
+    }
+
+    // ── Lógica de permisos ────────────────────────────────────────────────────
+
+    /**
+     * Determina si el usuario autenticado puede editar al usuario con 'id'.
+     * - ADMIN: puede editar a cualquiera.
+     * - MANAGER: solo puede editar a usuarios con rol USER.
+     * - USER: solo puede editarse a sí mismo.
+     */
+    private boolean puedeEditarUsuario(Integer idObjetivo, String emailAuth) {
+        if (esAdmin()) return true;
+
+        UsuarioDTO objetivo = usuarioService.obtenerUsuarioPorId(idObjetivo);
+        if (objetivo == null) return false;
+
+        // Empleado solo puede editarse a sí mismo
+        UsuarioDTO propio = usuarioService.obtenerUsuarioPorEmail(emailAuth);
+        return propio != null && propio.getId().equals(idObjetivo);
     }
 }

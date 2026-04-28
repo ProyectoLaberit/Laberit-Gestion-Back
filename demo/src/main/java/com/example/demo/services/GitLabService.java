@@ -112,13 +112,13 @@ public class GitLabService {
         String urlIssues = baseUrl + "/projects/" + gitlabId.trim() + "/issues";
         List<Map<String, Object>> rawIssues = ejecutarConsultaLista(urlIssues, config.getClave());
 
-        // 5. Transformación de modelo externo a DTO interno (iid se mapea para
-        // Clockify)
+        // 5. Transformación de modelo externo a DTO interno
         return rawIssues.stream()
                 .map(issue -> new GitLabTareaDTO(
-                        issue.get("id"),
-                        issue.get("iid"),
-                        issue.get("title")))
+                        issue.get("id"), // ID global de GitLab
+                        issue.get("iid"), // ID interno del proyecto (lo que ve el usuario)
+                        issue.get("title"), // Título de la tarea
+                        issue.get("labels"))) // Etiquetas asociadas a la tarea
                 .collect(Collectors.toList());
     }
 
