@@ -17,6 +17,8 @@ public class DetalleEstimacionDTO {
     private String tarea;
     private Double tiempoMin;
     private Double tiempoMax;
+    private Double tiempoReal;
+    private String numeroGitlab;
 
     // Constructor vacío
     public DetalleEstimacionDTO() {}
@@ -69,4 +71,10 @@ public class DetalleEstimacionDTO {
     
     public Double getTiempoMax() { return tiempoMax; }
     public void setTiempoMax(Double tiempoMax) { this.tiempoMax = tiempoMax; }
+
+    public Double getTiempoReal() { return tiempoReal; }
+    public void setTiempoReal(Double tiempoReal) { this.tiempoReal = tiempoReal; }
+
+    public String getNumeroGitlab() { return numeroGitlab; }
+    public void setNumeroGitlab(String numeroGitlab) { this.numeroGitlab = numeroGitlab; }
 }

@@ -35,7 +35,7 @@ public class ProyectoController {
     
 
    @GetMapping("/cargar")
-public ApiResponse obtenerProyectos(
+    public ApiResponse obtenerProyectos(
         @RequestParam(required = false) Boolean activo,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
