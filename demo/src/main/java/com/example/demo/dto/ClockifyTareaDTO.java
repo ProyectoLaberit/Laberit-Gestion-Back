@@ -4,15 +4,17 @@ public class ClockifyTareaDTO {
     private String titulo;
     private double horasTrabajadas;
     private int idGit;
+    private String departamento;
 
     //nombre tiempos
     public ClockifyTareaDTO() {
     }
 
-    public ClockifyTareaDTO( String titulo, double horasTrabajadas, int idGit) {
+    public ClockifyTareaDTO( String titulo, double horasTrabajadas, int idGit, String departamento) {
         this.titulo = titulo;
         this.horasTrabajadas = horasTrabajadas;
         this.idGit = idGit;
+        this.departamento = departamento;
     }
 
     public String getTitulo() {
@@ -38,6 +40,16 @@ public class ClockifyTareaDTO {
     public void setIdGit(int idGit) {
         this.idGit = idGit;
     }
+
+    public String getDepartamento() {
+        return departamento;
+    }
+
+    public void setDepartamento(String departamento) {
+        this.departamento = departamento;
+    }
+
+    
 
     
 }
