@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -108,6 +109,7 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMINISTRADOR')")
     public ApiResponse eliminarUsuario(@PathVariable Integer id) {
         try {
             // Llamamos al servicio para que ejecute el borrado
@@ -170,6 +172,7 @@ public class UsuarioController {
     }
 
     @PutMapping("/{id}/rol")
+    @PreAuthorize("hasRole('SUPERADMINISTRADOR')")
     public ApiResponse cambiarRol(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
         try {
             // Verificamos que nos hayan mandado algo en el campo rol
@@ -192,6 +195,7 @@ public class UsuarioController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMINISTRADOR')")
     public ApiResponse actualizarUsuario(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
         try {
             UsuarioDTO actualizado = usuarioService.actualizarUsuario(id, dto);
