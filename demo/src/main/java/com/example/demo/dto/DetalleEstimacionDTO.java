@@ -26,7 +26,7 @@ public class DetalleEstimacionDTO {
     // Constructor completo para facilitar el mapeo
     public DetalleEstimacionDTO(Long id, Integer idExcel, Integer idDepartamento, Integer idFase,
                                 String nombreDepartamento, String nombreFase, String nombreSubfase,
-                                String tarea, Double tiempoMin, Double tiempoMax, Double tiempoReal, String gitlabIssueId) {
+                                String tarea, Double tiempoMin, Double tiempoMax) {
         this.id = id;
         this.idExcel = idExcel;
         this.idDepartamento = idDepartamento;
@@ -37,8 +37,6 @@ public class DetalleEstimacionDTO {
         this.tarea = tarea;
         this.tiempoMin = tiempoMin;
         this.tiempoMax = tiempoMax;
-        this.tiempoReal = tiempoReal;
-        this.gitlabIssueId = gitlabIssueId;
     }
 
     // ==========================================
@@ -73,8 +71,10 @@ public class DetalleEstimacionDTO {
     
     public Double getTiempoMax() { return tiempoMax; }
     public void setTiempoMax(Double tiempoMax) { this.tiempoMax = tiempoMax; }
+
     public Double getTiempoReal() { return tiempoReal; }
     public void setTiempoReal(Double tiempoReal) { this.tiempoReal = tiempoReal; }
+
     public String getGitlabIssueId() { return gitlabIssueId; }
     public void setGitlabIssueId(String gitlabIssueId) { this.gitlabIssueId = gitlabIssueId; }
 }
