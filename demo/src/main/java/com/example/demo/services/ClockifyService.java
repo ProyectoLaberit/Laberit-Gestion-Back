@@ -66,8 +66,11 @@ public class ClockifyService {
 
                 String subfaseBuscada = detalleEstimacionService.normalizarTexto(subfas);
 
+                Map<String, String> etiquetas = cargarMapaTagsClockify();
+
                 Proyecto p = proyectoRepository.findById(projectId)
                                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
+
                 String clockifyId = p.getClockifyId();
 
                 ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
@@ -76,6 +79,29 @@ public class ClockifyService {
                 headers.set("X-Api-Key", clockify.getClave());
                 HttpEntity<String> entity = new HttpEntity<>(headers);
 
+                // 🔹 DATOS NECESARIOS PARA VALIDACIÓN (igual que método inválidas)
+
+                List<GitLabTareaDTO> tareasGit = gitLabService.obtenerTareasPorProyecto(projectId);
+
+                Set<Long> ids = tareasGit.stream()
+                                .map(GitLabTareaDTO::getIid)
+                                .collect(Collectors.toSet());
+
+                Excel exc = excelRepository.findFirstByIdProyectoAndVigenteTrue(projectId);
+
+                List<DetalleEstimacionDTO> detalles = detalleEstimacionService
+                                .obtenerDetallesPorExcel(exc.getIdExcel());
+
+                Set<String> subValidas = detalles.stream()
+                                .map(DetalleEstimacionDTO::getNombreSubfase)
+                                .map(detalleEstimacionService::normalizarTexto)
+                                .collect(Collectors.toSet());
+
+                Set<String> tarValidas = detalles.stream()
+                                .map(DetalleEstimacionDTO::getTarea)
+                                .map(detalleEstimacionService::normalizarTexto)
+                                .collect(Collectors.toSet());
+
                 // 🔹 1. Obtener userId
                 ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
                                 clockify.getUrlReal() + "/user",
@@ -83,35 +109,38 @@ public class ClockifyService {
                                 entity,
                                 new ParameterizedTypeReference<Map<String, Object>>() {
                                 });
+
                 String userId = (String) userResponse.getBody().get("id");
 
                 // 🔹 2. Obtener time entries
                 String url = clockify.getUrlReal() + "/workspaces/"
                                 + workspaceId + "/user/" + userId + "/time-entries";
+
                 ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
                                 url,
                                 HttpMethod.GET,
                                 entity,
                                 new ParameterizedTypeReference<List<Map<String, Object>>>() {
                                 });
+
                 List<Map<String, Object>> body = response.getBody();
 
-                // 🟢 CAMBIO CLAVE: Usamos un Map para agrupar por la descripción de la tarea
                 Map<String, ClockifyTareaDTO> tareasAgrupadas = new HashMap<>();
 
                 for (Map<String, Object> entry : body) {
-
-                        System.out.println(entry);
 
                         // 🔹 Filtrar por proyecto
                         if (!clockifyId.equals(entry.get("projectId")))
                                 continue;
 
                         String description = (String) entry.get("description");
-                        if (description == null)
+                        if (description == null || description.isEmpty())
                                 continue;
 
-                        // 🔹 1. Obtener subfase [backend]
+                        // 🔹 1. Formato
+                        boolean formatoCorrecto = description.matches("^\\[.+\\]#\\d+\\s.+$");
+
+                        // 🔹 2. Subfase
                         String subfase = null;
                         if (description.contains("[") && description.contains("]")) {
                                 subfase = description.substring(
@@ -119,50 +148,86 @@ public class ClockifyService {
                                                 description.indexOf("]"));
                         }
 
-                        // 🔹 Filtrar por subfase enviada desde front
-                        if (subfase == null || !subfase.equalsIgnoreCase(subfaseBuscada))
-                                continue;
+                        String subfaseNormalizada = subfase != null
+                                        ? detalleEstimacionService.normalizarTexto(subfase)
+                                        : null;
 
-                        // 🔹 2. Obtener idGit (#5)
-                        int idGit = 0;
+                        // 🔹 3. ID Git
+                        long idGit = -1;
                         if (description.contains("#")) {
-                                int start = description.indexOf("#") + 1;
-                                int end = description.indexOf(" ", start);
-                                if (end == -1)
-                                        end = description.length();
-                                idGit = Integer.parseInt(description.substring(start, end));
+                                try {
+                                        int start = description.indexOf("#") + 1;
+                                        int end = description.indexOf(" ", start);
+                                        if (end == -1)
+                                                end = description.length();
+
+                                        idGit = Long.parseLong(description.substring(start, end));
+                                } catch (Exception e) {
+                                        // inválido
+                                }
                         }
 
-                        // 🔹 3. Obtener título (texto después del número)
-                        String titulo = "";
+                        // 🔹 4. Título
+                        String titulo = null;
                         if (description.contains("#")) {
                                 int start = description.indexOf("#");
                                 int firstSpace = description.indexOf(" ", start);
+
                                 if (firstSpace != -1) {
                                         titulo = description.substring(firstSpace + 1).trim();
                                 }
                         }
 
-                        // 🔹 4. Obtener duración en horas
-                        Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
-                        String duration = (String) timeInterval.get("duration"); // ej: PT2S
+                        String tituloNormalizado = titulo != null
+                                        ? detalleEstimacionService.normalizarTexto(titulo)
+                                        : null;
 
+                        // 🔹 5. Validaciones
+                        boolean subfaseValida = subfaseNormalizada != null && subValidas.contains(subfaseNormalizada);
+                        boolean tareaValida = tituloNormalizado != null && tarValidas.contains(tituloNormalizado);
+                        boolean idValido = idGit != -1 && ids.contains(idGit);
+
+                        boolean esValida = formatoCorrecto && subfaseValida && tareaValida && idValido;
+
+                        // 🔴 Si NO es válida → fuera
+                        if (!esValida)
+                                continue;
+
+                        // 🔹 Filtrar por subfase buscada
+                        if (!subfaseNormalizada.equals(subfaseBuscada))
+                                continue;
+
+                        // 🔹 6. Tag
+                        List<String> tagIds = (List<String>) entry.get("tagIds");
+                        String nombreTag = null;
+
+                        if (tagIds != null && !tagIds.isEmpty()) {
+                                nombreTag = etiquetas.get(tagIds.get(0));
+                        }
+
+                        // 🔹 7. Horas
+                        Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
+                        String duration = (String) timeInterval.get("duration");
                         double horas = convertirDuracionAHoras(duration);
 
-                        // 🟢 5. AGRUPACIÓN (La magia de la suma)
+                        // 🔹 8. Agrupación
                         if (tareasAgrupadas.containsKey(description)) {
-                                // Si la tarea ya existe en el mapa, recuperamos el DTO y le sumamos las horas
+
                                 ClockifyTareaDTO dtoExistente = tareasAgrupadas.get(description);
-                                double horasAcumuladas = dtoExistente.getHorasTrabajadas() + horas;
-                                dtoExistente.setHorasTrabajadas(horasAcumuladas);
+                                dtoExistente.setHorasTrabajadas(dtoExistente.getHorasTrabajadas() + horas);
+
                         } else {
-                                // Si es la primera vez que vemos esta tarea, la creamos y la metemos al mapa
-                                ClockifyTareaDTO nuevoDto = new ClockifyTareaDTO(titulo, horas, idGit);
+
+                                ClockifyTareaDTO nuevoDto = new ClockifyTareaDTO(
+                                                titulo,
+                                                horas,
+                                                (int) idGit,
+                                                nombreTag);
+
                                 tareasAgrupadas.put(description, nuevoDto);
                         }
                 }
 
-                // 🟢 Devolvemos solo los valores del mapa transformados de nuevo en una Lista
                 return new ArrayList<>(tareasAgrupadas.values());
         }
 
@@ -232,6 +297,8 @@ public class ClockifyService {
                 String clockifyId = p.getClockifyId();
                 ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
 
+                Map<String, String> etiquetas = cargarMapaTagsClockify();
+
                 HttpHeaders headers = new HttpHeaders();
                 headers.set("X-Api-Key", clockify.getClave());
                 HttpEntity<String> entity = new HttpEntity<>(headers);
@@ -242,8 +309,6 @@ public class ClockifyService {
                 tareasGit.forEach(s -> {
                         ids.addLast(s.getIid());
                 });
-
-                System.out.println(ids);
 
                 Excel exc = excelRepository.findFirstByIdProyectoAndVigenteTrue(projectId);
 
@@ -268,11 +333,6 @@ public class ClockifyService {
                 tareas.forEach(s -> {
                         tarValidas.addLast(detalleEstimacionService.normalizarTexto(s));
                 });
-
-
-                System.out.println(subValidas);
-
-                System.out.println(tarValidas);
 
                 // 🔹 1. Obtener userId
                 ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
@@ -335,6 +395,15 @@ public class ClockifyService {
                                 }
                         }
 
+                        List<String> tagIds = (List<String>) entry.get("tagIds");
+
+                        String nombreTag = null;
+
+                        if (tagIds != null && !tagIds.isEmpty()) {
+                                String tagId = tagIds.get(0); // solo una etiqueta
+                                nombreTag = etiquetas.get(tagId);
+                        }
+
                         String titulo = null;
 
                         if (description.contains("#")) {
@@ -374,7 +443,7 @@ public class ClockifyService {
                                 String duration = (String) timeInterval.get("duration");
                                 double horas = convertirDuracionAHoras(duration);
 
-                                ClockifyTareaDTO dto = new ClockifyTareaDTO(description, horas, 0);
+                                ClockifyTareaDTO dto = new ClockifyTareaDTO(description, horas, 0, nombreTag);
                                 tareasInvalidas.add(dto);
 
                         } else {
@@ -383,6 +452,38 @@ public class ClockifyService {
                 }
 
                 return tareasInvalidas;
+        }
+
+        public Map<String, String> cargarMapaTagsClockify() {
+
+                ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("X-Api-Key", clockify.getClave());
+                HttpEntity<String> entity = new HttpEntity<>(headers);
+
+                String url = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/tags";
+
+                ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                                url,
+                                HttpMethod.GET,
+                                entity,
+                                new ParameterizedTypeReference<List<Map<String, Object>>>() {
+                                });
+
+                List<Map<String, Object>> tags = response.getBody();
+
+                Map<String, String> tagMap = new HashMap<>();
+
+                if (tags != null) {
+                        for (Map<String, Object> tag : tags) {
+                                String id = (String) tag.get("id");
+                                String name = (String) tag.get("name");
+                                tagMap.put(id, name);
+                        }
+                }
+
+                return tagMap;
         }
 
 }
