@@ -234,43 +234,6 @@ public class DetalleEstimacionController {
     }
 
 
-    /**
-     * Crea una nueva tarea de estimación manualmente desde el frontend.
-     * Recibe el idExcel vigente, idFase (subfase), idDepartamento, nombre de tarea, tiempoMin y tiempoMax.
-     */
-    @PostMapping
-    public ApiResponse crearTarea(@RequestBody DetalleEstimacionDTO dto) {
-        try {
-            if (dto.getTarea() == null || dto.getTarea().trim().isEmpty()) {
-                return new ApiResponse("El nombre de la tarea es obligatorio.", false, null);
-            }
-            if (dto.getIdExcel() == null || dto.getIdFase() == null || dto.getIdDepartamento() == null) {
-                return new ApiResponse("Faltan datos obligatorios (excel, fase o departamento).", false, null);
-            }
-            if (dto.getTiempoMin() == null || dto.getTiempoMax() == null) {
-                return new ApiResponse("Los tiempos mínimo y máximo son obligatorios.", false, null);
-            }
-            if (dto.getTiempoMin() < 0 || dto.getTiempoMax() < 0) {
-                return new ApiResponse("Los tiempos no pueden ser negativos.", false, null);
-            }
-            if (dto.getTiempoMin() > dto.getTiempoMax()) {
-                return new ApiResponse("El tiempo mínimo no puede ser mayor que el máximo.", false, null);
-            }
-
-            DetalleEstimacion nueva = new DetalleEstimacion();
-            nueva.setIdExcel(dto.getIdExcel());
-            nueva.setIdFase(dto.getIdFase());
-            nueva.setIdDepartamento(dto.getIdDepartamento());
-            nueva.setTarea(dto.getTarea().trim());
-            nueva.setTiempoMin(dto.getTiempoMin());
-            nueva.setTiempoMax(dto.getTiempoMax());
-
-            detalleEstimacionRepository.save(nueva);
-
-            return new ApiResponse("Tarea creada correctamente.", true, null);
-        } catch (Exception e) {
-            return new ApiResponse("Error al crear la tarea: " + e.getMessage(), false, null);
-        }
-    }
+   
 
 } // <-- fin del controlador -->
