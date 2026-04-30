@@ -1,5 +1,7 @@
 package com.example.demo.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class DetalleEstimacionDTO {
     
     private Long id;
@@ -7,6 +9,7 @@ public class DetalleEstimacionDTO {
     
     // IDs originales por si el front necesita hacer updates
     private Integer idDepartamento;
+    @JsonProperty("idSubfaseFase")
     private Integer idFase; 
     
     // Textos legibles para pintar la tabla directamente
