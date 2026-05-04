@@ -152,6 +152,37 @@ public class DetalleEstimacionService {
         }
         return listaParaGuardar.size();
     }
+    /*
+        * Crea una nueva tarea manualmente desde el Frontend, asignándola a un proyecto específico.
+
+    */
+    public DetalleEstimacion crearTareaManual(Long idProyecto, DetalleEstimacionDTO dto) {
+        // 1. Obtener el Excel vigente del proyecto
+        Excel excelVigente = excelService.obtenerExcelVigentePorProyecto(idProyecto);
+
+        if (excelVigente == null) {
+            throw new RuntimeException("El proyecto no tiene un Excel vigente asociado.");
+        }
+
+        // 2. Instanciar la nueva entidad
+        DetalleEstimacion nuevaTarea = new DetalleEstimacion();
+
+        // 3. Asignar los valores obligatorios
+        nuevaTarea.setIdExcel(excelVigente.getIdExcel());
+        nuevaTarea.setIdFase(dto.getIdFase()); // Recordamos que este es el ID de la subfase
+        nuevaTarea.setIdDepartamento(dto.getIdDepartamento());
+        nuevaTarea.setTarea(dto.getTarea());
+        nuevaTarea.setTiempoMin(dto.getTiempoMin());
+        nuevaTarea.setTiempoMax(dto.getTiempoMax());
+
+        // 4. Asegurarnos de que los opcionales van a null (por seguridad)
+        nuevaTarea.setTiempoReal(null);
+        nuevaTarea.setNumeroGitlab(null);
+
+        // 5. Guardar en base de datos y retornar
+        return detalleEstimacionRepository.save(nuevaTarea);
+    }
+
 
     // ==========================================================
     // MÉTODOS AUXILIARES Y NORMALIZACIÓN
@@ -211,6 +242,8 @@ public class DetalleEstimacionService {
         Cell cellA = fila.getCell(0);
         return cellA != null && normalizarTexto(cellA.toString()).contains("total");
     }
+
+
 
     // ==========================================================
     // MÉTODOS DE CONSULTA Y EXPORTACIÓN

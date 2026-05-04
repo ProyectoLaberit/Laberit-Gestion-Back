@@ -24,38 +24,39 @@ public class FaseService {
     private ExcelService excelService;
 
     /**
-     * Devuelve la jerarquía completa de Fases y sus Subfases.
+     * Devuelve la jerarquía completa de Fases y sus Subfases para el Excel VIGENTE del proyecto.
      */
-   public List<FaseDTO> obtenerJerarquiaFasesPorProyecto(Long idProyecto) {
-        // 1. Buscamos el Excel vigente del proyecto
+    public List<FaseDTO> obtenerJerarquiaFasesPorProyecto(Long idProyecto) {
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
         if (excel == null) {
             return new ArrayList<>();
         }
+        return obtenerJerarquiaPorIdExcel(excel.getIdExcel());
+    }
 
-        // 2. Traemos SOLO las subfases que tienen tareas en este Excel
-        List<Fase> subfasesActivas = faseRepository.findSubfasesConTareasPorExcel(excel.getIdExcel());
+    /**
+     * Devuelve la jerarquía de Fases y Subfases para un Excel concreto (por idExcel).
+     * Reutilizado tanto por el vigente como por el historial.
+     */
+    public List<FaseDTO> obtenerJerarquiaPorIdExcel(Integer idExcel) {
+        List<Fase> subfasesActivas = faseRepository.findSubfasesConTareasPorExcel(idExcel);
         if (subfasesActivas.isEmpty()) {
             return new ArrayList<>();
         }
 
-        // 3. Traemos todas las fases de BD para poder buscar el nombre de los "Padres" rápidamente
         List<Fase> todasLasFases = faseRepository.findAll();
 
-        // 4. Agrupamos las subfases activas por el ID de su fase_padre
         Map<Integer, List<SubFaseDTO>> agrupadasPorPadre = subfasesActivas.stream()
                 .collect(Collectors.groupingBy(
                         Fase::getFasePadre,
                         Collectors.mapping(f -> new SubFaseDTO(f.getId(), f.getNombre()), Collectors.toList())
                 ));
 
-        // 5. Construimos la lista final fusionando a los padres con sus hijas supervivientes
         List<FaseDTO> jerarquiaFinal = new ArrayList<>();
-        
+
         for (Map.Entry<Integer, List<SubFaseDTO>> entry : agrupadasPorPadre.entrySet()) {
             Integer idPadre = entry.getKey();
-            
-            // Buscamos al padre en la lista completa para saber su nombre (Desarrollo, Análisis...)
+
             todasLasFases.stream()
                     .filter(f -> f.getId().equals(idPadre))
                     .findFirst()

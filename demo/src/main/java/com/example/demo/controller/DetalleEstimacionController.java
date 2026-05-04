@@ -217,5 +217,23 @@ public class DetalleEstimacionController {
     return new ApiResponse("Historial recuperado con éxito", true, historial);
 }
 
+    /**
+     * Crea una nueva tarea de estimación manualmente y la asocia al Excel vigente.
+     * @param idProyecto ID del proyecto al que se añade la tarea.
+     * @param nuevaTareaDTO DTO con los datos de la tarea enviados por el Frontend.
+     * @return ApiResponse confirmando la creación.
+     */
+    @PostMapping("/proyecto/{idProyecto}/manual")
+    public ApiResponse crearNuevaEstimacionManual(@PathVariable Long idProyecto, @RequestBody DetalleEstimacionDTO nuevaTareaDTO) {
+        try {
+            detalleEstimacionService.crearTareaManual(idProyecto, nuevaTareaDTO);
+            return new ApiResponse("Tarea manual creada y asociada correctamente al proyecto.", true, null);
+        } catch (Exception e) {
+            return new ApiResponse("Error al crear la tarea manual: " + e.getMessage(), false, null);
+        }
+    }
+
+
+   
 
 } // <-- fin del controlador -->
