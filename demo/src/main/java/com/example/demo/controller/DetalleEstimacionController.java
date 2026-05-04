@@ -91,8 +91,8 @@ public class DetalleEstimacionController {
             if (detalleDTO.getIdDepartamento() != null) {
                 detalle.setIdDepartamento(detalleDTO.getIdDepartamento());
             }
-            if (detalleDTO.getIdFase() != null) {
-                detalle.setIdFase(detalleDTO.getIdFase());
+            if (detalleDTO.getIdSubFase() != null) {
+                detalle.setIdFase(detalleDTO.getIdSubFase());
             }
             if (detalleDTO.getTiempoMax() != null) {
                 detalle.setTiempoMax(detalleDTO.getTiempoMax());
