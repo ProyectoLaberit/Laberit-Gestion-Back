@@ -48,6 +48,7 @@ public class Usuario {
 
     // --- GETTERS Y SETTERS ---
 
+     
     public Integer getId() {
         return id;
     }
