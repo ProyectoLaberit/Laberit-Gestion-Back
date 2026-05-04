@@ -11,17 +11,20 @@ public class GitLabTareaDTO {
     private String id;     // ID global de GitLab (ej: 12345678)
     private Long iid;      // ID interno del proyecto (el que ve el usuario, ej: #42)
     private String title;  // Título de la tarea
-    private List<String> labels; // Etiquetas asociadas a la tarea)
+    private List<String> labels;
+    private String estado; 
 
     // Constructor vacío
     public GitLabTareaDTO() {}
 
     // Constructor para mapear fácilmente desde el Map de GitLab
-    public GitLabTareaDTO(Object id, Object iid, Object title, Object labels) {
+    public GitLabTareaDTO(Object id, Object iid, Object title, Object labels, Object estado) {
         this.id = String.valueOf(id);
         this.iid = Long.valueOf(String.valueOf(iid));
         this.title = String.valueOf(title);
         this.labels = (List<String>) labels;
+        this.estado = String.valueOf(estado);
+        
     }
 
     // Getters y Setters
@@ -33,4 +36,6 @@ public class GitLabTareaDTO {
     public void setTitle(String title) { this.title = title; }
     public List<String> getLabels() { return labels; }
     public void setLabels(List<String> labels) { this.labels = labels; }
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 }
