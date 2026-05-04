@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.DetalleEstimacionDTO;
+import com.example.demo.dto.GitLabTareaDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
 import com.example.demo.entity.Departamento;
 import com.example.demo.entity.DetalleEstimacion;
@@ -37,6 +38,9 @@ public class DetalleEstimacionService {
 
     @Autowired
     private ExcelService excelService;
+
+    @Autowired
+    private GitLabService gitLabService;
 
     /**
      * Procesa un archivo Excel físico, extrae las estimaciones y las guarda en BD.
@@ -149,6 +153,7 @@ public class DetalleEstimacionService {
         workbook.close();
         if (!listaParaGuardar.isEmpty()) {
             detalleEstimacionRepository.saveAll(listaParaGuardar);
+            emparejarTareasConGitLab(proyectoId, idExcelGenerado);
         }
         return listaParaGuardar.size();
     }
@@ -181,6 +186,54 @@ public class DetalleEstimacionService {
 
         // 5. Guardar en base de datos y retornar
         return detalleEstimacionRepository.save(nuevaTarea);
+    }
+
+    // ==========================================================
+    // MÉTODOS DE SINCRONIZACIÓN CON GITLAB
+    // ==========================================================
+
+    /**
+     * Sincroniza las estimaciones locales con los Issues de GitLab comparando los nombres.
+     * @param idProyecto ID del proyecto para buscar en GitLab.
+     * @param idExcel ID del excel para buscar las tareas locales.
+     */
+    public void emparejarTareasConGitLab(Long idProyecto, Integer idExcel) {
+        List<DetalleEstimacion> estimacionesLocales = detalleEstimacionRepository.findByIdExcel(idExcel);
+        List<GitLabTareaDTO> issuesGitLab = gitLabService.obtenerTareasPorProyecto(idProyecto);
+
+        boolean hayCambios = false;
+
+        for (DetalleEstimacion estimacion : estimacionesLocales) {
+            if (estimacion.getNumeroGitlab() == null) {
+                for (GitLabTareaDTO issue : issuesGitLab) {
+                    // Comparamos nombres ignorando mayúsculas y espacios extra
+                    if (estimacion.getTarea().trim().equalsIgnoreCase(issue.getTitle().trim())) {
+                        // Guardamos el IID (ID interno visible por el usuario en GitLab)
+                        estimacion.setNumeroGitlab(String.valueOf(issue.getIid()));
+                        hayCambios = true;
+                        break; 
+                    }
+                }
+            }
+        }
+
+        if (hayCambios) {
+            detalleEstimacionRepository.saveAll(estimacionesLocales);
+        }
+    }
+
+    /**
+     * Vincula manualmente una tarea local con un Issue específico de GitLab.
+     * @param idDetalleEstimacion ID de la tarea en base de datos.
+     * @param numeroGitlab ID del issue a vincular.
+     * @return La entidad actualizada.
+     */
+   public DetalleEstimacion vincularIssueManual(Long idDetalleEstimacion, String numeroGitlab) {
+        DetalleEstimacion estimacion = detalleEstimacionRepository.findById(idDetalleEstimacion)
+            .orElseThrow(() -> new RuntimeException("Estimación no encontrada"));
+            
+        estimacion.setNumeroGitlab(numeroGitlab);
+        return detalleEstimacionRepository.save(estimacion);
     }
 
 

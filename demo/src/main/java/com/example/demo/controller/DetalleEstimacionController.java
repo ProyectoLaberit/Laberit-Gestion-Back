@@ -233,7 +233,21 @@ public class DetalleEstimacionController {
         }
     }
 
-
+    /**
+     * Vincula manualmente una tarea de la base de datos con un Issue de GitLab.
+     * @param idDetalle ID de la estimación en la base de datos.
+     * @param numeroGitlab ID (IID) del Issue en GitLab.
+     * @return ApiResponse confirmando la acción.
+     */
+    @PutMapping("/{idDetalle}/vincular-gitlab/{numeroGitlab}")
+    public ApiResponse vincularGitLabManual(@PathVariable Long idDetalle, @PathVariable String numeroGitlab) {
+        try {
+            detalleEstimacionService.vincularIssueManual(idDetalle, numeroGitlab);
+            return new ApiResponse("Issue de GitLab vinculado correctamente.", true, null);
+        } catch (Exception e) {
+            return new ApiResponse("Error al vincular: " + e.getMessage(), false, null);
+        }
+    }
    
 
 } // <-- fin del controlador -->
