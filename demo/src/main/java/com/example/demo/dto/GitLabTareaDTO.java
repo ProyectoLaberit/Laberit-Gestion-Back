@@ -11,8 +11,8 @@ public class GitLabTareaDTO {
     private String id;     // ID global de GitLab (ej: 12345678)
     private Long iid;      // ID interno del proyecto (el que ve el usuario, ej: #42)
     private String title;  // Título de la tarea
-    private List<String> labels;
-    private String estado;
+    private List<String> labels; // Etiquetas asociadas a la tarea
+    private String estado; // Estado de la tarea (ej: "opened", "closed", "in_progress")
 
     // Constructor vacío
     public GitLabTareaDTO() {}

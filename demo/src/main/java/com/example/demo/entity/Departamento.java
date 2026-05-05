@@ -1,19 +1,22 @@
 package com.example.demo.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "departamento")
-
 public class Departamento {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_departamento") // Asegúrate de que este es el nombre en tu DB
     private int id;
+
     private String nombre;
+
+    // Relación recursiva con la misma tabla
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "departamento_padre") // Asegúrate de que este es el nombre en tu DB
+    private Departamento padre;
 
     public Departamento() {
     }
@@ -23,6 +26,7 @@ public class Departamento {
         this.nombre = nombre;
     }
 
+    // --- GETTERS Y SETTERS ---
     public int getId() {
         return id;
     }
@@ -37,5 +41,13 @@ public class Departamento {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+
+    public Departamento getPadre() {
+        return padre;
+    }
+
+    public void setPadre(Departamento padre) {
+        this.padre = padre;
     }
 }
