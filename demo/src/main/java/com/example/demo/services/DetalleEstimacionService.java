@@ -174,7 +174,11 @@ public class DetalleEstimacionService {
 
         // 3. Asignar los valores obligatorios
         nuevaTarea.setIdExcel(excelVigente.getIdExcel());
-        nuevaTarea.setIdFase(dto.getIdFase()); // Recordamos que este es el ID de la subfase
+        
+        // El Frontend nos enviará la subfase en el campo idFase (como venía haciendo) 
+        // o podemos leerlo de la estructura que decida el front. Lo vital es guardar la subfase.
+        nuevaTarea.setIdFase(dto.getIdSubFase()); 
+        
         nuevaTarea.setIdDepartamento(dto.getIdDepartamento());
         nuevaTarea.setTarea(dto.getTarea());
         nuevaTarea.setTiempoMin(dto.getTiempoMin());
@@ -183,8 +187,11 @@ public class DetalleEstimacionService {
         // 4. Asegurarnos de que los opcionales van a null (por seguridad)
         nuevaTarea.setTiempoReal(null);
         nuevaTarea.setNumeroGitlab(null);
+        
+        // 5. NUEVO: Asegurarnos de que la tarea nace como NO completada
+        nuevaTarea.setCompletada(false);
 
-        // 5. Guardar en base de datos y retornar
+        // 6. Guardar en base de datos y retornar
         return detalleEstimacionRepository.save(nuevaTarea);
     }
 
@@ -318,7 +325,7 @@ public class DetalleEstimacionService {
             dto.setId(entidad.getId()); 
             dto.setIdExcel(entidad.getIdExcel());
             dto.setIdDepartamento(entidad.getIdDepartamento());
-            dto.setIdFase(entidad.getIdFase());
+            dto.setIdSubFase(entidad.getIdFase());
             dto.setTarea(entidad.getTarea());
             dto.setTiempoMin(entidad.getTiempoMin());
             dto.setTiempoMax(entidad.getTiempoMax());
@@ -394,7 +401,7 @@ public class DetalleEstimacionService {
                 dto.setId(entidad.getId());
                 dto.setIdExcel(entidad.getIdExcel());
                 dto.setIdDepartamento(entidad.getIdDepartamento());
-                dto.setIdFase(entidad.getIdFase());
+                dto.setIdSubFase(entidad.getIdFase());
                 dto.setTarea(entidad.getTarea());
                 dto.setTiempoMin(entidad.getTiempoMin());
                 dto.setTiempoMax(entidad.getTiempoMax());
