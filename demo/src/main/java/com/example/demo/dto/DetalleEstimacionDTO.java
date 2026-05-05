@@ -2,6 +2,9 @@ package com.example.demo.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * Clase enviada y/o recibida del front para mostrar o recibir datos de las estimaciones de los excel
+ */
 public class DetalleEstimacionDTO {
     
     private Long id;

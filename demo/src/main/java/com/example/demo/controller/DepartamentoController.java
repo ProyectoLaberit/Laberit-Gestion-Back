@@ -16,6 +16,10 @@ public class DepartamentoController {
     @Autowired
     private DepartamentoRepository departamentoRepository;
 
+    /**
+     * Metodo que devuelve los departamentos existentes en la base de datos
+     * @return ApiResponse json con los departamentos existentes en la base de datos
+     */
     @GetMapping
     public ApiResponse listarDepartamentos() {
         try {
