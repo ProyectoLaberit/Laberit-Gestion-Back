@@ -9,6 +9,7 @@ import com.example.demo.entity.Excel;
 import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.services.DetalleEstimacionService;
 import com.example.demo.services.ExcelService;
+import com.example.demo.services.AuditService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +31,9 @@ public class DetalleEstimacionController {
 
     @Autowired
     private ExcelService excelService;
+
+    @Autowired
+    private AuditService auditService;
     
    /**
      * Recupera la tabla de estimaciones del Excel VIGENTE (el más reciente o activo) de un proyecto.
@@ -65,6 +69,11 @@ public class DetalleEstimacionController {
 
         try {
             int filasGuardadas = detalleEstimacionService.procesarExcel(archivo, proyectoId, usuarioId);
+            auditService.registrar(
+                AuditService.IMPORTACION_EXCEL,
+                "Excel importado en proyecto " + proyectoId + " con " + filasGuardadas + " registros.",
+                (long) proyectoId
+            );
             return new ApiResponse("Éxito: se importaron " + filasGuardadas + " registros.", true, filasGuardadas);
         } catch (Exception e) {
             return new ApiResponse("Error al procesar el Excel: " + e.getMessage(), false, null);
@@ -102,7 +111,11 @@ public class DetalleEstimacionController {
             }
 
             detalleEstimacionRepository.save(detalle);
-
+            auditService.registrar(
+                AuditService.CAMBIO_ESTIMACION,
+                "Estimación ID " + id + " modificada. Tarea: " + detalle.getTarea(),
+                null
+            );
             return new ApiResponse("Tarea actualizada correctamente", true, null);
         } catch (Exception e) {
             return new ApiResponse("Error al actualizar: " + e.getMessage(), false, null);
@@ -217,37 +230,48 @@ public class DetalleEstimacionController {
     return new ApiResponse("Historial recuperado con éxito", true, historial);
 }
 
-    /**
-     * Crea una nueva tarea de estimación manualmente y la asocia al Excel vigente.
-     * @param idProyecto ID del proyecto al que se añade la tarea.
-     * @param nuevaTareaDTO DTO con los datos de la tarea enviados por el Frontend.
-     * @return ApiResponse confirmando la creación.
-     */
-    @PostMapping("/proyecto/{idProyecto}/manual")
-    public ApiResponse crearNuevaEstimacionManual(@PathVariable Long idProyecto, @RequestBody DetalleEstimacionDTO nuevaTareaDTO) {
-        try {
-            detalleEstimacionService.crearTareaManual(idProyecto, nuevaTareaDTO);
-            return new ApiResponse("Tarea manual creada y asociada correctamente al proyecto.", true, null);
-        } catch (Exception e) {
-            return new ApiResponse("Error al crear la tarea manual: " + e.getMessage(), false, null);
-        }
-    }
 
     /**
-     * Vincula manualmente una tarea de la base de datos con un Issue de GitLab.
-     * @param idDetalle ID de la estimación en la base de datos.
-     * @param numeroGitlab ID (IID) del Issue en GitLab.
-     * @return ApiResponse confirmando la acción.
+     * Crea una nueva tarea de estimación manualmente desde el frontend.
+     * Recibe el idExcel vigente, idFase (subfase), idDepartamento, nombre de tarea, tiempoMin y tiempoMax.
      */
-    @PutMapping("/{idDetalle}/vincular-gitlab/{numeroGitlab}")
-    public ApiResponse vincularGitLabManual(@PathVariable Long idDetalle, @PathVariable String numeroGitlab) {
+    @PostMapping
+    public ApiResponse crearTarea(@RequestBody DetalleEstimacionDTO dto) {
         try {
-            detalleEstimacionService.vincularIssueManual(idDetalle, numeroGitlab);
-            return new ApiResponse("Issue de GitLab vinculado correctamente.", true, null);
+            if (dto.getTarea() == null || dto.getTarea().trim().isEmpty()) {
+                return new ApiResponse("El nombre de la tarea es obligatorio.", false, null);
+            }
+            if (dto.getIdExcel() == null || dto.getIdSubFase() == null || dto.getIdDepartamento() == null) {
+                return new ApiResponse("Faltan datos obligatorios (excel, fase o departamento).", false, null);
+            }
+            if (dto.getTiempoMin() == null || dto.getTiempoMax() == null) {
+                return new ApiResponse("Los tiempos mínimo y máximo son obligatorios.", false, null);
+            }
+            if (dto.getTiempoMin() < 0 || dto.getTiempoMax() < 0) {
+                return new ApiResponse("Los tiempos no pueden ser negativos.", false, null);
+            }
+            if (dto.getTiempoMin() > dto.getTiempoMax()) {
+                return new ApiResponse("El tiempo mínimo no puede ser mayor que el máximo.", false, null);
+            }
+
+            DetalleEstimacion nueva = new DetalleEstimacion();
+            nueva.setIdExcel(dto.getIdExcel());
+            nueva.setIdFase(dto.getIdSubFase());
+            nueva.setIdDepartamento(dto.getIdDepartamento());
+            nueva.setTarea(dto.getTarea().trim());
+            nueva.setTiempoMin(dto.getTiempoMin());
+            nueva.setTiempoMax(dto.getTiempoMax());
+
+            detalleEstimacionRepository.save(nueva);
+            auditService.registrar(
+                AuditService.CREACION_ESTIMACION,
+                "Tarea creada manualmente: \"" + nueva.getTarea() + "\" (dept=" + nueva.getIdDepartamento() + ")",
+                null
+            );
+            return new ApiResponse("Tarea creada correctamente.", true, null);
         } catch (Exception e) {
-            return new ApiResponse("Error al vincular: " + e.getMessage(), false, null);
+            return new ApiResponse("Error al crear la tarea: " + e.getMessage(), false, null);
         }
     }
-   
 
 } // <-- fin del controlador -->

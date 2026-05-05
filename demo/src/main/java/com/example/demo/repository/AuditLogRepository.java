@@ -1,0 +1,21 @@
+package com.example.demo.repository;
+
+import com.example.demo.entity.AuditLog;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
+
+    // Todos los logs ordenados por fecha desc
+    List<AuditLog> findAllByOrderByFechaHoraDesc();
+
+    // Logs de un proyecto concreto
+    List<AuditLog> findByIdProyectoOrderByFechaHoraDesc(Long idProyecto);
+
+    // Logs de un usuario concreto
+    List<AuditLog> findByUsuarioEmailOrderByFechaHoraDesc(String email);
+
+    // Logs de un tipo de acción concreto
+    List<AuditLog> findByAccionOrderByFechaHoraDesc(String accion);
+}
