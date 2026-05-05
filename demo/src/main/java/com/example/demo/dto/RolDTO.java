@@ -2,6 +2,9 @@ package com.example.demo.dto;
 
 import java.util.List;
 
+/**
+ * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ */
 public class RolDTO {
     private Integer id;
     private String nombre;

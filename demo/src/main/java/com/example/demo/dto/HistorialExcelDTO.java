@@ -3,6 +3,9 @@ package com.example.demo.dto;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ */
 public class HistorialExcelDTO {
     private Integer idExcel;
     private LocalDate fechaSubida;

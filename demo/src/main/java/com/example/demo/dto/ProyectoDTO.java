@@ -5,6 +5,9 @@ import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ */
 public class ProyectoDTO {
     private Long id;
     private String nombre;

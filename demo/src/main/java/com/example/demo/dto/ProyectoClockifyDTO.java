@@ -1,5 +1,8 @@
 package com.example.demo.dto;
 
+/**
+ * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ */
 public class ProyectoClockifyDTO {
     private String id;
     private String nombre;
