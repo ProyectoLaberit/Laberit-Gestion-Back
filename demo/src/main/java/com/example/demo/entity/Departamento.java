@@ -2,6 +2,11 @@ package com.example.demo.entity;
 
 import jakarta.persistence.*;
 
+/* Entidad que representa un departamento en el sistema.
+    * Un departamento puede tener un departamento padre, lo que permite crear una jerarquía.
+    * La tabla en la base de datos tendrá una relación recursiva consigo misma a través de la columna "departamento_padre".
+*/
+
 @Entity
 @Table(name = "departamento")
 public class Departamento {

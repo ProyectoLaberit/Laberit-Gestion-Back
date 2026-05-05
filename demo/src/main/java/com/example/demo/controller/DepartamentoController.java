@@ -18,6 +18,12 @@ import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.DepartamentoDTO;
 import com.example.demo.services.DepartamentoService;
 
+/* Controlador para gestionar las operaciones CRUD de departamentos
+    * Este controlador expone endpoints para listar, crear, actualizar y eliminar departamentos.
+    * Utiliza un servicio para manejar la lógica de negocio y un DTO para evitar problemas de serialización con entidades que tienen relaciones recursivas (departamento -> padre -> departamento).
+    * La seguridad se implementa con anotaciones @PreAuthorize para restringir ciertas operaciones solo a usuarios con el rol "SUPERADMINISTRADOR".
+*/
+
 @RestController
 @RequestMapping("/api/departamentos")
 @CrossOrigin(origins = "*")
@@ -26,6 +32,8 @@ public class DepartamentoController {
     @Autowired
     private DepartamentoService departamentoService; // <--- Usamos el Service, no el Repository
 
+
+    // 1. LISTAR
     @GetMapping
     public ApiResponse listarDepartamentos() {
         try {
@@ -36,7 +44,7 @@ public class DepartamentoController {
             return new ApiResponse("Error al recuperar: " + e.getMessage(), false, null);
         }
     }
-
+    // 2. CREAR
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')") // <--- Seguridad
     public ApiResponse crearDepartamento(@RequestBody DepartamentoDTO dto) {
@@ -47,7 +55,7 @@ public class DepartamentoController {
             return new ApiResponse("Error al crear: " + e.getMessage(), false, null);
         }
     }
-
+    // 3. ACTUALIZAR
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ApiResponse actualizarDepartamento(@PathVariable int id, @RequestBody DepartamentoDTO dto) {
@@ -58,7 +66,7 @@ public class DepartamentoController {
             return new ApiResponse("Error al actualizar: " + e.getMessage(), false, null);
         }
     }
-
+    // 4. ELIMINAR
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ApiResponse eliminarDepartamento(@PathVariable int id) {

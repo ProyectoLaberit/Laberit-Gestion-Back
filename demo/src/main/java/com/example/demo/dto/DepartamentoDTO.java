@@ -2,6 +2,11 @@ package com.example.demo.dto;
 
 import com.example.demo.entity.Departamento;
 
+/* DTO (Data Transfer Object) para representar un departamento en las respuestas de la API.
+   * Incluye información del departamento padre para evitar el bucle infinito al serializar la entidad.
+    * Este DTO se utiliza para simplificar la respuesta y evitar problemas de serialización con relaciones recursivas.
+*/
+
 public class DepartamentoDTO {
     private Integer id;
     private String nombre;
