@@ -12,18 +12,18 @@ public class GitLabTareaDTO {
     private Long iid;      // ID interno del proyecto (el que ve el usuario, ej: #42)
     private String title;  // Título de la tarea
     private List<String> labels;
-    private String estado; 
+    private String estado;
 
     // Constructor vacío
     public GitLabTareaDTO() {}
 
     // Constructor para mapear fácilmente desde el Map de GitLab
-    public GitLabTareaDTO(Object id, Object iid, Object title, Object labels, Object estado) {
-        this.id = String.valueOf(id);
-        this.iid = Long.valueOf(String.valueOf(iid));
-        this.title = String.valueOf(title);
-        this.labels = (List<String>) labels;
-        this.estado = String.valueOf(estado);
+    public GitLabTareaDTO(String id, Long iid, String title, List<String> labels, String estado) {
+        this.id = id;
+        this.iid = iid;
+        this.title = title;
+        this.labels = labels;
+        this.estado = estado;
         
     }
 
