@@ -1,5 +1,8 @@
 package com.example.demo.dto;
 
+/**
+ * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ */
 public class SubFaseDTO {
     private Integer id;
     private String nombre;

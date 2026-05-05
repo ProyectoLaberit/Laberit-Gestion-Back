@@ -115,11 +115,15 @@ public class GitLabService {
         // 5. Transformación de modelo externo a DTO interno
         return rawIssues.stream()
                 .map(issue -> new GitLabTareaDTO(
-                        issue.get("id"), // ID global de GitLab
-                        issue.get("iid"), // ID interno del proyecto (lo que ve el usuario)
-                        issue.get("title"), // Título de la tarea
-                        issue.get("labels"))) // Etiquetas asociadas a la tarea
-                .collect(Collectors.toList());
+                        String.valueOf(issue.get("id")),
+                        issue.get("iid") != null ? Long.valueOf(String.valueOf(issue.get("iid"))) : null,
+                        String.valueOf(issue.get("title")),
+                        issue.get("labels") instanceof List<?> labelsList
+                                ? labelsList.stream().map(String::valueOf).collect(Collectors.toList())
+                                : List.of(),
+                        String.valueOf(issue.get("state"))))
+                .collect(Collectors.toList());// Etiquetas asociadas a la tarea
+
     }
 
     /**

@@ -21,9 +21,6 @@ import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.services.ExcelService;
 import com.example.demo.services.ProyectoService;
 
-
-
-
 @RestController
 @RequestMapping("/api/proyectos")
 @CrossOrigin(origins = "*")
@@ -32,27 +29,35 @@ public class ProyectoController {
     @Autowired
     private ProyectoService proyectoService;
 
-    
-
-   @GetMapping("/cargar")
+    /**
+     * Metodo que recibe parametros a medio de filtros para devolver los proyectos de la base de datos en base a los filtros(si estos son nulos se devolveran todos los preoyectos)
+     * @param activo determina si los proyectos deben estar activos o no
+     * @param desde determina la fecha de inicio desde la cual se muestran los proyectos
+     * @param hasta determina la fecha de fin hasta la cual se muestran los proyectos
+     * @return ApiResponse json con los proyectos que siguen los filtros
+     */
+    @GetMapping("/cargar")
     public ApiResponse obtenerProyectos(
-        @RequestParam(required = false) Boolean activo,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
-        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
+            @RequestParam(required = false) Boolean activo,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
 
-    List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(activo, desde, hasta);
-    return new ApiResponse("Listado de proyectos recuperado", true, lista);
-}
+        List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(activo, desde, hasta);
+        return new ApiResponse("Listado de proyectos recuperado", true, lista);
+    }
 
-    
-
+    /**
+     * Metodo que recibe un proyecto y lo guarda en la base de datos
+     * @param proyectoDTO objeto a guardar en la base de datos
+     * @return ApiResponse json que contiene el proyecto guardado si el guardado ha tenido exito o nada si el guardado no se ha realizado (sea porqeu el proyecto ya existe o porque no ha pasado los filtros)
+     */
     @PostMapping
     // @RequestBody: Recibe el JSON del formulario y lo convierte en el ProyectoDTO
     public ApiResponse crearProyecto(@RequestBody ProyectoDTO proyectoDTO) {
         try {
-            //Mandamos el DTO al servicio para que lo guarde
+            // Mandamos el DTO al servicio para que lo guarde
             ProyectoDTO proyectoGuardado = proyectoService.crearProyecto(proyectoDTO);
-            
+
             // Respondemos con éxito y devolvemos el proyecto ya con su ID generado
             return new ApiResponse("Proyecto creado correctamente", true, proyectoGuardado);
         } catch (Exception e) {
@@ -61,12 +66,17 @@ public class ProyectoController {
         }
     }
 
+    /**
+     * Metodo que recibe un id de un proyecto y lo elimina de la base de datos
+     * @param id id del proyecto a eliminar
+     * @return ApiResponse json que contiene true si se ha eliminado o false si no
+     */
     @DeleteMapping("/{id}")
     public ApiResponse eliminarProyecto(@PathVariable Long id) {
         try {
             // Llamamos al servicio para ejecutar el borrado
             proyectoService.eliminarProyecto(id);
-            
+
             // Respondemos con éxito
             return new ApiResponse("Proyecto eliminado permanentemente", true, null);
         } catch (Exception e) {
@@ -74,7 +84,13 @@ public class ProyectoController {
             return new ApiResponse("Error al eliminar: " + e.getMessage(), false, null);
         }
     }
-    
+
+    /**
+     * Metodo que recibe un id de proyecto y un objeto proyectoDTO para actualizar la informacion del proyecto con la id en la base de datos
+     * @param id id del proyecto a actualizar
+     * @param proyectoDTO objeto proyectoDTO con la nueva informacion
+     * @return ApiResponse json que contiene el proyecto actualizado
+     */
     @PutMapping("/{id}")
     public ApiResponse actualizarProyecto(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
         // Recibe el ID del proyecto y los datos nuevos desde el cuerpo de la petición
@@ -82,7 +98,5 @@ public class ProyectoController {
         // Devuelve una respuesta con el proyecto ya actualizado
         return new ApiResponse("Proyecto actualizado correctamente", true, actualizado);
     }
-
-
 
 }

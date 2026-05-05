@@ -19,6 +19,10 @@ public class RolController {
     @Autowired
     private RolService rolService;
 
+    /**
+     * Metodo que devuelve los roles existentes en la base de datos
+     * @return ApiResponse json que contiene los roles existentes en la base de datos
+     */
     @GetMapping
     public ApiResponse obtenerRoles() {
         List<RolDTO> listaRoles = rolService.obtenerTodosLosRoles();

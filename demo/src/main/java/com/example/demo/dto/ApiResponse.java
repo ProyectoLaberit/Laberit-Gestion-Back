@@ -1,5 +1,8 @@
 package com.example.demo.dto;
 
+/**
+ * Clase que se envia al front y contiene un mensaje, si ha funcionado y los datos enviados
+ */
 public class ApiResponse {
     private String mensaje;
     private boolean success;

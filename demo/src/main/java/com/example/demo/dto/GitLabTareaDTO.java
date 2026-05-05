@@ -3,7 +3,8 @@ package com.example.demo.dto;
 import java.util.List;
 
 /**
- * Objeto de transferencia de datos para representar una tarea (Issue/Work Item) de GitLab.
+ * Objeto de transferencia de datos para representar una tarea (Issue/Work Item)
+ * de GitLab.
  * Este DTO se utiliza para simplificar la respuesta de la API externa y
  * adaptarla a las necesidades de nuestro sistema de gestión de tiempos.
  */
@@ -11,17 +12,20 @@ public class GitLabTareaDTO {
     private String id;     // ID global de GitLab (ej: 12345678)
     private Long iid;      // ID interno del proyecto (el que ve el usuario, ej: #42)
     private String title;  // Título de la tarea
-    private List<String> labels; // Etiquetas asociadas a la tarea)
+    private List<String> labels;
+    private String estado;
 
-    // Constructor vacío
-    public GitLabTareaDTO() {}
+    public GitLabTareaDTO() {
+    }
 
     // Constructor para mapear fácilmente desde el Map de GitLab
-    public GitLabTareaDTO(Object id, Object iid, Object title, Object labels) {
-        this.id = String.valueOf(id);
-        this.iid = Long.valueOf(String.valueOf(iid));
-        this.title = String.valueOf(title);
-        this.labels = (List<String>) labels;
+    public GitLabTareaDTO(String id, Long iid, String title, List<String> labels, String estado) {
+        this.id = id;
+        this.iid = iid;
+        this.title = title;
+        this.labels = labels;
+        this.estado = estado;
+        
     }
 
     // Getters y Setters
@@ -33,4 +37,6 @@ public class GitLabTareaDTO {
     public void setTitle(String title) { this.title = title; }
     public List<String> getLabels() { return labels; }
     public void setLabels(List<String> labels) { this.labels = labels; }
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
 }

@@ -27,7 +27,9 @@ public class FaseController {
     private ExcelService excelService;
 
     /**
-     * Devuelve las fases/subfases del Excel VIGENTE de un proyecto.
+     * Metodo que devuelve las fases y subfases del excel vigente de un proyecto
+     * @param idProyecto id del proyecto a consultar
+     * @return ApiResponse json que contiene las fases y subfases correspondientes
      */
     @GetMapping("/{idProyecto}")
     public ApiResponse obtenerJerarquiaFases(@PathVariable Long idProyecto) {
@@ -45,8 +47,9 @@ public class FaseController {
     }
 
     /**
-     * Devuelve las fases/subfases de un Excel CONCRETO (por su idExcel).
-     * Usado para el historial: al seleccionar un excel del desplegable se cargan sus fases.
+     * Metodo que devuelve las fases y subfases de un excel en concreto
+     * @param idExcel id del excel a consultar
+     * @return ApiResponse json que contiene las fases y subfases del excel
      */
     @GetMapping("/por-excel/{idExcel}")
     public ApiResponse obtenerJerarquiaPorExcel(@PathVariable Integer idExcel) {
@@ -64,7 +67,9 @@ public class FaseController {
     }
 
     /**
-     * Devuelve el historial de excels subidos para un proyecto, ordenados del más reciente al más antiguo.
+     * Metodo que devuelve el historial de excels de un proyecto concreto
+     * @param idProyecto id del proyecto a consultar
+     * @return ApiResponse json que contiene los excel que tienen asociados al proyecto en la base de datos
      */
     @GetMapping("/historial/{idProyecto}")
     public ApiResponse obtenerHistorialExcels(@PathVariable Long idProyecto) {

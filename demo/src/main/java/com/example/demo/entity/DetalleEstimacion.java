@@ -33,6 +33,9 @@ public class DetalleEstimacion {
 
     @Column(name = "numero_gitlab", length = 45, nullable = true)
     private String numeroGitlab;
+
+    @Column(name = "completada", nullable = false)
+    private Boolean completada = false;
     // Constructores, Getters y Setters
     public DetalleEstimacion() {}
 
@@ -54,4 +57,8 @@ public class DetalleEstimacion {
     public void setTiempoReal(Double tiempoReal) { this.tiempoReal = tiempoReal; }
     public String getNumeroGitlab() { return numeroGitlab; }
     public void setNumeroGitlab(String numeroGitlab) { this.numeroGitlab = numeroGitlab; }
+    public Boolean getCompletada() { return completada; }
+    public void setCompletada(Boolean completada) { this.completada = completada; }
+
+    
 }

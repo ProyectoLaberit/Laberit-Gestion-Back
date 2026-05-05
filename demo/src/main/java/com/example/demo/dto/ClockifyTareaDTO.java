@@ -2,6 +2,9 @@ package com.example.demo.dto;
 
 import java.util.Date;
 
+/**
+ * Clase enviada y/o recibida del front para mostrar o recibir datos de las tareas de clockify
+ */
 public class ClockifyTareaDTO {
     private String titulo;
     private double horasTrabajadas;

@@ -2,6 +2,9 @@ package com.example.demo.dto;
 
 import java.util.List;
 
+/**
+ * Clase enviada y/o recibida del front para mostrar o recibir datos de las fases 
+ */
 public class FaseDTO {
     private Integer id;
     private String nombre;
