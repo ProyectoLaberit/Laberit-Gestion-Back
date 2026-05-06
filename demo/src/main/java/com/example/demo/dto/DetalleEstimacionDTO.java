@@ -1,5 +1,8 @@
 package com.example.demo.dto;
 
+/**
+ * Clase enviada y/o recibida del front para mostrar o recibir datos de las estimaciones de los excel
+ */
 public class DetalleEstimacionDTO {
     
     private Long id;
@@ -7,8 +10,9 @@ public class DetalleEstimacionDTO {
     
     // IDs originales por si el front necesita hacer updates
     private Integer idDepartamento;
-    private Integer idFase; 
+    private Integer idFasePadre;
     
+    private Integer idSubFase;
     // Textos legibles para pintar la tabla directamente
     private String nombreDepartamento;
     private String nombreFase;     // Padre (ej: Análisis, Desarrollo)
@@ -21,6 +25,7 @@ public class DetalleEstimacionDTO {
     private Double tiempoMaxElegido; // Tiempo máximo del excel elegido
     private Double tiempoReal;
     private String numeroGitlab;
+    private Boolean completada;
 
     // Constructor vacío
     public DetalleEstimacionDTO() {}
@@ -32,13 +37,14 @@ public class DetalleEstimacionDTO {
         this.id = id;
         this.idExcel = idExcel;
         this.idDepartamento = idDepartamento;
-        this.idFase = idFase;
+        this.idSubFase = idFase;
         this.nombreDepartamento = nombreDepartamento;
         this.nombreFase = nombreFase;
         this.nombreSubfase = nombreSubfase;
         this.tarea = tarea;
         this.tiempoMin = tiempoMin;
         this.tiempoMax = tiempoMax;
+        this.completada = false;
     }
 
     // ==========================================
@@ -52,9 +58,12 @@ public class DetalleEstimacionDTO {
     
     public Integer getIdDepartamento() { return idDepartamento; }
     public void setIdDepartamento(Integer idDepartamento) { this.idDepartamento = idDepartamento; }
+
+    public Integer getIdFasePadre() { return idFasePadre; }
+    public void setIdFasePadre(Integer idFasePadre) { this.idFasePadre = idFasePadre; }
     
-    public Integer getIdFase() { return idFase; }
-    public void setIdFase(Integer idFase) { this.idFase = idFase; }
+    public Integer getIdSubFase() { return idSubFase; }
+    public void setIdSubFase(Integer idSubFase) { this.idSubFase = idSubFase; }
     
     public String getNombreDepartamento() { return nombreDepartamento; }
     public void setNombreDepartamento(String nombreDepartamento) { this.nombreDepartamento = nombreDepartamento; }
@@ -85,4 +94,7 @@ public class DetalleEstimacionDTO {
 
     public String getNumeroGitlab() { return numeroGitlab; }
     public void setNumeroGitlab(String numeroGitlab) { this.numeroGitlab = numeroGitlab; }
+
+    public Boolean getCompletada() { return completada; }
+    public void setCompletada(Boolean completada) { this.completada = completada; }
 }

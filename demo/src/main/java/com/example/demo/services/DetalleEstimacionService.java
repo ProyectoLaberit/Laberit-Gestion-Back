@@ -232,7 +232,7 @@ public class DetalleEstimacionService {
             dto.setId(entidad.getId()); 
             dto.setIdExcel(entidad.getIdExcel());
             dto.setIdDepartamento(entidad.getIdDepartamento());
-            dto.setIdFase(entidad.getIdFase());
+            dto.setIdSubFase(entidad.getIdFase());
             dto.setTarea(entidad.getTarea());
             dto.setTiempoMin(entidad.getTiempoMin());
             dto.setTiempoMax(entidad.getTiempoMax());
@@ -308,7 +308,7 @@ public class DetalleEstimacionService {
                     dto.setId(entidad.getId());
                     dto.setIdExcel(entidad.getIdExcel());
                     dto.setIdDepartamento(entidad.getIdDepartamento());
-                    dto.setIdFase(entidad.getIdFase());
+                    dto.setIdSubFase(entidad.getIdFase());
                     dto.setTarea(entidad.getTarea());
                     dto.setTiempoMin(entidad.getTiempoMin());
                     dto.setTiempoMax(entidad.getTiempoMax());
