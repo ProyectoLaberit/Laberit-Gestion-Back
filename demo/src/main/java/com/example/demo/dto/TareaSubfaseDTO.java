@@ -9,6 +9,8 @@ public class TareaSubfaseDTO {
     private String nombreTarea;
     private double tiempoTotalMin;
     private double tiempoTotalMax;
+    private Double tiempoTotalMinElegido;
+    private Double tiempoTotalMaxElegido;
 
     public TareaSubfaseDTO() {
     }
@@ -19,29 +21,52 @@ public class TareaSubfaseDTO {
         this.tiempoTotalMax = tiempoTotalMax;
     }
 
-        public Long getIdTarea() {
-            return idTarea;
-        }
-        public void setIdTarea(Long idTarea) {
-            this.idTarea = idTarea;
-        }
+    public Long getIdTarea() {
+        return idTarea;
+    }
+
+    public void setIdTarea(Long idTarea) {
+        this.idTarea = idTarea;
+    }
+
     public String getNombreTarea() {
         return nombreTarea;
     }
+
     public void setNombreTarea(String nombreTarea) {
         this.nombreTarea = nombreTarea;
     }
+
     public double getTiempoTotalMin() {
         return tiempoTotalMin;
     }
+
     public void setTiempoTotalMin(double tiempoTotalMin) {
         this.tiempoTotalMin = tiempoTotalMin;
     }
+
     public double getTiempoTotalMax() {
         return tiempoTotalMax;
     }
+
     public void setTiempoTotalMax(double tiempoTotalMax) {
         this.tiempoTotalMax = tiempoTotalMax;
+    }
+
+    public Double getTiempoTotalMinElegido() { 
+        return tiempoTotalMinElegido; 
+    }
+
+    public void setTiempoTotalMinElegido(Double tiempoTotalMinElegido) { 
+        this.tiempoTotalMinElegido = tiempoTotalMinElegido; 
+    }
+
+    public Double getTiempoTotalMaxElegido() { 
+        return tiempoTotalMaxElegido; 
+    }
+
+    public void setTiempoTotalMaxElegido(Double tiempoTotalMaxElegido) { 
+        this.tiempoTotalMaxElegido = tiempoTotalMaxElegido; 
     }
 
 }

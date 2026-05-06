@@ -315,7 +315,7 @@ public class DetalleEstimacionService {
      * * @param idExcel ID del Excel vigente a consultar.
      * @return Lista de DTOs enriquecidos con datos de texto.
      */
-   public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
+    public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
         List<DetalleEstimacion> detalles = detalleEstimacionRepository.findByIdExcel(idExcel);
         List<Fase> todasLasFases = faseRepository.findAll();
         List<Departamento> todosLosDeptos = departamentoRepository.findAll();
@@ -380,11 +380,74 @@ public class DetalleEstimacionService {
      * @param nombreTarea Nombre exacto (o casi exacto) de la tarea a buscar.
      * @return DTO ligero con la información matemática y de IDs.
      */
-   public List<DetalleEstimacionDTO> obtenerDetallePorCriterios(Long idProyecto, Integer idSubfase, String nombreTarea) {
-    // 1. Obtener el Excel vigente
-    Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
-    if (excel == null) {
-        return new java.util.ArrayList<>();
+    public List<DetalleEstimacionDTO> obtenerDetallePorCriterios(Long idProyecto, Integer idSubfase, String nombreTarea, Integer idExcelElegido) {
+        // 1. Obtener el Excel vigente
+        Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
+        if (excel == null) {
+            return new java.util.ArrayList<>();
+        }
+
+        // 2. Traer todas las estimaciones y los departamentos para cruzar nombres
+        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
+        List<com.example.demo.entity.Departamento> todosLosDeptos = departamentoRepository.findAll();
+
+        // 3. Filtrar todas las filas que coincidan con la subfase y el nombre de la tarea
+        List<DetalleEstimacionDTO> listaPrincipal = todasLasEstimaciones.stream()
+                .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
+                .filter(d -> d.getTarea() != null && d.getTarea().equalsIgnoreCase(nombreTarea.trim()))
+                .map(entidad -> {
+                    // Usamos tu clase DetalleEstimacionDTO
+                    DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
+                    dto.setId(entidad.getId());
+                    dto.setIdExcel(entidad.getIdExcel());
+                    dto.setIdDepartamento(entidad.getIdDepartamento());
+                    dto.setIdFase(entidad.getIdFase());
+                    dto.setTarea(entidad.getTarea());
+                    dto.setTiempoMin(entidad.getTiempoMin());
+                    dto.setTiempoMax(entidad.getTiempoMax());
+
+                    // Buscamos el nombre del departamento en la lista para rellenar el DTO
+                // Buscamos el nombre del departamento de forma segura
+                // Sustituye esa línea por esta:
+                String nombreDepto = todosLosDeptos.stream()
+                    .filter(d -> d.getId() == entidad.getIdDepartamento())
+                    .map(d -> d.getNombre())
+                    .findFirst()
+                    .orElse("Desconocido");
+                            dto.setNombreDepartamento(nombreDepto);
+                            return dto;
+                })
+                .collect(java.util.stream.Collectors.toList());
+
+
+        // Si el Front-end nos manda un ID de Excel para comparar, hacemos el cruce de datos
+        if (idExcelElegido != null) {
+            // Traemos las tareas del Excel que el usuario ha seleccionado en el desplegable
+            List<DetalleEstimacion> estimacionesElegidas = detalleEstimacionRepository.findByIdExcel(idExcelElegido);
+                
+            // Recorremos las tareas principales que ya filtramos
+            for (DetalleEstimacionDTO principal : listaPrincipal) {
+                    
+                // Buscamos su equivalente en el Excel elegido
+                for (DetalleEstimacion comparado : estimacionesElegidas) {
+                        
+                    // Comprobamos que sea exactamente la misma tarea en el mismo departamento
+                    boolean mismaSubfase = comparado.getIdFase() != null && comparado.getIdFase().equals(idSubfase);
+                    boolean mismaTarea = comparado.getTarea() != null && comparado.getTarea().equalsIgnoreCase(nombreTarea.trim());
+                    boolean mismoDepto = comparado.getIdDepartamento() == principal.getIdDepartamento();
+
+                    // Si coinciden, le pasamos los tiempos a las nuevas variables del DTO
+                    if (mismaSubfase && mismaTarea && mismoDepto) {
+                        principal.setTiempoMinElegido(comparado.getTiempoMin());
+                        principal.setTiempoMaxElegido(comparado.getTiempoMax());
+                        break; // Dejamos de buscar porque ya la hemos encontrado
+                    }
+                }
+            }
+        }
+
+        return listaPrincipal;
+
     }
 
     // 2. Traer todas las estimaciones y los departamentos para cruzar nombres
@@ -455,6 +518,32 @@ public class DetalleEstimacionService {
             dto.setTiempoTotalMax(sumaMax);
             
             resultado.add(dto);
+        }
+
+        if (idExcelElegido != null) {
+            // Traemos las tareas del Excel que queremos comparar
+            List<DetalleEstimacion> estimacionesElegidas = detalleEstimacionRepository.findByIdExcel(idExcelElegido);
+            
+            // Las agrupamos por tarea
+            Map<String, List<DetalleEstimacion>> agrupadasElegidas = estimacionesElegidas.stream()
+                    .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
+                    .filter(d -> d.getTarea() != null)
+                    .collect(Collectors.groupingBy(DetalleEstimacion::getTarea));
+
+            // Recorremos el resultado del excel en el que nos encontramos
+            for (TareaSubfaseDTO dto : resultado) {
+                // Si la tarea existe en el Excel elegido, sumamos sus tiempos
+                if (agrupadasElegidas.containsKey(dto.getNombreTarea())) {
+                    List<DetalleEstimacion> tareasElegidas = agrupadasElegidas.get(dto.getNombreTarea());
+                    
+                    double sumaMinElegido = tareasElegidas.stream().mapToDouble(DetalleEstimacion::getTiempoMin).sum();
+                    double sumaMaxElegido = tareasElegidas.stream().mapToDouble(DetalleEstimacion::getTiempoMax).sum();
+                    
+                    // Guardamos los totales
+                    dto.setTiempoTotalMinElegido(sumaMinElegido);
+                    dto.setTiempoTotalMaxElegido(sumaMaxElegido);
+                }
+            }
         }
 
         return resultado;

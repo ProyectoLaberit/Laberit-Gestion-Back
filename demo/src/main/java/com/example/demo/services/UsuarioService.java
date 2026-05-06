@@ -136,17 +136,16 @@ public class UsuarioService {
         System.out.println("=== Rol solicitado: '" + dto.getRol() + "' ===");
 
         if (dto.getRol() != null && !dto.getRol().trim().isEmpty()) {
-            String nombreRol = dto.getRol().trim();
-
-            // 1. Buscar por nombre exacto (case-insensitive)
-            rolAsignado = rolRepository.findByNombreIgnoreCase(nombreRol).orElse(null);
-
-            // 2. Si no, buscar con variantes comunes: USER -> USUARIO, ADMIN -> ADMINISTRADOR, etc.
-            if (rolAsignado == null) {
-                String variante = mapearNombreRol(nombreRol);
-                if (!variante.equals(nombreRol)) {
-                    rolAsignado = rolRepository.findByNombreIgnoreCase(variante).orElse(null);
-                }
+            try {
+                // Transformamos el String ("1", "2" o "3") a un número entero
+                int idRol = Integer.parseInt(dto.getRol().trim());
+                
+                // Buscamos directamente por ese ID
+                rolAsignado = rolRepository.findById(idRol)
+                        .orElseThrow(() -> new RuntimeException("Error: El rol especificado (" + idRol + ") no existe en la base de datos."));
+                        
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Error: El rol enviado no es un número válido.");
             }
 
             // 3. Si sigue sin encontrarse, buscar en la lista completa ignorando mayúsculas
@@ -166,16 +165,9 @@ public class UsuarioService {
                     "Error: El rol '" + nombreRol + "' no existe. Roles disponibles: " + rolesDisponibles);
             }
         } else {
-            // Sin rol especificado: asignar el primer rol de la lista (suele ser USER/USUARIO)
-            rolAsignado = todosLosRoles.stream()
-                    .filter(r -> r.getNombre().equalsIgnoreCase("USER")
-                              || r.getNombre().equalsIgnoreCase("USUARIO"))
-                    .findFirst()
-                    .orElse(todosLosRoles.isEmpty() ? null : todosLosRoles.get(0));
-
-            if (rolAsignado == null) {
-                throw new RuntimeException("Error crítico: No hay roles definidos en la base de datos.");
-            }
+            // Si viene null o vacío, asignamos empleado
+            rolAsignado = rolRepository.findById(3)
+                    .orElseThrow(() -> new RuntimeException("Error: El rol Empleado no existe en la base de datos."));
         }
 
         System.out.println("=== Rol asignado: ID=" + rolAsignado.getId() + " nombre='" + rolAsignado.getNombre() + "' ===");

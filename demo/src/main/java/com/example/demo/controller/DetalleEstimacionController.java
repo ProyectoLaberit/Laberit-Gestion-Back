@@ -149,10 +149,11 @@ public class DetalleEstimacionController {
    public ApiResponse obtenerEstimacionEspecifica(
         @PathVariable Long idProyecto,
         @RequestParam Integer idSubfase,
-        @RequestParam String tarea) {
+        @RequestParam String tarea,
+        @RequestParam(required = false) Integer idExcelElegido) {
     
     // Ahora recibimos una lista de DTOs con cada departamento y sus tiempos
-    List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallePorCriterios(idProyecto, idSubfase, tarea);
+    List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallePorCriterios(idProyecto, idSubfase, tarea, idExcelElegido);
 
     if (detalles.isEmpty()) {
         return new ApiResponse("No se encontraron registros para esta tarea y subfase", false, detalles);
@@ -186,12 +187,14 @@ public class DetalleEstimacionController {
      * Recibe un JSON por POST con idProyecto e idSubfase.
      */
     @PostMapping("/subfase/tareas") 
-    public ApiResponse obtenerTareasSubfase(@RequestParam Long idProyecto, 
-            @RequestParam Integer idSubfase) {
+    public ApiResponse obtenerTareasSubfase(
+            @RequestParam Long idProyecto, 
+            @RequestParam Integer idSubfase,
+            @RequestParam(required = false) Integer idExcelElegido) {
             
         try {
             // Llamamos directamente a tu lógica pasándole los dos IDs
-            List<TareaSubfaseDTO> tareas = detalleEstimacionService.obtenerTareasSubfase(idProyecto, idSubfase);
+            List<TareaSubfaseDTO> tareas = detalleEstimacionService.obtenerTareasSubfase(idProyecto, idSubfase,idExcelElegido);
             
             if (tareas.isEmpty()) {
                 return new ApiResponse("No hay tareas para esta subfase o el proyecto no tiene Excel activo", true, tareas);

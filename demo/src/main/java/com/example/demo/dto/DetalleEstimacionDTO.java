@@ -21,8 +21,10 @@ public class DetalleEstimacionDTO {
     private String nombreSubfase;  // Hijo (ej: Investigación, Frontend)
     
     private String tarea;
-    private Double tiempoMin;
-    private Double tiempoMax;
+    private Double tiempoMin; // Tiempo mínimo del excel actual
+    private Double tiempoMax; // Tiempo máximo del excel actual
+    private Double tiempoMinElegido; // Tiempo mínimo del excel elegido
+    private Double tiempoMaxElegido; // Tiempo máximo del excel elegido
     private Double tiempoReal;
     private String numeroGitlab;
     private Boolean completada;
@@ -82,6 +84,12 @@ public class DetalleEstimacionDTO {
     
     public Double getTiempoMax() { return tiempoMax; }
     public void setTiempoMax(Double tiempoMax) { this.tiempoMax = tiempoMax; }
+
+    public Double getTiempoMinElegido() { return tiempoMinElegido; }
+    public void setTiempoMinElegido(Double tiempoMinElegido) { this.tiempoMinElegido = tiempoMinElegido; }
+    
+    public Double getTiempoMaxElegido() { return tiempoMaxElegido; }
+    public void setTiempoMaxElegido(Double tiempoMaxElegido) { this.tiempoMaxElegido = tiempoMaxElegido; }
 
     public Double getTiempoReal() { return tiempoReal; }
     public void setTiempoReal(Double tiempoReal) { this.tiempoReal = tiempoReal; }
