@@ -18,14 +18,18 @@ import com.example.demo.dto.GitLabTareaDTO;
 import com.example.demo.dto.ProyectoClockifyDTO;
 import com.example.demo.dto.SubFaseDTO;
 import com.example.demo.entity.ApiConfig;
+import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
+import com.example.demo.entity.ImputacionClockify;
 import com.example.demo.entity.Proyecto;
 import com.example.demo.repository.ApiConfigRepository;
+import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.ExcelRepository;
 import com.example.demo.repository.ProyectoRepository;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -58,6 +62,12 @@ public class ClockifyService {
 
         @Autowired
         private ExcelRepository excelRepository;
+
+        @Autowired
+        private ImputacionClockifyService imputacionService;
+
+        @Autowired
+        private DetalleEstimacionRepository detalleEstimacionRepository;
 
         @Value("${clockify.workspace.id}")
         private String workspaceId;
@@ -492,4 +502,155 @@ public class ClockifyService {
                 return tagMap;
         }
 
+        /**
+     * Sincroniza las entradas de tiempo de Clockify con nuestra base de datos local.
+     * @param projectId ID de nuestro proyecto local.
+     * @return Número de imputaciones nuevas guardadas.
+     */
+  public int sincronizarImputaciones(Long projectId) {
+        Proyecto p = proyectoRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
+
+        // Rescatamos el Excel vigente de este proyecto para hacer búsquedas seguras
+        Excel excelVigente = excelRepository.findFirstByIdProyectoAndVigenteTrue(projectId);
+
+        String clockifyId = p.getClockifyId();
+        ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
+        
+        // (Opcional) Map<String, String> etiquetas = cargarMapaTagsClockify();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Api-Key", clockify.getClave());
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+
+        // 1. Obtener ID del usuario maestro de Clockify (Obligatorio para la URL)
+        ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
+                clockify.getUrlReal() + "/user", HttpMethod.GET, entity,
+                new ParameterizedTypeReference<Map<String, Object>>() {});
+        String userId = (String) userResponse.getBody().get("id");
+
+        // 2. Obtener todas las entradas de tiempo
+        String url = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/user/" + userId + "/time-entries";
+        ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                url, HttpMethod.GET, entity,
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+
+        List<Map<String, Object>> entradasClockify = response.getBody();
+        List<ImputacionClockify> nuevasImputaciones = new ArrayList<>();
+
+        // 3. Procesar cada entrada
+        for (Map<String, Object> entry : entradasClockify) {
+            
+            // Ignorar si no es del proyecto actual
+            if (!clockifyId.equals(entry.get("projectId"))) { 
+                continue; 
+            }
+            
+            String idEntrada = (String) entry.get("id");
+            String description = (String) entry.get("description");
+            
+            if (description == null || description.isEmpty()) { 
+                continue; 
+            }
+
+            // -- EXTRAEMOS TIEMPO PRIMERO PARA PODER COMPARARLO --
+            Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
+            double horasClockify = convertirDuracionAHoras((String) timeInterval.get("duration"));
+
+            // -- LÓGICA DE ACTUALIZACIÓN DE TIEMPOS MODIFICADOS A MANO --
+            ImputacionClockify imputacionExistente = imputacionService.obtenerPorIdClockify(idEntrada);
+            
+            if (imputacionExistente != null) {
+                // Comprobamos si el tiempo ha cambiado (tolerancia de 0.01 para evitar fallos con decimales)
+                if (Math.abs(imputacionExistente.getHorasTrabajadas() - horasClockify) > 0.01) {
+                    imputacionExistente.setHorasTrabajadas(horasClockify);
+                    imputacionService.actualizarImputacion(imputacionExistente);
+                }
+                continue; // Ya existía (actualizada o no), pasamos a la siguiente entrada
+            }
+
+            // -- A PARTIR DE AQUÍ ES UNA IMPUTACIÓN NUEVA --
+            ImputacionClockify imputacion = new ImputacionClockify();
+            imputacion.setIdClockifyOriginal(idEntrada);
+            imputacion.setIdProyecto(projectId);
+            imputacion.setDescripcionOriginal(description);
+            imputacion.setHorasTrabajadas(horasClockify);
+
+            // -- LÓGICA DE DESPIECE DE TEXTO --
+            String subfase = null;
+            if (description.contains("[") && description.contains("]")) {
+                subfase = description.substring(description.indexOf("[") + 1, description.indexOf("]"));
+                imputacion.setSubfaseExtraida(detalleEstimacionService.normalizarTexto(subfase));
+            }
+
+            long idGit = -1;
+            if (description.contains("#")) {
+                try {
+                    int start = description.indexOf("#") + 1;
+                    int end = description.indexOf(" ", start);
+                    if (end == -1) {
+                        end = description.length();
+                    }
+                    idGit = Long.parseLong(description.substring(start, end));
+                    imputacion.setIdGitlab(idGit);
+                } catch (Exception e) {
+                    // Ignorar error de parseo, se quedará en -1
+                }
+            }
+
+            if (description.contains("#")) {
+                int start = description.indexOf("#");
+                int firstSpace = description.indexOf(" ", start);
+                if (firstSpace != -1) {
+                    String titulo = description.substring(firstSpace + 1).trim();
+                    imputacion.setTareaExtraida(detalleEstimacionService.normalizarTexto(titulo));
+                }
+            }
+
+            // -- FECHAS Y HORAS --
+            try {
+                String startStr = (String) timeInterval.get("start");
+                if (startStr != null) {
+                    Instant start = Instant.parse(startStr);
+                    ZonedDateTime zdtStart = start.atZone(ZoneId.systemDefault());
+                    imputacion.setFecha(zdtStart.toLocalDate());
+                    imputacion.setHoraInicio(zdtStart.getHour() + (zdtStart.getMinute() / 60.0));
+                }
+                String endStr = (String) timeInterval.get("end");
+                if (endStr != null) {
+                    Instant end = Instant.parse(endStr);
+                    ZonedDateTime zdtEnd = end.atZone(ZoneId.systemDefault());
+                    imputacion.setHoraFin(zdtEnd.getHour() + (zdtEnd.getMinute() / 60.0));
+                }
+            } catch (Exception e) {
+                imputacion.setFecha(LocalDate.now()); // Fallback por seguridad
+            }
+
+            // -- CRUCE CON BASE DE DATOS (EL NÚCLEO DEL FILTRADO) --
+            boolean esValida = false;
+            
+            // Solo validamos si tenemos número de GitLab Y el proyecto tiene un Excel activo
+            if (idGit != -1 && excelVigente != null) {
+                DetalleEstimacion estimacion = detalleEstimacionRepository.findFirstByIdExcelAndNumeroGitlab(
+                        excelVigente.getIdExcel(), 
+                        String.valueOf(idGit)
+                );
+                
+                if (estimacion != null) {
+                    imputacion.setIdDetalleEstimacion(estimacion.getId()); 
+                    esValida = true;
+                }
+            }
+            
+            imputacion.setValida(esValida);
+            nuevasImputaciones.add(imputacion);
+        }
+
+        // 4. Guardar masivamente en BD
+        if (!nuevasImputaciones.isEmpty()) {
+            imputacionService.guardarImputacionesMasivas(nuevasImputaciones);
+        }
+
+        return nuevasImputaciones.size();
+    }
 }

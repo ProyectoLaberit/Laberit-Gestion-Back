@@ -8,62 +8,93 @@ import java.math.BigDecimal;
 @Table(name = "imputacion_clockify")
 public class ImputacionClockify {
 
-    @Id
+   @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_imputacion_clockify")
     private Long idImputacionClockify;
 
-    @Column(name = "id_clockify_original")
+    @Column(name = "id_clockify_original", unique = true)
     private String idClockifyOriginal;
 
-    @Column(name = "nombre_tarea", columnDefinition = "TEXT")
-    private String nombreTarea;
-
-    @Column(name = "fecha")
-    private LocalDate fecha;
-
-    @Column(name = "hora_inicio")
-    private BigDecimal horaInicio;
-
-    @Column(name = "hora_fin")
-    private BigDecimal horaFin;
-
-    @Column(name = "horas_totales")
-    private BigDecimal horasTotales;
-
-    @Column(name = "estado", length = 45)
-    private String estado;
+    @Column(name = "id_proyecto", nullable = false)
+    private Long idProyecto;
 
     @Column(name = "id_detalle_estimacion")
     private Long idDetalleEstimacion;
 
-    public ImputacionClockify() {}
+    @Column(name = "id_gitlab")
+    private Long idGitlab;
 
-    // GETTERS Y SETTERS
+    @Column(name = "subfase_extraida")
+    private String subfaseExtraida;
+
+    @Column(name = "tarea_extraida")
+    private String tareaExtraida;
+
+    @Column(name = "descripcion_original", columnDefinition = "TEXT", nullable = false)
+    private String descripcionOriginal;
+
+    @Column(name = "id_departamento")
+    private Integer idDepartamento;
+
+    @Column(name = "horas_trabajadas", nullable = false)
+    private Double horasTrabajadas;
+
+    
+    @Column(name = "fecha", nullable = false)
+    private LocalDate fecha;
+
+    @Column(name = "hora_inicio")
+    private Double horaInicio;
+
+    @Column(name = "hora_fin")
+    private Double horaFin;
+
+    @Column(name = "valida", nullable = false)
+    private Boolean valida = false;
+
+    public ImputacionClockify() {
+    }
+
     public Long getIdImputacionClockify() { return idImputacionClockify; }
     public void setIdImputacionClockify(Long idImputacionClockify) { this.idImputacionClockify = idImputacionClockify; }
 
     public String getIdClockifyOriginal() { return idClockifyOriginal; }
     public void setIdClockifyOriginal(String idClockifyOriginal) { this.idClockifyOriginal = idClockifyOriginal; }
 
-    public String getNombreTarea() { return nombreTarea; }
-    public void setNombreTarea(String nombreTarea) { this.nombreTarea = nombreTarea; }
+    public Long getIdProyecto() { return idProyecto; }
+    public void setIdProyecto(Long idProyecto) { this.idProyecto = idProyecto; }
+
+    public Long getIdDetalleEstimacion() { return idDetalleEstimacion; }
+    public void setIdDetalleEstimacion(Long idDetalleEstimacion) { this.idDetalleEstimacion = idDetalleEstimacion; }
+
+    public Long getIdGitlab() { return idGitlab; }
+    public void setIdGitlab(Long idGitlab) { this.idGitlab = idGitlab; }
+
+    public String getSubfaseExtraida() { return subfaseExtraida; }
+    public void setSubfaseExtraida(String subfaseExtraida) { this.subfaseExtraida = subfaseExtraida; }
+
+    public String getTareaExtraida() { return tareaExtraida; }
+    public void setTareaExtraida(String tareaExtraida) { this.tareaExtraida = tareaExtraida; }
+
+    public String getDescripcionOriginal() { return descripcionOriginal; }
+    public void setDescripcionOriginal(String descripcionOriginal) { this.descripcionOriginal = descripcionOriginal; }
+
+    public Integer getIdDepartamento() { return idDepartamento; }
+    public void setIdDepartamento(Integer idDepartamento) { this.idDepartamento = idDepartamento; }
+
+    public Double getHorasTrabajadas() { return horasTrabajadas; }
+    public void setHorasTrabajadas(Double horasTrabajadas) { this.horasTrabajadas = horasTrabajadas; }
 
     public LocalDate getFecha() { return fecha; }
     public void setFecha(LocalDate fecha) { this.fecha = fecha; }
 
-    public BigDecimal getHoraInicio() { return horaInicio; }
-    public void setHoraInicio(BigDecimal horaInicio) { this.horaInicio = horaInicio; }
+    public Double getHoraInicio() { return horaInicio; }
+    public void setHoraInicio(Double horaInicio) { this.horaInicio = horaInicio; }
 
-    public BigDecimal getHoraFin() { return horaFin; }
-    public void setHoraFin(BigDecimal horaFin) { this.horaFin = horaFin; }
+    public Double getHoraFin() { return horaFin; }
+    public void setHoraFin(Double horaFin) { this.horaFin = horaFin; }
 
-    public BigDecimal getHorasTotales() { return horasTotales; }
-    public void setHorasTotales(BigDecimal horasTotales) { this.horasTotales = horasTotales; }
-
-    public String getEstado() { return estado; }
-    public void setEstado(String estado) { this.estado = estado; }
-
-    public Long getIdDetalleEstimacion() { return idDetalleEstimacion; }
-    public void setIdDetalleEstimacion(Long idDetalleEstimacion) { this.idDetalleEstimacion = idDetalleEstimacion; }
+    public Boolean getValida() { return valida; }
+    public void setValida(Boolean valida) { this.valida = valida; }
 }

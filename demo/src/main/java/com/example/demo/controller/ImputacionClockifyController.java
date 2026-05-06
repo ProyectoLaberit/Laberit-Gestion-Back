@@ -3,6 +3,9 @@ package com.example.demo.controller;
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.entity.ImputacionClockify;
 import com.example.demo.services.ImputacionClockifyService;
+
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/imputaciones")
 public class ImputacionClockifyController {
 
-    @Autowired
+   @Autowired
     private ImputacionClockifyService service;
 
     // GET: Suma de tiempos de tarea/departamento
@@ -19,10 +22,8 @@ public class ImputacionClockifyController {
     public ResponseEntity<ApiResponse> obtenerSumaHoras(@PathVariable Long idDetalleEstimacion) {
         try {
             Double suma = service.obtenerSumaHorasValidas(idDetalleEstimacion);
-            // Orden corregido: Mensaje, Success, Data
             return ResponseEntity.ok(new ApiResponse("Suma obtenida correctamente", true, suma));
         } catch (Exception e) {
-            // Orden corregido: Mensaje, Success, Data
             return ResponseEntity.badRequest().body(new ApiResponse("Error al calcular la suma", false, null));
         }
     }
@@ -31,29 +32,30 @@ public class ImputacionClockifyController {
     @GetMapping("/validas/{idDetalleEstimacion}")
     public ResponseEntity<ApiResponse> obtenerValidas(@PathVariable Long idDetalleEstimacion) {
         try {
-            java.util.List<ImputacionClockify> lista = service.obtenerImputacionesValidas(idDetalleEstimacion);
+            List<ImputacionClockify> lista = service.obtenerImputacionesValidas(idDetalleEstimacion);
             return ResponseEntity.ok(new ApiResponse("Lista de imputaciones obtenida", true, lista));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener imputaciones", false, null));
         }
     }
 
-    // GET: Para rellenar el desplegable de tareas huérfanas
-    @GetMapping("/huerfanas/{idDetalleEstimacion}")
-    public ResponseEntity<ApiResponse> obtenerHuerfanas(@PathVariable Long idDetalleEstimacion) {
+    // CAMBIO AQUÍ: Ahora buscamos las huérfanas por idProyecto
+    @GetMapping("/huerfanas/{idProyecto}")
+    public ResponseEntity<ApiResponse> obtenerHuerfanas(@PathVariable Long idProyecto) {
         try {
-            java.util.List<ImputacionClockify> lista = service.obtenerHuerfanas(idDetalleEstimacion);
+            List<ImputacionClockify> lista = service.obtenerHuerfanas(idProyecto);
             return ResponseEntity.ok(new ApiResponse("Huérfanas obtenidas", true, lista));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener huérfanas", false, null));
         }
     }
 
-    // PUT: Para cuando el usuario le da al botón de "Añadir" en el desplegable
-    @PutMapping("/vincular/{idImputacion}")
-    public ResponseEntity<ApiResponse> vincularManual(@PathVariable Long idImputacion) {
+    // CAMBIO AQUÍ: Recibimos ambos IDs en la URL para poder hacer la vinculación
+    @PutMapping("/vincular/{idImputacion}/{idDetalleEstimacion}")
+    public ResponseEntity<ApiResponse> vincularManual(@PathVariable Long idImputacion, @PathVariable Long idDetalleEstimacion) {
         try {
-            ImputacionClockify actualizada = service.vincularImputacionManual(idImputacion);
+            ImputacionClockify actualizada = service.vincularImputacionManual(idImputacion, idDetalleEstimacion);
+            
             if (actualizada != null) {
                 return ResponseEntity.ok(new ApiResponse("Tarea vinculada correctamente", true, actualizada));
             } else {
