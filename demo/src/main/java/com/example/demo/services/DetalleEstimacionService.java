@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.DetalleEstimacionDTO;
-import com.example.demo.dto.GitLabTareaDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
 import com.example.demo.entity.Departamento;
 import com.example.demo.entity.DetalleEstimacion;
@@ -38,9 +37,6 @@ public class DetalleEstimacionService {
 
     @Autowired
     private ExcelService excelService;
-
-    @Autowired
-    private GitLabService gitLabService;
 
     /**
      * Procesa un archivo Excel físico, extrae las estimaciones y las guarda en BD.
@@ -153,96 +149,9 @@ public class DetalleEstimacionService {
         workbook.close();
         if (!listaParaGuardar.isEmpty()) {
             detalleEstimacionRepository.saveAll(listaParaGuardar);
-            emparejarTareasConGitLab(proyectoId, idExcelGenerado);
         }
         return listaParaGuardar.size();
     }
-    /*
-        * Crea una nueva tarea manualmente desde el Frontend, asignándola a un proyecto específico.
-
-    */
-    public DetalleEstimacion crearTareaManual(Long idProyecto, DetalleEstimacionDTO dto) {
-        // 1. Obtener el Excel vigente del proyecto
-        Excel excelVigente = excelService.obtenerExcelVigentePorProyecto(idProyecto);
-
-        if (excelVigente == null) {
-            throw new RuntimeException("El proyecto no tiene un Excel vigente asociado.");
-        }
-
-        // 2. Instanciar la nueva entidad
-        DetalleEstimacion nuevaTarea = new DetalleEstimacion();
-
-        // 3. Asignar los valores obligatorios
-        nuevaTarea.setIdExcel(excelVigente.getIdExcel());
-        
-        // El Frontend nos enviará la subfase en el campo idFase (como venía haciendo) 
-        // o podemos leerlo de la estructura que decida el front. Lo vital es guardar la subfase.
-        nuevaTarea.setIdFase(dto.getIdSubFase()); 
-        
-        nuevaTarea.setIdDepartamento(dto.getIdDepartamento());
-        nuevaTarea.setTarea(dto.getTarea());
-        nuevaTarea.setTiempoMin(dto.getTiempoMin());
-        nuevaTarea.setTiempoMax(dto.getTiempoMax());
-
-        // 4. Asegurarnos de que los opcionales van a null (por seguridad)
-        nuevaTarea.setTiempoReal(null);
-        nuevaTarea.setNumeroGitlab(null);
-        
-        // 5. NUEVO: Asegurarnos de que la tarea nace como NO completada
-        nuevaTarea.setCompletada(false);
-
-        // 6. Guardar en base de datos y retornar
-        return detalleEstimacionRepository.save(nuevaTarea);
-    }
-
-    // ==========================================================
-    // MÉTODOS DE SINCRONIZACIÓN CON GITLAB
-    // ==========================================================
-
-    /**
-     * Sincroniza las estimaciones locales con los Issues de GitLab comparando los nombres.
-     * @param idProyecto ID del proyecto para buscar en GitLab.
-     * @param idExcel ID del excel para buscar las tareas locales.
-     */
-    public void emparejarTareasConGitLab(Long idProyecto, Integer idExcel) {
-        List<DetalleEstimacion> estimacionesLocales = detalleEstimacionRepository.findByIdExcel(idExcel);
-        List<GitLabTareaDTO> issuesGitLab = gitLabService.obtenerTareasPorProyecto(idProyecto);
-
-        boolean hayCambios = false;
-
-        for (DetalleEstimacion estimacion : estimacionesLocales) {
-            if (estimacion.getNumeroGitlab() == null) {
-                for (GitLabTareaDTO issue : issuesGitLab) {
-                    // Comparamos nombres ignorando mayúsculas y espacios extra
-                    if (estimacion.getTarea().trim().equalsIgnoreCase(issue.getTitle().trim())) {
-                        // Guardamos el IID (ID interno visible por el usuario en GitLab)
-                        estimacion.setNumeroGitlab(String.valueOf(issue.getIid()));
-                        hayCambios = true;
-                        break; 
-                    }
-                }
-            }
-        }
-
-        if (hayCambios) {
-            detalleEstimacionRepository.saveAll(estimacionesLocales);
-        }
-    }
-
-    /**
-     * Vincula manualmente una tarea local con un Issue específico de GitLab.
-     * @param idDetalleEstimacion ID de la tarea en base de datos.
-     * @param numeroGitlab ID del issue a vincular.
-     * @return La entidad actualizada.
-     */
-   public DetalleEstimacion vincularIssueManual(Long idDetalleEstimacion, String numeroGitlab) {
-        DetalleEstimacion estimacion = detalleEstimacionRepository.findById(idDetalleEstimacion)
-            .orElseThrow(() -> new RuntimeException("Estimación no encontrada"));
-            
-        estimacion.setNumeroGitlab(numeroGitlab);
-        return detalleEstimacionRepository.save(estimacion);
-    }
-
 
     // ==========================================================
     // MÉTODOS AUXILIARES Y NORMALIZACIÓN
@@ -303,8 +212,6 @@ public class DetalleEstimacionService {
         return cellA != null && normalizarTexto(cellA.toString()).contains("total");
     }
 
-
-
     // ==========================================================
     // MÉTODOS DE CONSULTA Y EXPORTACIÓN
     // ==========================================================
@@ -325,7 +232,7 @@ public class DetalleEstimacionService {
             dto.setId(entidad.getId()); 
             dto.setIdExcel(entidad.getIdExcel());
             dto.setIdDepartamento(entidad.getIdDepartamento());
-            dto.setIdSubFase(entidad.getIdFase());
+            dto.setIdFase(entidad.getIdFase());
             dto.setTarea(entidad.getTarea());
             dto.setTiempoMin(entidad.getTiempoMin());
             dto.setTiempoMax(entidad.getTiempoMax());
@@ -450,40 +357,7 @@ public class DetalleEstimacionService {
 
     }
 
-    // 2. Traer todas las estimaciones y los departamentos para cruzar nombres
-    List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
-    List<com.example.demo.entity.Departamento> todosLosDeptos = departamentoRepository.findAll();
-
-    // 3. Filtrar todas las filas que coincidan con la subfase y el nombre de la tarea
-    return todasLasEstimaciones.stream()
-            .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
-            .filter(d -> d.getTarea() != null && d.getTarea().equalsIgnoreCase(nombreTarea.trim()))
-            .map(entidad -> {
-                // Usamos tu clase DetalleEstimacionDTO
-                DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
-                dto.setId(entidad.getId());
-                dto.setIdExcel(entidad.getIdExcel());
-                dto.setIdDepartamento(entidad.getIdDepartamento());
-                dto.setIdSubFase(entidad.getIdFase());
-                dto.setTarea(entidad.getTarea());
-                dto.setTiempoMin(entidad.getTiempoMin());
-                dto.setTiempoMax(entidad.getTiempoMax());
-
-                // Buscamos el nombre del departamento en la lista para rellenar el DTO
-             // Buscamos el nombre del departamento de forma segura
-            // Sustituye esa línea por esta:
-            String nombreDepto = todosLosDeptos.stream()
-                .filter(d -> d.getId() == entidad.getIdDepartamento())
-                .map(d -> d.getNombre())
-                .findFirst()
-                .orElse("Desconocido");
-                        dto.setNombreDepartamento(nombreDepto);
-                        return dto;
-            })
-            .collect(java.util.stream.Collectors.toList());
-}
-
-    public List<TareaSubfaseDTO> obtenerTareasSubfase(long idProyecto, Integer idSubfase){
+    public List<TareaSubfaseDTO> obtenerTareasSubfase(long idProyecto, Integer idSubfase, Integer idExcelElegido){
 
        // 1. Con el id del proyecto buscar su excel vigente
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
@@ -548,8 +422,5 @@ public class DetalleEstimacionService {
 
         return resultado;
     }
-
-
-
 
 } //<-- fin del servicio DetalleEstimacionService.java
