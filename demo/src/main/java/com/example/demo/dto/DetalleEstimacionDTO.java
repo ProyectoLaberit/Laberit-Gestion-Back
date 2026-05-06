@@ -39,7 +39,7 @@ public class DetalleEstimacionDTO {
         this.id = id;
         this.idExcel = idExcel;
         this.idDepartamento = idDepartamento;
-        this.idSubFase = idSubFase;
+        this.idSubFase = idFase;
         this.nombreDepartamento = nombreDepartamento;
         this.nombreFase = nombreFase;
         this.nombreSubfase = nombreSubfase;

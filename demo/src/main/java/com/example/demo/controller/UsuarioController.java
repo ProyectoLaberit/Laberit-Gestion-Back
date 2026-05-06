@@ -24,6 +24,7 @@ import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.UsuarioDTO;
 import com.example.demo.services.UsuarioService;
+import com.example.demo.services.AuditService;
 import com.example.demo.entity.Usuario;
 import com.example.demo.security.JwtUtil;
 
@@ -38,10 +39,11 @@ public class UsuarioController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private AuditService auditService;
+
     // ── Helpers de autenticación ──────────────────────────────────────────────
-    /**
-     * Metodos de autenticacion
-     */ 
+
     private String getEmailAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return (auth != null) ? auth.getName() : null;
@@ -64,11 +66,6 @@ public class UsuarioController {
 
     // ── Endpoints ─────────────────────────────────────────────────────────────
 
-    /**
-     * Metodo para iniciar sesion
-     * @param login objeto tipo login que contiene las credenciales del usuario introducidas en el login
-     * @return ApiResponse json con la informacion del usuario logeado y su token de verificacion
-     */
     @PostMapping("/login")
     public ApiResponse verificar(@RequestBody LoginRequest login) {
         Usuario usuario = usuarioService.validarUsuario(login);
@@ -92,11 +89,6 @@ public class UsuarioController {
         }
     }
 
-    /**
-     * Metodo para recuperacion de contraseña
-     * @param dto objeto tipo usuarioDTO con la informacion necesaria del usuario a recuperar
-     * @return ApiResponse json con un mesaje segun exista o no el usuario con el correo introducido (si existe se procedera a enviar un correo electronico para el cambio de contraseña)
-     */
     @PostMapping("/forgot-password")
     public ApiResponse forgotPassword(@RequestBody UsuarioDTO dto) {
         try {
@@ -108,12 +100,7 @@ public class UsuarioController {
             return new ApiResponse("No se pudo procesar la solicitud: " + e.getMessage(), false, null);
         }
     }
-    
-    /**
-     * Metodo para realizar un cambio de contraseña
-     * @param dto objeto tipo usuarioDTO con la informacion del usuario 
-     * @return ApiResponse json con mensaje segun la contraseña se haya reestablecido correctamente o no
-     */
+
     @PostMapping("/reset-password")
     public ApiResponse resetPassword(@RequestBody UsuarioDTO dto) {
         try {
@@ -127,8 +114,7 @@ public class UsuarioController {
     }
 
     /**
-     * Metodo que devuelve todos los usuarios existentes si el usuario que lo solicita tiene el rol superadministrador
-     * @return ApiResponse json que contiene la lista de todos los usuarios existentes en la base de datos y su infromacion
+     * Listar todos los usuarios: solo SuperAdministrador.
      */
     @GetMapping
     public ApiResponse listarUsuarios() {
@@ -144,10 +130,7 @@ public class UsuarioController {
     }
 
     /**
-     * Metodo para obtener un usuario por su id 
      * Obtener un usuario por ID: SuperAdministrador o el propio usuario.
-     * @param id id del usuario a buscar
-     * @return ApiResponse json con la informacion del usuario
      */
     @GetMapping("/{id}")
     public ApiResponse obtenerUsuarioPorId(@PathVariable Integer id) {
@@ -164,11 +147,7 @@ public class UsuarioController {
         }
     }
 
-    /**
-     * Metodo para crear un usuario, solo se puede crear si el creador tiene el rol admin o superior
-     * @param usuarioDTO objeto tipo usuarioDTO con la informacion del nuevo usuario a crear y guardar en la base de datos
-     * @return ApiResponse json con la informacion del usuario nuevo si el guardado se realizo correctamente o error si no
-     */
+
     @PostMapping
     public ApiResponse crearUsuario(@RequestBody UsuarioDTO usuarioDTO) {
         if (!esAdmin()) {
@@ -176,6 +155,11 @@ public class UsuarioController {
         }
         try {
             UsuarioDTO usuarioCreado = usuarioService.crearUsuario(usuarioDTO);
+            auditService.registrar(
+                AuditService.CREACION_USUARIO,
+                "Usuario creado: " + usuarioDTO.getEmail() + " con rol " + usuarioDTO.getRol(),
+                null
+            );
             return new ApiResponse("Usuario creado con éxito", true, usuarioCreado);
         } catch (RuntimeException e) {
             return new ApiResponse(e.getMessage(), false, null);
@@ -185,9 +169,8 @@ public class UsuarioController {
     }
 
     /**
-     * Metodo para borrar usuarios, solo pueden ejecutarlo usuarios con rol admin o mayor un admin no puede borrarse a si mismo
-     * @param id id del usuario a borrar
-     * @return ApiResponse json que contiene un booleano a true o false y un mensaje segun el borrado haya sido efectuado o no
+     * Eliminar usuario: solo ADMIN (garantizado por SecurityConfig).
+     * ADMIN no puede eliminarse a sí mismo.
      */
     @DeleteMapping("/{id}")
     public ApiResponse eliminarUsuario(@PathVariable Integer id) {
@@ -198,6 +181,11 @@ public class UsuarioController {
                 return new ApiResponse("No puedes eliminarte a ti mismo.", false, null);
             }
             usuarioService.eliminarUsuario(id);
+            auditService.registrar(
+                AuditService.BORRADO_USUARIO,
+                "Usuario ID " + id + " eliminado.",
+                null
+            );
             return new ApiResponse("Usuario eliminado correctamente", true, null);
         } catch (RuntimeException e) {
             return new ApiResponse(e.getMessage(), false, null);
@@ -207,10 +195,10 @@ public class UsuarioController {
     }
 
     /**
-     * Metodo para cambiar la contraseña de un usuario propio, de otros con el rol user si eres manager o de cualquiera si tienes el rol admin
-     * @param id id del usuario a cambiar la contraseña
-     * @param dto objeto tipo usuarioDTO con la contraseña antigua y nueva para el cambio de la misma
-     * @return ApiResponse json que contiene un mensaje y un booleano segun el cambio se haya realizado con exito o no
+     * Cambiar contraseña:
+     * - USER solo puede cambiar la suya propia.
+     * - MANAGER puede cambiar la de usuarios con rol USER.
+     * - ADMIN puede cambiar la de cualquiera.
      */
     @PutMapping("/{id}/password")
     public ApiResponse cambiarContrasena(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
@@ -234,10 +222,8 @@ public class UsuarioController {
     }
 
     /**
-     * Metodo para cambiar el icono de un usuario propio, de otros con el rol user si eres manager o de cualquiera si tienes el rol admin
-     * @param id id del usuario a cambiar el icono
-     * @param archivo archivo del icono nuevo
-     * @return ApiResponse json que contiene un mensaje y un booleano segun el cambio se haya realizado con exito o no 
+     * Cambiar foto:
+     * Mismas reglas que cambiar contraseña.
      */
     @PutMapping(value = "/{id}/foto", consumes = "multipart/form-data")
     public ApiResponse cambiarFoto(
@@ -259,10 +245,7 @@ public class UsuarioController {
     }
 
     /**
-     * Metodo para cambiar el rol de un usuario solo utilizable por el rol admin o superior
-     * @param id id del usuario a cambiar
-     * @param dto objeto usuarioDTO que contiene el nuevo rol del usuario
-     * @return ApiResponse json que contiene un mensaje y un booleano segun el cambio se haya realizado con exito o no
+     * Cambiar rol: solo ADMIN.
      */
     @PutMapping("/{id}/rol")
     public ApiResponse cambiarRol(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
@@ -281,6 +264,11 @@ public class UsuarioController {
             }
 
             usuarioService.cambiarRol(id, dto.getRol());
+            auditService.registrar(
+                AuditService.CAMBIO_ROL,
+                "Rol del usuario ID " + id + " cambiado a: " + dto.getRol(),
+                null
+            );
             return new ApiResponse("Rol actualizado correctamente.", true, null);
         } catch (RuntimeException e) {
             return new ApiResponse(e.getMessage(), false, null);
@@ -290,10 +278,8 @@ public class UsuarioController {
     }
 
     /**
-     * Metodo para cambiar el mail/nombre/foto de un usuario propio, de otros con el rol user si eres manager o de cualquiera si tienes el rol admin
-     * @param id id del usuario a cambiar
-     * @param dto objeto usuarioDTO con la informacion a cambiar 
-     * @return ApiResponse json que contiene la informacion actualizada del usuario si este se actualizo correctamente 
+     * Actualizar nombre/email/foto del perfil:
+     * Mismas reglas que cambiar contraseña.
      */
     @PutMapping("/{id}")
     public ApiResponse actualizarUsuario(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
