@@ -127,14 +127,7 @@ public class UsuarioService {
         nuevoUsuario.setExcels(dto.getExcels() != null ? dto.getExcels() : false);
 
         // Determinar rol a asignar
-        Rol rolAsignado = null;
-
-        // Log para depuración: mostrar todos los roles disponibles en BD
-        List<Rol> todosLosRoles = rolRepository.findAll();
-        System.out.println("=== Roles disponibles en BD ===");
-        todosLosRoles.forEach(r -> System.out.println("  ID=" + r.getId() + " nombre='" + r.getNombre() + "'"));
-        System.out.println("=== Rol solicitado: '" + dto.getRol() + "' ===");
-
+        Rol rolAsignado;
         if (dto.getRol() != null && !dto.getRol().trim().isEmpty()) {
             try {
                 // Transformamos el String ("1", "2" o "3") a un número entero
@@ -147,30 +140,11 @@ public class UsuarioService {
             } catch (NumberFormatException e) {
                 throw new RuntimeException("Error: El rol enviado no es un número válido.");
             }
-
-            // 3. Si sigue sin encontrarse, buscar en la lista completa ignorando mayúsculas
-            if (rolAsignado == null) {
-                rolAsignado = todosLosRoles.stream()
-                        .filter(r -> r.getNombre().equalsIgnoreCase(nombreRol))
-                        .findFirst()
-                        .orElse(null);
-            }
-
-            if (rolAsignado == null) {
-                String rolesDisponibles = todosLosRoles.stream()
-                        .map(r -> "'" + r.getNombre() + "' (id=" + r.getId() + ")")
-                        .reduce((a, b) -> a + ", " + b)
-                        .orElse("ninguno");
-                throw new RuntimeException(
-                    "Error: El rol '" + nombreRol + "' no existe. Roles disponibles: " + rolesDisponibles);
-            }
         } else {
             // Si viene null o vacío, asignamos empleado
             rolAsignado = rolRepository.findById(3)
                     .orElseThrow(() -> new RuntimeException("Error: El rol Empleado no existe en la base de datos."));
         }
-
-        System.out.println("=== Rol asignado: ID=" + rolAsignado.getId() + " nombre='" + rolAsignado.getNombre() + "' ===");
 
         nuevoUsuario.getRoles().add(rolAsignado);
         nuevoUsuario.setPassword(passwordEncoder.encode(dto.getPassword()));
@@ -183,29 +157,6 @@ public class UsuarioService {
         respuesta.setEmail(guardado.getEmail());
         respuesta.setExcels(guardado.getExcels());
         return respuesta;
-    }
-
-    /**
-     * Mapea nombres de rol del frontend a los nombres exactos en BD:
-     * SuperAdministrador, Administrador, Empleado
-     */
-    private String mapearNombreRol(String nombreRol) {
-        switch (nombreRol.toUpperCase()) {
-            case "ADMIN":
-            case "ADMINISTRADOR":
-            case "SUPERADMINISTRADOR":
-                return "Administrador";
-            case "SUPERADMIN":
-                return "SuperAdministrador";
-            case "MANAGER":
-            case "GESTOR":
-            case "USER":
-            case "USUARIO":
-            case "EMPLEADO":
-                return "Empleado";
-            default:
-                return nombreRol;
-        }
     }
 
     public void eliminarUsuario(Integer id) {
