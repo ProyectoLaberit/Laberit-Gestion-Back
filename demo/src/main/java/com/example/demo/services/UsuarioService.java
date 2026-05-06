@@ -122,26 +122,21 @@ public class UsuarioService {
         // Determinar rol a asignar
         Rol rolAsignado;
         if (dto.getRol() != null && !dto.getRol().trim().isEmpty()) {
-            // Buscar por nombre
-            String nombreRol = dto.getRol().trim().toUpperCase();
-            rolAsignado = rolRepository.findAll().stream()
-                    .filter(r -> r.getNombre().equalsIgnoreCase(nombreRol))
-                    .findFirst()
-                    .orElse(null);
-            if (rolAsignado == null) {
-                // Intentar por ID numérico
-                try {
-                    int idRol = Integer.parseInt(dto.getRol().trim());
-                    rolAsignado = rolRepository.findById(idRol)
-                            .orElseThrow(() -> new RuntimeException("Error: El rol especificado no existe."));
-                } catch (NumberFormatException e) {
-                    throw new RuntimeException("Error: El rol especificado no existe en el sistema.");
-                }
+            try {
+                // Transformamos el String ("1", "2" o "3") a un número entero
+                int idRol = Integer.parseInt(dto.getRol().trim());
+                
+                // Buscamos directamente por ese ID
+                rolAsignado = rolRepository.findById(idRol)
+                        .orElseThrow(() -> new RuntimeException("Error: El rol especificado (" + idRol + ") no existe en la base de datos."));
+                        
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Error: El rol enviado no es un número válido.");
             }
         } else {
-            // Rol por defecto: USER (id=3 según código original)
+            // Si viene null o vacío, asignamos empleado
             rolAsignado = rolRepository.findById(3)
-                    .orElseThrow(() -> new RuntimeException("Error critico: El rol 3 no existe en la base de datos."));
+                    .orElseThrow(() -> new RuntimeException("Error: El rol Empleado no existe en la base de datos."));
         }
 
         nuevoUsuario.getRoles().add(rolAsignado);
