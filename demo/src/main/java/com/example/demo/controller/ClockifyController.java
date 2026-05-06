@@ -62,6 +62,8 @@ public class ClockifyController {
         return new ApiResponse("tareasFaliidas", true, tareasFallidas);
     }
     
+
+    
     @PostMapping("/sincronizar/{idProyecto}")
     public ApiResponse sincronizarConClockify(@PathVariable Long idProyecto) {
         try {

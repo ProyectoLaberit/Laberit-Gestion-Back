@@ -49,4 +49,12 @@ public class ImputacionClockifyService {
     public List<ImputacionClockify> guardarImputacionesMasivas(List<ImputacionClockify> nuevasImputaciones) {
         return repository.saveAll(nuevasImputaciones);
     }
+
+    public ImputacionClockify obtenerPorIdClockify(String idClockifyOriginal) {
+        return repository.findByIdClockifyOriginal(idClockifyOriginal);
+    }
+
+    public ImputacionClockify actualizarImputacion(ImputacionClockify imputacion) {
+        return repository.save(imputacion);
+    }
 }

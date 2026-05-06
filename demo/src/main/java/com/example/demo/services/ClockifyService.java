@@ -507,8 +507,8 @@ public class ClockifyService {
      * @param projectId ID de nuestro proyecto local.
      * @return Número de imputaciones nuevas guardadas.
      */
-    public int sincronizarImputaciones(Long projectId) {
-       Proyecto p = proyectoRepository.findById(projectId)
+  public int sincronizarImputaciones(Long projectId) {
+        Proyecto p = proyectoRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
 
         // Rescatamos el Excel vigente de este proyecto para hacer búsquedas seguras
@@ -516,13 +516,14 @@ public class ClockifyService {
 
         String clockifyId = p.getClockifyId();
         ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
-        Map<String, String> etiquetas = cargarMapaTagsClockify();
+        
+        // (Opcional) Map<String, String> etiquetas = cargarMapaTagsClockify();
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Api-Key", clockify.getClave());
         HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        // 1. Obtener ID del usuario de Clockify
+        // 1. Obtener ID del usuario maestro de Clockify (Obligatorio para la URL)
         ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
                 clockify.getUrlReal() + "/user", HttpMethod.GET, entity,
                 new ParameterizedTypeReference<Map<String, Object>>() {});
@@ -540,20 +541,40 @@ public class ClockifyService {
         // 3. Procesar cada entrada
         for (Map<String, Object> entry : entradasClockify) {
             
-            // Ignorar si no es del proyecto actual o no tiene descripción
-            if (!clockifyId.equals(entry.get("projectId"))) continue;
+            // Ignorar si no es del proyecto actual
+            if (!clockifyId.equals(entry.get("projectId"))) { 
+                continue; 
+            }
             
             String idEntrada = (String) entry.get("id");
             String description = (String) entry.get("description");
-            if (description == null || description.isEmpty()) continue;
+            
+            if (description == null || description.isEmpty()) { 
+                continue; 
+            }
 
-            // Ignorar si ya la hemos guardado en sincronizaciones anteriores
-            if (imputacionService.existeImputacion(idEntrada)) continue;
+            // -- EXTRAEMOS TIEMPO PRIMERO PARA PODER COMPARARLO --
+            Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
+            double horasClockify = convertirDuracionAHoras((String) timeInterval.get("duration"));
 
+            // -- LÓGICA DE ACTUALIZACIÓN DE TIEMPOS MODIFICADOS A MANO --
+            ImputacionClockify imputacionExistente = imputacionService.obtenerPorIdClockify(idEntrada);
+            
+            if (imputacionExistente != null) {
+                // Comprobamos si el tiempo ha cambiado (tolerancia de 0.01 para evitar fallos con decimales)
+                if (Math.abs(imputacionExistente.getHorasTrabajadas() - horasClockify) > 0.01) {
+                    imputacionExistente.setHorasTrabajadas(horasClockify);
+                    imputacionService.actualizarImputacion(imputacionExistente);
+                }
+                continue; // Ya existía (actualizada o no), pasamos a la siguiente entrada
+            }
+
+            // -- A PARTIR DE AQUÍ ES UNA IMPUTACIÓN NUEVA --
             ImputacionClockify imputacion = new ImputacionClockify();
             imputacion.setIdClockifyOriginal(idEntrada);
             imputacion.setIdProyecto(projectId);
             imputacion.setDescripcionOriginal(description);
+            imputacion.setHorasTrabajadas(horasClockify);
 
             // -- LÓGICA DE DESPIECE DE TEXTO --
             String subfase = null;
@@ -567,10 +588,14 @@ public class ClockifyService {
                 try {
                     int start = description.indexOf("#") + 1;
                     int end = description.indexOf(" ", start);
-                    if (end == -1) end = description.length();
+                    if (end == -1) {
+                        end = description.length();
+                    }
                     idGit = Long.parseLong(description.substring(start, end));
                     imputacion.setIdGitlab(idGit);
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                    // Ignorar error de parseo, se quedará en -1
+                }
             }
 
             if (description.contains("#")) {
@@ -582,10 +607,7 @@ public class ClockifyService {
                 }
             }
 
-            // -- TIEMPOS Y FECHAS --
-            Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
-            imputacion.setHorasTrabajadas(convertirDuracionAHoras((String) timeInterval.get("duration")));
-
+            // -- FECHAS Y HORAS --
             try {
                 String startStr = (String) timeInterval.get("start");
                 if (startStr != null) {
@@ -604,26 +626,18 @@ public class ClockifyService {
                 imputacion.setFecha(LocalDate.now()); // Fallback por seguridad
             }
 
-            // -- DEPARTAMENTO (TAG) --
-            List<String> tagIds = (List<String>) entry.get("tagIds");
-            if (tagIds != null && !tagIds.isEmpty()) {
-                // Aquí deberías buscar tu departamento local según el nombre del tag.
-                // Por ahora lo dejamos nulo o guardamos un ID provisional si lo tienes.
-            }
-
-           // -- CRUCE CON BASE DE DATOS (EL NÚCLEO DEL FILTRADO) --
+            // -- CRUCE CON BASE DE DATOS (EL NÚCLEO DEL FILTRADO) --
             boolean esValida = false;
             
             // Solo validamos si tenemos número de GitLab Y el proyecto tiene un Excel activo
             if (idGit != -1 && excelVigente != null) {
-                // Buscamos cruzando el ID del Excel y el número de GitLab
                 DetalleEstimacion estimacion = detalleEstimacionRepository.findFirstByIdExcelAndNumeroGitlab(
                         excelVigente.getIdExcel(), 
                         String.valueOf(idGit)
                 );
                 
                 if (estimacion != null) {
-                    imputacion.setIdDetalleEstimacion(estimacion.getId()); // Aquí asegúrate de usar el getter correcto de tu Entidad (ej. getIdDetalleEstimacion())
+                    imputacion.setIdDetalleEstimacion(estimacion.getId()); 
                     esValida = true;
                 }
             }
