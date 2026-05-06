@@ -38,6 +38,9 @@ public class DetalleEstimacionService {
     @Autowired
     private ExcelService excelService;
 
+    @Autowired
+    private com.example.demo.repository.ImputacionClockifyRepository imputacionClockifyRepository;
+
     /**
      * Procesa un archivo Excel físico, extrae las estimaciones y las guarda en BD.
      * * @param archivo El archivo MultipartFile subido desde el cliente.
@@ -303,7 +306,6 @@ public class DetalleEstimacionService {
                 .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
                 .filter(d -> d.getTarea() != null && d.getTarea().equalsIgnoreCase(nombreTarea.trim()))
                 .map(entidad -> {
-                    // Usamos tu clase DetalleEstimacionDTO
                     DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
                     dto.setId(entidad.getId());
                     dto.setIdExcel(entidad.getIdExcel());
@@ -313,16 +315,22 @@ public class DetalleEstimacionService {
                     dto.setTiempoMin(entidad.getTiempoMin());
                     dto.setTiempoMax(entidad.getTiempoMax());
 
-                    // Buscamos el nombre del departamento en la lista para rellenar el DTO
-                // Buscamos el nombre del departamento de forma segura
-                // Sustituye esa línea por esta:
-                String nombreDepto = todosLosDeptos.stream()
-                    .filter(d -> d.getId() == entidad.getIdDepartamento())
-                    .map(d -> d.getNombre())
-                    .findFirst()
-                    .orElse("Desconocido");
-                            dto.setNombreDepartamento(nombreDepto);
-                            return dto;
+                    // 1. Añadimos el número de GitLab directamente de la entidad
+                    dto.setNumeroGitlab(entidad.getNumeroGitlab());
+
+                    // 2. Calculamos el tiempo real desde Clockify (redondeado a 1 decimal para evitar fallos visuales)
+                    Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(entidad.getId());
+                    dto.setTiempoReal(horasReales != null ? Math.round(horasReales * 10.0) / 10.0 : 0.0);
+
+                    // 3. Buscamos el nombre del departamento de forma segura (tu código original)
+                    String nombreDepto = todosLosDeptos.stream()
+                        .filter(d -> d.getId() == entidad.getIdDepartamento())
+                        .map(d -> d.getNombre())
+                        .findFirst()
+                        .orElse("Desconocido");
+                    
+                    dto.setNombreDepartamento(nombreDepto);
+                    return dto;
                 })
                 .collect(java.util.stream.Collectors.toList());
 
@@ -381,15 +389,23 @@ public class DetalleEstimacionService {
             TareaSubfaseDTO dto = new TareaSubfaseDTO();
             dto.setNombreTarea(entry.getKey());
 
-            dto.setIdTarea(entry.getValue().get(0).getId());// ID de una de las tareas (podrían ser varias con el mismo nombre)
+            dto.setIdTarea(entry.getValue().get(0).getId());
 
-            // Sumamos todos los mínimos de este grupo
             double sumaMin = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMin).sum();
-            // Sumamos todos los máximos de este grupo
             double sumaMax = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMax).sum();
+
+            // -- NUEVO: SUMAR TIEMPO REAL DE TODOS LOS DEPARTAMENTOS DE ESTA TAREA --
+            double sumaReal = 0.0;
+            for (DetalleEstimacion det : entry.getValue()) {
+                Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(det.getId());
+                if (horasReales != null) {
+                    sumaReal += horasReales;
+                }
+            }
 
             dto.setTiempoTotalMin(sumaMin);
             dto.setTiempoTotalMax(sumaMax);
+            dto.setTiempoTotalReal(Math.round(sumaReal * 10.0) / 10.0);
             
             resultado.add(dto);
         }

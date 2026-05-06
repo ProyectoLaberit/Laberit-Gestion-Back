@@ -28,4 +28,8 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
     boolean existsByIdClockifyOriginal(String idClockifyOriginal);
 
      ImputacionClockify findByIdClockifyOriginal(String idClockifyOriginal);
+
+    @Query("SELECT SUM(ic.horasTrabajadas) FROM ImputacionClockify ic WHERE ic.idDetalleEstimacion = :idDetalle")
+    Double sumarHorasPorDetalle(@Param("idDetalle") Long idDetalle);
+
 }

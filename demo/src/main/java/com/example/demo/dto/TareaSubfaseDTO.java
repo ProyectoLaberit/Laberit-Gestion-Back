@@ -11,6 +11,7 @@ public class TareaSubfaseDTO {
     private double tiempoTotalMax;
     private Double tiempoTotalMinElegido;
     private Double tiempoTotalMaxElegido;
+    private Double tiempoTotalReal;
 
     public TareaSubfaseDTO() {
     }
@@ -68,5 +69,8 @@ public class TareaSubfaseDTO {
     public void setTiempoTotalMaxElegido(Double tiempoTotalMaxElegido) { 
         this.tiempoTotalMaxElegido = tiempoTotalMaxElegido; 
     }
+
+    public Double getTiempoTotalReal() { return tiempoTotalReal; }
+    public void setTiempoTotalReal(Double tiempoTotalReal) { this.tiempoTotalReal = tiempoTotalReal; }
 
 }
