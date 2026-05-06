@@ -62,4 +62,13 @@ public class ClockifyController {
         return new ApiResponse("tareasFaliidas", true, tareasFallidas);
     }
     
+    @PostMapping("/sincronizar/{idProyecto}")
+    public ApiResponse sincronizarConClockify(@PathVariable Long idProyecto) {
+        try {
+            int cantidad = clockifyService.sincronizarImputaciones(idProyecto);
+            return new ApiResponse("Sincronización completada. Se importaron " + cantidad + " imputaciones nuevas.", true, cantidad);
+        } catch (Exception e) {
+            return new ApiResponse("Error al sincronizar: " + e.getMessage(), false, null);
+        }
+    }
 }
