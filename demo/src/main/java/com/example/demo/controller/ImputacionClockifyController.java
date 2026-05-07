@@ -17,18 +17,7 @@ public class ImputacionClockifyController {
    @Autowired
     private ImputacionClockifyService service;
 
-    // GET: Suma de tiempos de tarea/departamento
-    @GetMapping("/suma/{idDetalleEstimacion}")
-    public ResponseEntity<ApiResponse> obtenerSumaHoras(@PathVariable Long idDetalleEstimacion) {
-        try {
-            Double suma = service.obtenerSumaHorasValidas(idDetalleEstimacion);
-            return ResponseEntity.ok(new ApiResponse("Suma obtenida correctamente", true, suma));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse("Error al calcular la suma", false, null));
-        }
-    }
-
-    // GET: Para rellenar la tabla de imputaciones
+    // GET: Para rellenar la tabla de imputaciones específicas que componen una tarea
     @GetMapping("/validas/{idDetalleEstimacion}")
     public ResponseEntity<ApiResponse> obtenerValidas(@PathVariable Long idDetalleEstimacion) {
         try {
@@ -39,7 +28,7 @@ public class ImputacionClockifyController {
         }
     }
 
-    // CAMBIO AQUÍ: Ahora buscamos las huérfanas por idProyecto
+    // GET: Buscar las imputaciones huérfanas por idProyecto
     @GetMapping("/huerfanas/{idProyecto}")
     public ResponseEntity<ApiResponse> obtenerHuerfanas(@PathVariable Long idProyecto) {
         try {
@@ -50,7 +39,7 @@ public class ImputacionClockifyController {
         }
     }
 
-    // CAMBIO AQUÍ: Recibimos ambos IDs en la URL para poder hacer la vinculación
+    // PUT: Recibimos ambos IDs en la URL para poder hacer la vinculación manual
     @PutMapping("/vincular/{idImputacion}/{idDetalleEstimacion}")
     public ResponseEntity<ApiResponse> vincularManual(@PathVariable Long idImputacion, @PathVariable Long idDetalleEstimacion) {
         try {
