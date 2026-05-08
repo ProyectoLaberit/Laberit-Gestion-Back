@@ -67,4 +67,13 @@ public class AuditController {
         }
         return new ApiResponse("Logs del usuario", true, auditService.obtenerPorUsuario(email));
     }
+
+    /** Logs filtrados por usuario (ID). */
+    @GetMapping("/usuario/id/{idUsuario}")
+    public ApiResponse obtenerPorUsuarioId(@PathVariable Integer idUsuario) {
+        if (!esSuperAdmin()) {
+            return new ApiResponse("Acceso denegado.", false, null);
+        }
+        return new ApiResponse("Logs del usuario", true, auditService.obtenerPorUsuario(idUsuario));
+    }
 }

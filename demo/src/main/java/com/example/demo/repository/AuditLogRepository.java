@@ -16,6 +16,9 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     // Logs de un usuario concreto
     List<AuditLog> findByUsuarioEmailOrderByFechaHoraDesc(String email);
 
+    // Logs de un usuario concreto por ID
+    List<AuditLog> findByIdUsuarioOrderByFechaHoraDesc(Integer idUsuario);
+
     // Logs de un tipo de acción concreto
     List<AuditLog> findByAccionOrderByFechaHoraDesc(String accion);
 }

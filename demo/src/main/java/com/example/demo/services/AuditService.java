@@ -1,7 +1,9 @@
 package com.example.demo.services;
 
 import com.example.demo.entity.AuditLog;
+import com.example.demo.entity.Usuario;
 import com.example.demo.repository.AuditLogRepository;
+import com.example.demo.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,6 +16,9 @@ public class AuditService {
 
     @Autowired
     private AuditLogRepository auditLogRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     // ── Constantes de acción ──────────────────────────────────────────────────
     public static final String IMPORTACION_EXCEL   = "IMPORTACION_EXCEL";
@@ -31,10 +36,21 @@ public class AuditService {
      * Registra un evento de auditoría obteniendo el usuario del contexto de seguridad.
      */
     public void registrar(String accion, String descripcion, Long idProyecto) {
+        registrar(accion, descripcion, idProyecto, null);
+    }
+
+    /**
+     * Registra un evento indicando también el usuario afectado por la acción.
+     */
+    public void registrar(String accion, String descripcion, Long idProyecto, Integer idUsuarioObjetivo) {
         try {
-            String email  = getEmailActual();
-            String nombre = email; // fallback si no hay más datos
-            AuditLog log = new AuditLog(accion, descripcion, email, nombre, idProyecto);
+            Usuario usuarioActual = getUsuarioActual();
+            String email  = usuarioActual != null ? usuarioActual.getEmail() : getEmailActual();
+            String nombre = usuarioActual != null && usuarioActual.getNombre() != null
+                    ? usuarioActual.getNombre()
+                    : email;
+            Integer idUsuario = usuarioActual != null ? usuarioActual.getId() : null;
+            AuditLog log = new AuditLog(accion, descripcion, idUsuario, email, nombre, idProyecto, idUsuarioObjetivo);
             auditLogRepository.save(log);
         } catch (Exception e) {
             // El logging nunca debe romper el flujo principal
@@ -47,8 +63,16 @@ public class AuditService {
      */
     public void registrar(String accion, String descripcion, String usuarioEmail,
                           String usuarioNombre, Long idProyecto) {
+        registrar(accion, descripcion, usuarioEmail, usuarioNombre, idProyecto, null);
+    }
+
+    public void registrar(String accion, String descripcion, String usuarioEmail,
+                          String usuarioNombre, Long idProyecto, Integer idUsuarioObjetivo) {
         try {
-            AuditLog log = new AuditLog(accion, descripcion, usuarioEmail, usuarioNombre, idProyecto);
+            Integer idUsuario = usuarioRepository.findByEmail(usuarioEmail)
+                    .map(Usuario::getId)
+                    .orElse(null);
+            AuditLog log = new AuditLog(accion, descripcion, idUsuario, usuarioEmail, usuarioNombre, idProyecto, idUsuarioObjetivo);
             auditLogRepository.save(log);
         } catch (Exception e) {
             System.err.println("[AUDIT ERROR] No se pudo guardar el log: " + e.getMessage());
@@ -69,6 +93,10 @@ public class AuditService {
         return auditLogRepository.findByUsuarioEmailOrderByFechaHoraDesc(email);
     }
 
+    public List<AuditLog> obtenerPorUsuario(Integer idUsuario) {
+        return auditLogRepository.findByIdUsuarioOrderByFechaHoraDesc(idUsuario);
+    }
+
     public List<AuditLog> obtenerPorAccion(String accion) {
         return auditLogRepository.findByAccionOrderByFechaHoraDesc(accion);
     }
@@ -78,5 +106,10 @@ public class AuditService {
     private String getEmailActual() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return (auth != null && auth.getName() != null) ? auth.getName() : "sistema";
+    }
+
+    private Usuario getUsuarioActual() {
+        String email = getEmailActual();
+        return usuarioRepository.findByEmail(email).orElse(null);
     }
 }

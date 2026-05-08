@@ -158,7 +158,8 @@ public class UsuarioController {
             auditService.registrar(
                 AuditService.CREACION_USUARIO,
                 "Usuario creado: " + usuarioDTO.getEmail() + " con rol " + usuarioDTO.getRol(),
-                null
+                null,
+                usuarioCreado.getId()
             );
             return new ApiResponse("Usuario creado con éxito", true, usuarioCreado);
         } catch (RuntimeException e) {
@@ -184,7 +185,8 @@ public class UsuarioController {
             auditService.registrar(
                 AuditService.BORRADO_USUARIO,
                 "Usuario ID " + id + " eliminado.",
-                null
+                null,
+                id
             );
             return new ApiResponse("Usuario eliminado correctamente", true, null);
         } catch (RuntimeException e) {
@@ -267,7 +269,8 @@ public class UsuarioController {
             auditService.registrar(
                 AuditService.CAMBIO_ROL,
                 "Rol del usuario ID " + id + " cambiado a: " + dto.getRol(),
-                null
+                null,
+                id
             );
             return new ApiResponse("Rol actualizado correctamente.", true, null);
         } catch (RuntimeException e) {
