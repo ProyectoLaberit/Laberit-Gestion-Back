@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.dto.DetalleEstimacionDTO;
+import com.example.demo.dto.ResumenTiemposDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
 import com.example.demo.entity.Departamento;
 import com.example.demo.entity.DetalleEstimacion;
@@ -394,7 +395,7 @@ public class DetalleEstimacionService {
             double sumaMin = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMin).sum();
             double sumaMax = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMax).sum();
 
-            // -- NUEVO: SUMAR TIEMPO REAL DE TODOS LOS DEPARTAMENTOS DE ESTA TAREA --
+            // -- SUMAR TIEMPO REAL DE TODOS LOS DEPARTAMENTOS DE ESTA TAREA --
             double sumaReal = 0.0;
             for (DetalleEstimacion det : entry.getValue()) {
                 Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(det.getId());
@@ -437,6 +438,115 @@ public class DetalleEstimacionService {
         }
 
         return resultado;
+    }
+
+    /**
+     * Calcula los totales de TODAS las subfases de un proyecto de una sola vez.
+     */
+    public Map<Integer, ResumenTiemposDTO> obtenerResumenTodasSubfases(Long idProyecto) {
+        Map<Integer, ResumenTiemposDTO> resultado = new java.util.HashMap<>();
+        Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
+        
+        if (excel == null) {
+            return resultado;
+        }
+
+        // Traemos todas las tareas del Excel
+        List<DetalleEstimacion> todasLasTareas = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
+        
+        // Traemos TODAS las sumas de horas del proyecto de golpe
+        List<Object[]> sumasBD = imputacionClockifyRepository.sumarHorasValidasAgrupadasPorDetalle(idProyecto);
+        
+        // Convertimos el resultado en un diccionario rápido en memoria { idTarea : sumaHoras }
+        Map<Long, Double> mapaHorasReales = new java.util.HashMap<>();
+        for (Object[] fila : sumasBD) {
+            Long idDetalle = (Long) fila[0];
+            Double suma = (Double) fila[1];
+            mapaHorasReales.put(idDetalle, suma != null ? suma : 0.0);
+        }
+
+        // Agrupamos las tareas por Subfase
+        Map<Integer, List<DetalleEstimacion>> tareasPorSubfase = todasLasTareas.stream()
+            .filter(d -> d.getIdFase() != null)
+            .collect(Collectors.groupingBy(DetalleEstimacion::getIdFase));
+
+        // Calculamos los totales
+        for (Map.Entry<Integer, List<DetalleEstimacion>> entry : tareasPorSubfase.entrySet()) {
+            Integer idSubfase = entry.getKey();
+            List<DetalleEstimacion> tareas = entry.getValue();
+
+            double sumaRealTotal = 0.0;
+            double sumaMinTotal = 0.0;
+            double sumaMaxTotal = 0.0;
+
+            for (DetalleEstimacion det : tareas) {
+                // Buscamos la suma en nuestro diccionario de memoria al instante
+                Double realValido = mapaHorasReales.getOrDefault(det.getId(), 0.0);
+                
+                sumaRealTotal += realValido;
+                sumaMinTotal += (det.getTiempoMin() != null ? det.getTiempoMin() : 0.0);
+                sumaMaxTotal += (det.getTiempoMax() != null ? det.getTiempoMax() : 0.0);
+            }
+
+            double mediaEstimada = (sumaMinTotal + sumaMaxTotal) / 2.0;
+            
+            sumaRealTotal = Math.round(sumaRealTotal * 10.0) / 10.0;
+            mediaEstimada = Math.round(mediaEstimada * 10.0) / 10.0;
+
+            resultado.put(idSubfase, new ResumenTiemposDTO(sumaRealTotal, mediaEstimada));
+        }
+
+        return resultado;
+    }
+
+    /**
+     * Calcula los totales de un proyecto completo:
+     * - La suma de todo el tiempo real validado del proyecto.
+     * - La media entre la suma total de mínimos y máximos de su Excel vigente.
+     */
+    public ResumenTiemposDTO obtenerResumenProyecto(Long idProyecto) {
+        // Tiempo real total
+        Double realTotal = imputacionClockifyRepository.sumarHorasTotalesProyecto(idProyecto);
+        
+        // Tiempo estimado medio del Excel vigente
+        Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
+        double mediaEstimada = 0.0;
+        
+        if (excel != null) {
+            // Traemos todas las tareas de ese Excel
+            List<DetalleEstimacion> todasLasTareas = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
+            
+            // Sumamos todos los mínimos y todos los máximos del proyecto
+            double sumaMin = todasLasTareas.stream()
+                    .mapToDouble(t -> t.getTiempoMin() != null ? t.getTiempoMin() : 0.0)
+                    .sum();
+            double sumaMax = todasLasTareas.stream()
+                    .mapToDouble(t -> t.getTiempoMax() != null ? t.getTiempoMax() : 0.0)
+                    .sum();
+            
+            // Calculamos la media de la estimación total
+            mediaEstimada = (sumaMin + sumaMax) / 2.0;
+        }
+
+        // Redondeo
+        double realRedondeado = Math.round((realTotal != null ? realTotal : 0.0) * 10.0) / 10.0;
+        double mediaRedondeada = Math.round(mediaEstimada * 10.0) / 10.0;
+
+        return new ResumenTiemposDTO(realRedondeado, mediaRedondeada);
+    }
+
+    /**
+     * Obtiene el resumen de tiempos para una lista de proyectos.
+     * Devuelve un Map donde la clave es el ID del proyecto y el valor su resumen.
+     */
+    public Map<Long, ResumenTiemposDTO> obtenerResumenVariosProyectos(List<Long> idsProyectos) {
+        Map<Long, ResumenTiemposDTO> resultados = new java.util.HashMap<>();
+        
+        for (Long idProy : idsProyectos) {
+            // Aprovechamos el método para un solo proyecto
+            resultados.put(idProy, obtenerResumenProyecto(idProy));
+        }
+        return resultados;
     }
 
 } //<-- fin del servicio DetalleEstimacionService.java

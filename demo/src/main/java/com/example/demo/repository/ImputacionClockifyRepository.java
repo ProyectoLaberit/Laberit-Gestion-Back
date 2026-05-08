@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface ImputacionClockifyRepository extends JpaRepository<ImputacionClockify, Long> {
 
-    // Suma de horas válidas: Filtra por la tarea y cuenta SOLO AUTOMATICA y MANUAL
+    // Suma de horas válidas: Filtra por la tarea y cuenta solo las que son válidas
     @Query("SELECT COALESCE(SUM(i.horasTrabajadas), 0) FROM ImputacionClockify i WHERE i.idDetalleEstimacion = :idDetalleEstimacion AND i.valida = true")
     Double sumarHorasValidas(@Param("idDetalleEstimacion") Long idDetalleEstimacion);
 
@@ -27,9 +27,21 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
     
     boolean existsByIdClockifyOriginal(String idClockifyOriginal);
 
-     ImputacionClockify findByIdClockifyOriginal(String idClockifyOriginal);
+    ImputacionClockify findByIdClockifyOriginal(String idClockifyOriginal);
 
-    @Query("SELECT SUM(ic.horasTrabajadas) FROM ImputacionClockify ic WHERE ic.idDetalleEstimacion = :idDetalle")
+    @Query("SELECT COALESCE(SUM(ic.horasTrabajadas), 0) FROM ImputacionClockify ic WHERE ic.idDetalleEstimacion = :idDetalle")
     Double sumarHorasPorDetalle(@Param("idDetalle") Long idDetalle);
+
+    //COALESCE evita nulos
+    //Suma horas totales en un proyecto
+    @Query("SELECT COALESCE(SUM(i.horasTrabajadas), 0) FROM ImputacionClockify i WHERE i.idProyecto = :idProyecto AND i.valida = true")
+    Double sumarHorasTotalesProyecto(@Param("idProyecto") Long idProyecto);
+
+    // Devuelve una lista donde [0] es el ID de la tarea y [1] es la suma de sus horas válidas
+    @Query("SELECT ic.idDetalleEstimacion, SUM(ic.horasTrabajadas) " +
+        "FROM ImputacionClockify ic " +
+        "WHERE ic.idProyecto = :idProyecto AND ic.valida = true " +
+        "GROUP BY ic.idDetalleEstimacion")
+    List<Object[]> sumarHorasValidasAgrupadasPorDetalle(@Param("idProyecto") Long idProyecto);
 
 }

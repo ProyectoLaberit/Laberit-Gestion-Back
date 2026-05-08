@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.DetalleEstimacionDTO;
 import com.example.demo.dto.HistorialExcelDTO;
+import com.example.demo.dto.ResumenTiemposDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -35,7 +37,7 @@ public class DetalleEstimacionController {
     @Autowired
     private AuditService auditService;
     
-   /**
+    /**
      * Recupera la tabla de estimaciones del Excel VIGENTE (el más reciente o activo) de un proyecto.
      * El Frontend debe usar este endpoint por defecto para ver el estado actual.
      * @param idProyecto ID del proyecto a consultar.
@@ -158,8 +160,8 @@ public class DetalleEstimacionController {
          * @param tarea Nombre de la tarea (ej. "Benchmark").
          * @return ApiResponse con el DTO de la estimación encontrada.
     */
- @PostMapping("/proyecto/{idProyecto}/especifica")
-   public ApiResponse obtenerEstimacionEspecifica(
+    @PostMapping("/proyecto/{idProyecto}/especifica")
+    public ApiResponse obtenerEstimacionEspecifica(
         @PathVariable Long idProyecto,
         @RequestParam Integer idSubfase,
         @RequestParam String tarea,
@@ -219,7 +221,7 @@ public class DetalleEstimacionController {
             return new ApiResponse("Error al recuperar las tareas: " + e.getMessage(), false, null);
         }
     }
-   /**
+    /**
      * Recupera el historial de archivos Excel subidos a un proyecto específico.
      * Permite al Frontend listar todas las versiones disponibles, indicando quién lo subió y si es la versión vigente.
      * @param id ID del proyecto a consultar.
@@ -274,6 +276,45 @@ public class DetalleEstimacionController {
             return new ApiResponse("Tarea creada correctamente.", true, null);
         } catch (Exception e) {
             return new ApiResponse("Error al crear la tarea: " + e.getMessage(), false, null);
+        }
+    }
+
+    /**
+     * Obtiene los resúmenes de tiempos de TODAS las subfases de un proyecto de golpe.
+     */
+    @GetMapping("/resumen/subfases/{idProyecto}")
+    public ApiResponse obtenerResumenTodasSubfases(@PathVariable Long idProyecto) {
+        try {
+            Map<Integer, ResumenTiemposDTO> resumenes = detalleEstimacionService.obtenerResumenTodasSubfases(idProyecto);
+            return new ApiResponse("Resumen masivo recuperado", true, resumenes);
+        } catch (Exception e) {
+            return new ApiResponse("Error al calcular resumen masivo: " + e.getMessage(), false, null);
+        }
+    }
+
+    /**
+     * Obtiene el resumen de tiempos de un proyecto completo.
+     */
+    @GetMapping("/resumen/proyecto/{idProyecto}")
+    public ApiResponse obtenerResumenProyecto(@PathVariable Long idProyecto) {
+        try {
+            ResumenTiemposDTO resumen = detalleEstimacionService.obtenerResumenProyecto(idProyecto);
+            return new ApiResponse("Resumen de proyecto recuperado", true, resumen);
+        } catch (Exception e) {
+            return new ApiResponse("Error al calcular resumen: " + e.getMessage(), false, null);
+        }
+    }
+
+    /**
+     * Obtiene los resúmenes de una lista de proyectos.
+     */
+    @PostMapping("/proyectos/resumen")
+    public ApiResponse obtenerResumenProyectos(@RequestBody List<Long> idsProyectos) {
+        try {
+            Map<Long, ResumenTiemposDTO> resumenes = detalleEstimacionService.obtenerResumenVariosProyectos(idsProyectos);
+            return new ApiResponse("Resúmenes de proyectos recuperados", true, resumenes);
+        } catch (Exception e) {
+            return new ApiResponse("Error al recuperar resúmenes", false, null);
         }
     }
 
