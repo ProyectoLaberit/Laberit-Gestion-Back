@@ -96,4 +96,55 @@ public class ImputacionClockifyController {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al contar inválidas", false, 0));
         }
     }
+
+    // PUT: Alternar validación enviando el ID de la tarea para cuando pase a true
+    @PutMapping("/alternar-validacion/{idImputacion}/{idDetalleEstimacion}")
+    public ResponseEntity<ApiResponse> alternarValidacion(
+            @PathVariable Long idImputacion, 
+            @PathVariable Long idDetalleEstimacion) {
+        try {
+            ImputacionClockify actualizada = service.alternarEstadoValidacion(idImputacion, idDetalleEstimacion);
+            if (actualizada != null) {
+                return ResponseEntity.ok(new ApiResponse("Estado e ID actualizados correctamente", true, actualizada));
+            } else {
+                return ResponseEntity.badRequest().body(new ApiResponse("No se encontró la imputación", false, null));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al procesar el cambio", false, null));
+        }
+    }
+
+    // PUT: Editar el campo tarea_extraida de una imputación
+    @PutMapping("/editar-tarea/{idImputacion}")
+    public ResponseEntity<ApiResponse> editarTarea(
+            @PathVariable Long idImputacion, 
+            @RequestBody java.util.Map<String, String> body) {
+        try {
+            String nuevaTarea = body.get("tareaExtraida");
+            ImputacionClockify actualizada = service.editarTareaExtraida(idImputacion, nuevaTarea);
+            
+            if (actualizada != null) {
+                return ResponseEntity.ok(new ApiResponse("Tarea editada correctamente", true, actualizada));
+            } else {
+                return ResponseEntity.badRequest().body(new ApiResponse("No se encontró la imputación", false, null));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al editar la tarea", false, null));
+        }
+    }
+
+    // DELETE: Borrar una imputación por completo de la base de datos
+    @DeleteMapping("/borrar/{idImputacion}")
+    public ResponseEntity<ApiResponse> borrarImputacion(@PathVariable Long idImputacion) {
+        try {
+            boolean borrado = service.borrarImputacion(idImputacion);
+            if (borrado) {
+                return ResponseEntity.ok(new ApiResponse("Imputación borrada correctamente", true, null));
+            } else {
+                return ResponseEntity.badRequest().body(new ApiResponse("No se encontró la imputación para borrar", false, null));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al borrar la imputación", false, null));
+        }
+    }
 }

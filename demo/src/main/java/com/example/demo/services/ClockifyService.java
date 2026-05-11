@@ -670,7 +670,7 @@ public class ClockifyService {
         }
 
         if (!nuevasImputaciones.isEmpty()) {
-            imputacionService.guardarImputacionesMasivas(nuevasImputaciones);
+                imputacionService.guardarImputaciones(nuevasImputaciones);
         }
 
         return nuevasImputaciones.size();
