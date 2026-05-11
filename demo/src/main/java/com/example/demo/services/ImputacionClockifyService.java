@@ -162,4 +162,15 @@ public class ImputacionClockifyService {
         }
         return false;
     }
+
+    /**
+     * Filtra las imputaciones por fechas asegurándose de que el rango sea válido.
+     */
+    public List<ImputacionClockify> filtrarPorFechas(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento, java.time.LocalDate desde, java.time.LocalDate hasta) {
+        // Comprobación de seguridad: si 'desde' es posterior a 'hasta', no hacemos la consulta
+        if (desde.isAfter(hasta)) {
+            return java.util.Collections.emptyList();
+        }
+        return repository.findByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndFechaBetween(idProyecto, idDetalleEstimacion, idDepartamento, desde, hasta);
+    }
 }

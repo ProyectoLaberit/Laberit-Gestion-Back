@@ -147,4 +147,25 @@ public class ImputacionClockifyController {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al borrar la imputación", false, null));
         }
     }
+
+    // GET: Filtrar imputaciones por rango de fechas
+    @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}/fechas")
+    public ResponseEntity<ApiResponse> obtenerPorFechas(
+            @PathVariable Long idProyecto, 
+            @PathVariable Long idDetalleEstimacion, 
+            @PathVariable Integer idDepartamento,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate desde,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate hasta) {
+        try {
+            // Si el usuario cruzó las fechas, le mandamos un mensaje de error claro
+            if (desde.isAfter(hasta)) {
+                return ResponseEntity.badRequest().body(new ApiResponse("La fecha 'desde' no puede ser posterior a 'hasta'", false, null));
+            }
+            
+            List<ImputacionClockify> lista = service.filtrarPorFechas(idProyecto, idDetalleEstimacion, idDepartamento, desde, hasta);
+            return ResponseEntity.ok(new ApiResponse("Imputaciones filtradas por fecha", true, lista));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al filtrar por fechas", false, null));
+        }
+    }
 }

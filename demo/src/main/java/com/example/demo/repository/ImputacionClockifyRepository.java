@@ -53,4 +53,6 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
     // Cuenta cuántas imputaciones inválidas hay
     Integer countByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndValidaFalse(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento);
     
+    // Filtrar imputaciones por departamento, tarea y un rango de fechas
+    List<ImputacionClockify> findByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndFechaBetween(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento, java.time.LocalDate desde, java.time.LocalDate hasta);
 }
