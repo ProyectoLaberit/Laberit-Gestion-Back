@@ -530,7 +530,7 @@ public class ClockifyService {
                 new ParameterizedTypeReference<Map<String, Object>>() {});
         String userId = (String) userResponse.getBody().get("id");
 
-        // -- NUEVO: OBTENER ETIQUETAS DE CLOCKIFY --
+        // -- OBTENER ETIQUETAS DE CLOCKIFY --
         String tagsUrl = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/tags";
         ResponseEntity<List<Map<String, Object>>> tagsResponse = restTemplate.exchange(
                 tagsUrl, HttpMethod.GET, entity,
@@ -546,13 +546,36 @@ public class ClockifyService {
         // Obtener lista de departamentos de la BD local
         List<Departamento> departamentosBD = departamentoRepository.findAll();
 
-        // 2. Obtener todas las entradas de tiempo
-        String url = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/user/" + userId + "/time-entries";
-        ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                url, HttpMethod.GET, entity,
-                new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+        // 2. Obtener TODAS las entradas de tiempo mediante PAGINACIÓN DINÁMICA
+        List<Map<String, Object>> entradasClockify = new ArrayList<>();
+        int paginaActual = 1;
+        int tamanoPagina = 100;
+        boolean hayMasPaginas = true;
 
-        List<Map<String, Object>> entradasClockify = response.getBody();
+        while (hayMasPaginas) {
+            String url = clockify.getUrlReal() + "/workspaces/" + workspaceId + 
+                         "/user/" + userId + "/time-entries?page=" + paginaActual + "&page-size=" + tamanoPagina;
+
+            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity,
+                    new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+
+            List<Map<String, Object>> paginaResultados = response.getBody();
+
+            if (paginaResultados != null && !paginaResultados.isEmpty()) {
+                entradasClockify.addAll(paginaResultados);
+                
+                // Si la página viene llena (100), asumimos que hay más. Si viene con menos, hemos terminado.
+                if (paginaResultados.size() < tamanoPagina) {
+                    hayMasPaginas = false;
+                } else {
+                    paginaActual++;
+                }
+            } else {
+                hayMasPaginas = false;
+            }
+        }
+
         List<ImputacionClockify> nuevasImputaciones = new ArrayList<>();
 
         // 3. Procesar cada entrada
@@ -614,7 +637,7 @@ public class ClockifyService {
                 }
             }
 
-            // -- NUEVO: MAPEO DE DEPARTAMENTO (TAG) --
+            // -- MAPEO DE DEPARTAMENTO (TAG) --
             List<String> tagIds = (List<String>) entry.get("tagIds");
             if (tagIds != null && !tagIds.isEmpty()) {
                 String idEtiqueta = tagIds.get(0); 
@@ -632,14 +655,14 @@ public class ClockifyService {
                 }
             }
 
-            // -- FECHAS --
+            // -- FECHAS (YA ACTUALIZADO A LOCALTIME) --
             try {
                 String startStr = (String) timeInterval.get("start");
                 if (startStr != null) {
                     Instant start = Instant.parse(startStr);
                     ZonedDateTime zdtStart = start.atZone(ZoneId.systemDefault());
                     imputacion.setFecha(zdtStart.toLocalDate());
-                   imputacion.setHoraInicio(zdtStart.toLocalTime());
+                    imputacion.setHoraInicio(zdtStart.toLocalTime());
                 }
                 String endStr = (String) timeInterval.get("end");
                 if (endStr != null) {
@@ -651,7 +674,7 @@ public class ClockifyService {
                 imputacion.setFecha(LocalDate.now());
             }
 
-            // -- CRUCE --
+            // -- CRUCE CON EXCEL VIGENTE --
             boolean esValida = false;
             if (idGit != -1 && excelVigente != null) {
                 DetalleEstimacion estimacion = detalleEstimacionRepository.findFirstByIdExcelAndNumeroGitlab(
