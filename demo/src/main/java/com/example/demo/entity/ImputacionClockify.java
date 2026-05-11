@@ -2,6 +2,7 @@ package com.example.demo.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "imputacion_clockify")
@@ -44,10 +45,10 @@ public class ImputacionClockify {
     private LocalDate fecha;
 
     @Column(name = "hora_inicio")
-    private Double horaInicio;
+    private LocalTime horaInicio;
 
     @Column(name = "hora_fin")
-    private Double horaFin;
+    private LocalTime horaFin;
 
     @Column(name = "valida", nullable = false)
     private Boolean valida = false;
@@ -88,11 +89,11 @@ public class ImputacionClockify {
     public LocalDate getFecha() { return fecha; }
     public void setFecha(LocalDate fecha) { this.fecha = fecha; }
 
-    public Double getHoraInicio() { return horaInicio; }
-    public void setHoraInicio(Double horaInicio) { this.horaInicio = horaInicio; }
+    public LocalTime getHoraInicio() { return horaInicio; }
+    public void setHoraInicio(LocalTime horaInicio) { this.horaInicio = horaInicio; }
 
-    public Double getHoraFin() { return horaFin; }
-    public void setHoraFin(Double horaFin) { this.horaFin = horaFin; }
+    public LocalTime getHoraFin() { return horaFin; }
+    public void setHoraFin(LocalTime horaFin) { this.horaFin = horaFin; }
 
     public Boolean getValida() { return valida; }
     public void setValida(Boolean valida) { this.valida = valida; }
