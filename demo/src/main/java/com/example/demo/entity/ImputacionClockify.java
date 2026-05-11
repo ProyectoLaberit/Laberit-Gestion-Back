@@ -2,13 +2,12 @@ package com.example.demo.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
-import java.math.BigDecimal;
 
 @Entity
 @Table(name = "imputacion_clockify")
 public class ImputacionClockify {
 
-   @Id
+    @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_imputacion_clockify")
     private Long idImputacionClockify;

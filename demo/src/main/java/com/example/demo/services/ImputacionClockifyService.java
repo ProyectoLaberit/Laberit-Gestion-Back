@@ -10,7 +10,7 @@ import java.util.List;
 @Service
 public class ImputacionClockifyService {
 
-   @Autowired
+    @Autowired
     private ImputacionClockifyRepository repository;
 
     public Double obtenerSumaHorasValidas(Long idDetalleEstimacion) {
@@ -56,5 +56,17 @@ public class ImputacionClockifyService {
 
     public ImputacionClockify actualizarImputacion(ImputacionClockify imputacion) {
         return repository.save(imputacion);
+    }
+
+    public List<ImputacionClockify> obtenerPorDepartamentoYDetalle(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento) {
+        return repository.findByIdProyectoAndIdDetalleEstimacionAndIdDepartamento(idProyecto, idDetalleEstimacion, idDepartamento);
+    }
+
+    public Integer contarValidasPorDepartamento(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento) {
+        return repository.countByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndValidaTrue(idProyecto, idDetalleEstimacion, idDepartamento);
+    }
+
+    public Integer contarInvalidasPorDepartamento(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento) {
+        return repository.countByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndValidaFalse(idProyecto, idDetalleEstimacion, idDepartamento);
     }
 }

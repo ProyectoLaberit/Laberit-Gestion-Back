@@ -54,4 +54,46 @@ public class ImputacionClockifyController {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al procesar la solicitud", false, null));
         }
     }
+
+    // GET: Obtener imputaciones por proyecto, tarea y departamento
+    @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}")
+    public ResponseEntity<ApiResponse> obtenerPorDepartamento(
+            @PathVariable Long idProyecto, 
+            @PathVariable Long idDetalleEstimacion, 
+            @PathVariable Integer idDepartamento) {
+        try {
+            List<ImputacionClockify> lista = service.obtenerPorDepartamentoYDetalle(idProyecto, idDetalleEstimacion, idDepartamento);
+            return ResponseEntity.ok(new ApiResponse("Imputaciones del departamento obtenidas", true, lista));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener imputaciones del departamento", false, null));
+        }
+    }
+
+    // GET: Obtener cantidad de válidas por departamento
+    @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}/validas/count")
+    public ResponseEntity<ApiResponse> contarValidasDepartamento(
+            @PathVariable Long idProyecto, 
+            @PathVariable Long idDetalleEstimacion, 
+            @PathVariable Integer idDepartamento) {
+        try {
+            Integer total = service.contarValidasPorDepartamento(idProyecto, idDetalleEstimacion, idDepartamento);
+            return ResponseEntity.ok(new ApiResponse("Recuento de válidas", true, total));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al contar válidas", false, 0));
+        }
+    }
+
+    // GET: Obtener cantidad de inválidas por departamento
+    @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}/invalidas/count")
+    public ResponseEntity<ApiResponse> contarInvalidasDepartamento(
+            @PathVariable Long idProyecto, 
+            @PathVariable Long idDetalleEstimacion, 
+            @PathVariable Integer idDepartamento) {
+        try {
+            Integer total = service.contarInvalidasPorDepartamento(idProyecto, idDetalleEstimacion, idDepartamento);
+            return ResponseEntity.ok(new ApiResponse("Recuento de inválidas", true, total));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al contar inválidas", false, 0));
+        }
+    }
 }

@@ -44,4 +44,13 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
         "GROUP BY ic.idDetalleEstimacion")
     List<Object[]> sumarHorasValidasAgrupadasPorDetalle(@Param("idProyecto") Long idProyecto);
 
+    // Devuelve las imputaciones filtradas por proyecto, subtarea y departamento
+    List<ImputacionClockify> findByIdProyectoAndIdDetalleEstimacionAndIdDepartamento(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento);
+
+    // Cuenta cuántas imputaciones válidas hay
+    Integer countByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndValidaTrue(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento);
+
+    // Cuenta cuántas imputaciones inválidas hay
+    Integer countByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndValidaFalse(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento);
+    
 }
