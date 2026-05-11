@@ -1,18 +1,20 @@
 package com.example.demo.dto;
 
-public class ResumenTiemposDTO {
-    private Double tiempoRealTotal;
-    private Double tiempoEstimadoMedia;
+import java.time.LocalTime;
 
-    public ResumenTiemposDTO(Double tiempoRealTotal, Double tiempoEstimadoMedia) {
+public class ResumenTiemposDTO {
+    private LocalTime tiempoRealTotal;
+    private LocalTime tiempoEstimadoMedia;
+
+    public ResumenTiemposDTO(LocalTime tiempoRealTotal, LocalTime tiempoEstimadoMedia) {
         this.tiempoRealTotal = tiempoRealTotal;
         this.tiempoEstimadoMedia = tiempoEstimadoMedia;
     }
 
     // Getters y Setters
-    public Double getTiempoRealTotal() { return tiempoRealTotal; }
-    public void setTiempoRealTotal(Double tiempoRealTotal) { this.tiempoRealTotal = tiempoRealTotal; }
+    public LocalTime getTiempoRealTotal() { return tiempoRealTotal; }
+    public void setTiempoRealTotal(LocalTime tiempoRealTotal) { this.tiempoRealTotal = tiempoRealTotal; }
 
-    public Double getTiempoEstimadoMedia() { return tiempoEstimadoMedia; }
-    public void setTiempoEstimadoMedia(Double tiempoEstimadoMedia) { this.tiempoEstimadoMedia = tiempoEstimadoMedia; }
+    public LocalTime getTiempoEstimadoMedia() { return tiempoEstimadoMedia; }
+    public void setTiempoEstimadoMedia(LocalTime tiempoEstimadoMedia) { this.tiempoEstimadoMedia = tiempoEstimadoMedia; }
 }
