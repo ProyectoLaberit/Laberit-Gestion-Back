@@ -1,6 +1,7 @@
 package com.example.demo.services;
 
 import com.example.demo.entity.ImputacionClockify;
+import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.ImputacionClockifyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,6 +13,9 @@ public class ImputacionClockifyService {
 
     @Autowired
     private ImputacionClockifyRepository repository;
+
+   @Autowired
+   private DetalleEstimacionRepository detalleEstimacionRepository;
 
     /**
      * Calcula y devuelve la suma total de horas trabajadas que están marcadas como válidas 
@@ -46,15 +50,47 @@ public class ImputacionClockifyService {
      * Asigna manualmente una imputación huérfana a una tarea específica, 
      * cambiando su estado a válido (true).
      */
+  /**
+     * Vincula manualmente una imputación y "enseña" al Excel el número de GitLab
+     * para que las próximas se validen solas.
+     */
     public ImputacionClockify vincularImputacionManual(Long idImputacionClockify, Long idDetalleEstimacion) {
+        // 1. Buscamos la imputación en la base de datos
         ImputacionClockify imputacion = repository.findById(idImputacionClockify).orElse(null);
         
         if (imputacion != null && !imputacion.getValida()) {
+            // 2. Marcamos como válida y enlazamos a la tarea del Excel
             imputacion.setValida(true);
             imputacion.setIdDetalleEstimacion(idDetalleEstimacion);
-            return repository.save(imputacion);
+            repository.save(imputacion);
+
+            // 3. APRENDIZAJE: Buscamos la tarea en el Excel para guardarle el ID de GitLab
+            com.example.demo.entity.DetalleEstimacion estimacion = 
+                detalleEstimacionRepository.findById(idDetalleEstimacion).orElse(null);
+
+            if (estimacion != null) {
+                // Si el Excel no tiene número y la descripción de Clockify traía uno (#123)
+                if ((estimacion.getNumeroGitlab() == null || estimacion.getNumeroGitlab().isEmpty())) {
+                    // Extraemos el número de la descripción original
+                    String desc = imputacion.getDescripcionOriginal();
+                    if (desc.contains("#")) {
+                        try {
+                            int start = desc.indexOf("#") + 1;
+                            int end = desc.indexOf(" ", start);
+                            if (end == -1) { end = desc.length(); }
+                            String numGit = desc.substring(start, end);
+                            
+                            // Guardamos el número en el "diccionario" (Excel)
+                            estimacion.setNumeroGitlab(numGit);
+                            detalleEstimacionRepository.save(estimacion);
+                        } catch (Exception e) {
+                            // Si falla la extracción, simplemente no guardamos el número
+                        }
+                    }
+                }
+            }
+            return imputacion;
         }
-        
         return null; 
     }
 
