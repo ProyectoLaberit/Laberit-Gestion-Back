@@ -14,28 +14,44 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/imputaciones")
 public class ImputacionClockifyController {
 
-   @Autowired
+    @Autowired
     private ImputacionClockifyService service;
 
-    // GET: Para rellenar la tabla de imputaciones específicas que componen una tarea
-    @GetMapping("/validas/{idDetalleEstimacion}")
-    public ResponseEntity<ApiResponse> obtenerValidas(@PathVariable Long idDetalleEstimacion) {
-        try {
-            List<ImputacionClockify> lista = service.obtenerImputacionesValidas(idDetalleEstimacion);
-            return ResponseEntity.ok(new ApiResponse("Lista de imputaciones obtenida", true, lista));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener imputaciones", false, null));
-        }
-    }
+    // // GET: Para rellenar la tabla de imputaciones específicas que componen una tarea
+    // @GetMapping("/validas/{idDetalleEstimacion}")
+    // public ResponseEntity<ApiResponse> obtenerValidas(@PathVariable Long idDetalleEstimacion) {
+    //     try {
+    //         List<ImputacionClockify> lista = service.obtenerImputacionesValidas(idDetalleEstimacion);
+    //         return ResponseEntity.ok(new ApiResponse("Lista de imputaciones obtenida", true, lista));
+    //     } catch (Exception e) {
+    //         return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener imputaciones", false, null));
+    //     }
+    // }
 
-    // GET: Buscar las imputaciones huérfanas por idProyecto
-    @GetMapping("/huerfanas/{idProyecto}")
-    public ResponseEntity<ApiResponse> obtenerHuerfanas(@PathVariable Long idProyecto) {
+    // // GET: Buscar las imputaciones huérfanas por idProyecto
+    // @GetMapping("/huerfanas/{idProyecto}")
+    // public ResponseEntity<ApiResponse> obtenerHuerfanas(@PathVariable Long idProyecto) {
+    //     try {
+    //         List<ImputacionClockify> lista = service.obtenerHuerfanas(idProyecto);
+    //         return ResponseEntity.ok(new ApiResponse("Huérfanas obtenidas", true, lista));
+    //     } catch (Exception e) {
+    //         return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener huérfanas", false, null));
+    //     }
+    // }
+
+    // GET: Trae todas las imputaciones de la tarea
+    @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}")
+    public ResponseEntity<ApiResponse> obtenerTodoPorDepartamento(
+            @PathVariable Long idProyecto, 
+            @PathVariable Long idDetalleEstimacion, 
+            @PathVariable Integer idDepartamento) {
         try {
-            List<ImputacionClockify> lista = service.obtenerHuerfanas(idProyecto);
-            return ResponseEntity.ok(new ApiResponse("Huérfanas obtenidas", true, lista));
+            // Llamamos al método que trae la lista completa (válidas + inválidas)
+            List<ImputacionClockify> listaCompleta = service.obtenerPorDepartamentoYDetalle(idProyecto, idDetalleEstimacion, idDepartamento);
+            
+            return ResponseEntity.ok(new ApiResponse("Datos de departamento recuperados", true, listaCompleta));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener huérfanas", false, null));
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al recuperar los datos del departamento", false, null));
         }
     }
 

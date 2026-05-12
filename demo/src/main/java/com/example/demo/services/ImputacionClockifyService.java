@@ -30,27 +30,25 @@ public class ImputacionClockifyService {
         }
     }
     
-    /**
-     * Recupera una lista de todas las imputaciones que tienen el estado de válidas 
-     * asociadas a una tarea en concreto.
-     */
-    public List<ImputacionClockify> obtenerImputacionesValidas(Long idDetalleEstimacion) {
-        return repository.findByIdDetalleEstimacionAndValidaTrue(idDetalleEstimacion);
-    }
+    // /**
+    //  * Recupera una lista de todas las imputaciones que tienen el estado de válidas 
+    //  * asociadas a una tarea en concreto.
+    //  */
+    // public List<ImputacionClockify> obtenerImputacionesValidas(Long idDetalleEstimacion) {
+    //     return repository.findByIdDetalleEstimacionAndValidaTrue(idDetalleEstimacion);
+    // }
 
-    /**
-     * Recupera las imputaciones de un proyecto que están marcadas como no válidas (huérfanas), 
-     * es decir, que no están asignadas a ninguna tarea.
-     */
-    public List<ImputacionClockify> obtenerHuerfanas(Long idProyecto) {
-        return repository.findByIdProyectoAndValidaFalse(idProyecto);
-    }
+    // /**
+    //  * Recupera las imputaciones de un proyecto que están marcadas como no válidas (huérfanas), 
+    //  * es decir, que no están asignadas a ninguna tarea.
+    //  */
+    // public List<ImputacionClockify> obtenerHuerfanas(Long idProyecto) {
+    //     return repository.findByIdProyectoAndValidaFalse(idProyecto);
+    // }
 
     /**
      * Asigna manualmente una imputación huérfana a una tarea específica, 
      * cambiando su estado a válido (true).
-     */
-  /**
      * Vincula manualmente una imputación y "enseña" al Excel el número de GitLab
      * para que las próximas se validen solas.
      */
