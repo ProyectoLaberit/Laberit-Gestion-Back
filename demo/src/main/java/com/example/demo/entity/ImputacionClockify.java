@@ -22,8 +22,6 @@ public class ImputacionClockify {
     @Column(name = "id_detalle_estimacion")
     private Long idDetalleEstimacion;
 
-    @Column(name = "id_gitlab")
-    private Long idGitlab;
 
     @Column(name = "subfase_extraida")
     private String subfaseExtraida;
@@ -67,9 +65,6 @@ public class ImputacionClockify {
 
     public Long getIdDetalleEstimacion() { return idDetalleEstimacion; }
     public void setIdDetalleEstimacion(Long idDetalleEstimacion) { this.idDetalleEstimacion = idDetalleEstimacion; }
-
-    public Long getIdGitlab() { return idGitlab; }
-    public void setIdGitlab(Long idGitlab) { this.idGitlab = idGitlab; }
 
     public String getSubfaseExtraida() { return subfaseExtraida; }
     public void setSubfaseExtraida(String subfaseExtraida) { this.subfaseExtraida = subfaseExtraida; }

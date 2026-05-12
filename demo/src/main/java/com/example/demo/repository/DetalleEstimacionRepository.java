@@ -15,4 +15,11 @@ public interface DetalleEstimacionRepository extends JpaRepository<DetalleEstima
     // NUEVO MÉTODO: Busca de forma segura cruzando el Excel actual y el ID del Issue
     DetalleEstimacion findFirstByIdExcelAndNumeroGitlab(Integer idExcel, String numeroGitlab);
     
+    // Añadir dentro de DetalleEstimacionRepository
+    DetalleEstimacion findFirstByIdExcelAndIdFaseAndTareaIgnoreCaseAndIdDepartamento(
+        Integer idExcel, 
+        Integer idFase, 
+        String tarea, 
+        Integer idDepartamento
+    );
 }

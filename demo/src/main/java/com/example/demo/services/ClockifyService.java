@@ -27,6 +27,7 @@ import com.example.demo.repository.ApiConfigRepository;
 import com.example.demo.repository.DepartamentoRepository;
 import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.ExcelRepository;
+import com.example.demo.repository.FaseRepository;
 import com.example.demo.repository.ProyectoRepository;
 
 import java.time.Duration;
@@ -57,7 +58,7 @@ public class ClockifyService {
         private ProyectoRepository proyectoRepository;
 
         @Autowired
-        private FaseService faseService;
+        private FaseRepository faseRepository;
 
         @Autowired
         private GitLabService gitLabService;
@@ -543,8 +544,9 @@ public class ClockifyService {
             }
         }
 
-        // Obtener lista de departamentos de la BD local
+        // Obtener listas de BD local
         List<Departamento> departamentosBD = departamentoRepository.findAll();
+        List<com.example.demo.entity.Fase> todasLasFasesBD = faseRepository.findAll();
 
         // 2. Obtener TODAS las entradas de tiempo mediante PAGINACIÓN DINÁMICA
         List<Map<String, Object>> entradasClockify = new ArrayList<>();
@@ -565,7 +567,6 @@ public class ClockifyService {
             if (paginaResultados != null && !paginaResultados.isEmpty()) {
                 entradasClockify.addAll(paginaResultados);
                 
-                // Si la página viene llena (100), asumimos que hay más. Si viene con menos, hemos terminado.
                 if (paginaResultados.size() < tamanoPagina) {
                     hayMasPaginas = false;
                 } else {
@@ -624,7 +625,7 @@ public class ClockifyService {
                     int end = description.indexOf(" ", start);
                     if (end == -1) { end = description.length(); }
                     idGit = Long.parseLong(description.substring(start, end));
-                    imputacion.setIdGitlab(idGit);
+                    // Eliminamos imputacion.setIdGitlab() para aplicar la separación de responsabilidades
                 } catch (Exception e) {}
             }
 
@@ -655,39 +656,58 @@ public class ClockifyService {
                 }
             }
 
-            // -- FECHAS (YA ACTUALIZADO A LOCALTIME) --
+            // -- FECHAS --
             try {
                 String startStr = (String) timeInterval.get("start");
                 if (startStr != null) {
-                    Instant start = Instant.parse(startStr);
-                    ZonedDateTime zdtStart = start.atZone(ZoneId.systemDefault());
+                    java.time.Instant start = java.time.Instant.parse(startStr);
+                    java.time.ZonedDateTime zdtStart = start.atZone(java.time.ZoneId.systemDefault());
                     imputacion.setFecha(zdtStart.toLocalDate());
                     imputacion.setHoraInicio(zdtStart.toLocalTime());
                 }
                 String endStr = (String) timeInterval.get("end");
                 if (endStr != null) {
-                    Instant end = Instant.parse(endStr);
-                    ZonedDateTime zdtEnd = end.atZone(ZoneId.systemDefault());
+                    java.time.Instant end = java.time.Instant.parse(endStr);
+                    java.time.ZonedDateTime zdtEnd = end.atZone(java.time.ZoneId.systemDefault());
                     imputacion.setHoraFin(zdtEnd.toLocalTime());
                 }
             } catch (Exception e) {
-                imputacion.setFecha(LocalDate.now());
+                imputacion.setFecha(java.time.LocalDate.now());
             }
 
-            // -- CRUCE CON EXCEL VIGENTE --
+            // -- CRUCE POR TEXTO Y APRENDIZAJE DE ID --
             boolean esValida = false;
-            if (idGit != -1 && excelVigente != null) {
-                DetalleEstimacion estimacion = detalleEstimacionRepository.findFirstByIdExcelAndNumeroGitlab(
-                        excelVigente.getIdExcel(), 
-                        String.valueOf(idGit)
-                );
+            String subfaseLimpia = imputacion.getSubfaseExtraida(); 
+            String tareaLimpia = imputacion.getTareaExtraida();     
+
+            if (subfaseLimpia != null && !subfaseLimpia.isEmpty() && tareaLimpia != null && !tareaLimpia.isEmpty() && excelVigente != null) {
                 
-                if (estimacion != null) {
-                    imputacion.setIdDetalleEstimacion(estimacion.getId()); 
-                    esValida = true;
+                Integer idFaseEncontrada = todasLasFasesBD.stream()
+                    .filter(f -> f.getFasePadre() != null && detalleEstimacionService.normalizarTexto(f.getNombre()).equals(subfaseLimpia))
+                    .map(com.example.demo.entity.Fase::getId)
+                    .findFirst()
+                    .orElse(null);
+
+                if (idFaseEncontrada != null && imputacion.getIdDepartamento() != null) {
+                    DetalleEstimacion estimacion = detalleEstimacionRepository.findFirstByIdExcelAndIdFaseAndTareaIgnoreCaseAndIdDepartamento(
+                            excelVigente.getIdExcel(),
+                            idFaseEncontrada,
+                            tareaLimpia,
+                            imputacion.getIdDepartamento()
+                    );
+
+                    if (estimacion != null) {
+                        imputacion.setIdDetalleEstimacion(estimacion.getId()); 
+                        esValida = true;
+
+                        if ((estimacion.getNumeroGitlab() == null || estimacion.getNumeroGitlab().trim().isEmpty()) && idGit != -1) {
+                            estimacion.setNumeroGitlab(String.valueOf(idGit));
+                            detalleEstimacionRepository.save(estimacion);
+                        }
+                    }
                 }
             }
-            
+
             imputacion.setValida(esValida);
             nuevasImputaciones.add(imputacion);
         }
