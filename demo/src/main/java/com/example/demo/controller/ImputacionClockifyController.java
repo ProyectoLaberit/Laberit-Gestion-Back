@@ -39,37 +39,21 @@ public class ImputacionClockifyController {
     //     }
     // }
 
-    // GET: Trae todas las imputaciones de la tarea
-    @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}")
-    public ResponseEntity<ApiResponse> obtenerTodoPorDepartamento(
-            @PathVariable Long idProyecto, 
-            @PathVariable Long idDetalleEstimacion, 
-            @PathVariable Integer idDepartamento) {
-        try {
-            // Llamamos al método que trae la lista completa (válidas + inválidas)
-            List<ImputacionClockify> listaCompleta = service.obtenerPorDepartamentoYDetalle(idProyecto, idDetalleEstimacion, idDepartamento);
-            
-            return ResponseEntity.ok(new ApiResponse("Datos de departamento recuperados", true, listaCompleta));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse("Error al recuperar los datos del departamento", false, null));
-        }
-    }
-
     // PUT: Recibimos ambos IDs en la URL para poder hacer la vinculación manual
-    @PutMapping("/vincular/{idImputacion}/{idDetalleEstimacion}")
-    public ResponseEntity<ApiResponse> vincularManual(@PathVariable Long idImputacion, @PathVariable Long idDetalleEstimacion) {
-        try {
-            ImputacionClockify actualizada = service.vincularImputacionManual(idImputacion, idDetalleEstimacion);
+    // @PutMapping("/vincular/{idImputacion}/{idDetalleEstimacion}")
+    // public ResponseEntity<ApiResponse> vincularManual(@PathVariable Long idImputacion, @PathVariable Long idDetalleEstimacion) {
+    //     try {
+    //         ImputacionClockify actualizada = service.vincularImputacionManual(idImputacion, idDetalleEstimacion);
             
-            if (actualizada != null) {
-                return ResponseEntity.ok(new ApiResponse("Tarea vinculada correctamente", true, actualizada));
-            } else {
-                return ResponseEntity.badRequest().body(new ApiResponse("La tarea no existe o ya estaba vinculada", false, null));
-            }
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse("Error al procesar la solicitud", false, null));
-        }
-    }
+    //         if (actualizada != null) {
+    //             return ResponseEntity.ok(new ApiResponse("Tarea vinculada correctamente", true, actualizada));
+    //         } else {
+    //             return ResponseEntity.badRequest().body(new ApiResponse("La tarea no existe o ya estaba vinculada", false, null));
+    //         }
+    //     } catch (Exception e) {
+    //         return ResponseEntity.badRequest().body(new ApiResponse("Error al procesar la solicitud", false, null));
+    //     }
+    // }
 
     // GET: Obtener imputaciones por proyecto, tarea y departamento
     @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}")
