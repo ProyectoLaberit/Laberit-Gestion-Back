@@ -118,7 +118,7 @@ public class UsuarioController {
      */
     @GetMapping
     public ApiResponse listarUsuarios() {
-        if (!esSuperAdmin()) {
+        if (!esAdmin()) {
             return new ApiResponse("No tienes permisos para ver la lista de usuarios.", false, null);
         }
         try {
