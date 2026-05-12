@@ -639,13 +639,13 @@ public class ClockifyService {
                     Instant start = Instant.parse(startStr);
                     ZonedDateTime zdtStart = start.atZone(ZoneId.systemDefault());
                     imputacion.setFecha(zdtStart.toLocalDate());
-                    imputacion.setHoraInicio(zdtStart.getHour() + (zdtStart.getMinute() / 60.0));
+                   imputacion.setHoraInicio(zdtStart.toLocalTime());
                 }
                 String endStr = (String) timeInterval.get("end");
                 if (endStr != null) {
                     Instant end = Instant.parse(endStr);
                     ZonedDateTime zdtEnd = end.atZone(ZoneId.systemDefault());
-                    imputacion.setHoraFin(zdtEnd.getHour() + (zdtEnd.getMinute() / 60.0));
+                    imputacion.setHoraFin(zdtEnd.toLocalTime());
                 }
             } catch (Exception e) {
                 imputacion.setFecha(LocalDate.now());
