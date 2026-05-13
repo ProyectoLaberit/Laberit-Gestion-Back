@@ -45,7 +45,7 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
     List<Object[]> sumarHorasValidasAgrupadasPorDetalle(@Param("idProyecto") Long idProyecto);
 
     // Devuelve las imputaciones filtradas por proyecto, subtarea y departamento
-    List<ImputacionClockify> findByIdProyectoAndIdDetalleEstimacionAndIdDepartamento(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento);
+    // List<ImputacionClockify> findByIdProyectoAndIdDetalleEstimacionAndIdDepartamento(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento);
 
     // Cuenta cuántas imputaciones válidas hay
     Integer countByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndValidaTrue(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento);
@@ -54,5 +54,13 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
     Integer countByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndValidaFalse(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento);
     
     // Filtrar imputaciones por departamento, tarea y un rango de fechas
-    List<ImputacionClockify> findByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndFechaBetween(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento, java.time.LocalDate desde, java.time.LocalDate hasta);
+    // List<ImputacionClockify> findByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndFechaBetween(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento, java.time.LocalDate desde, java.time.LocalDate hasta);
+
+    // Devuelve las válidas de la tarea + TODAS las huérfanas de ese departamento
+    @Query("SELECT i FROM ImputacionClockify i WHERE i.idProyecto = :idProyecto AND i.idDepartamento = :idDepartamento AND (i.idDetalleEstimacion = :idDetalleEstimacion OR (i.valida = false AND i.idDetalleEstimacion IS NULL))")
+    List<ImputacionClockify> obtenerDatosVistaDepartamento(@Param("idProyecto") Long idProyecto, @Param("idDetalleEstimacion") Long idDetalleEstimacion, @Param("idDepartamento") Integer idDepartamento);
+
+    // Lo mismo, pero aplicando el filtro de fechas
+    @Query("SELECT i FROM ImputacionClockify i WHERE i.idProyecto = :idProyecto AND i.idDepartamento = :idDepartamento AND (i.idDetalleEstimacion = :idDetalleEstimacion OR (i.valida = false AND i.idDetalleEstimacion IS NULL)) AND i.fecha BETWEEN :desde AND :hasta")
+    List<ImputacionClockify> obtenerDatosVistaDepartamentoFechas(@Param("idProyecto") Long idProyecto, @Param("idDetalleEstimacion") Long idDetalleEstimacion, @Param("idDepartamento") Integer idDepartamento, @Param("desde") java.time.LocalDate desde, @Param("hasta") java.time.LocalDate hasta);
 }

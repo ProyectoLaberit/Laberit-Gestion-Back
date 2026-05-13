@@ -128,7 +128,7 @@ public class ImputacionClockifyService {
      * una tarea y un departamento específicos.
      */
     public List<ImputacionClockify> obtenerPorDepartamentoYDetalle(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento) {
-        return repository.findByIdProyectoAndIdDetalleEstimacionAndIdDepartamento(idProyecto, idDetalleEstimacion, idDepartamento);
+        return repository.obtenerDatosVistaDepartamento(idProyecto, idDetalleEstimacion, idDepartamento);
     }
 
     /**
@@ -201,10 +201,9 @@ public class ImputacionClockifyService {
      * Filtra las imputaciones por fechas asegurándose de que el rango sea válido.
      */
     public List<ImputacionClockify> filtrarPorFechas(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento, java.time.LocalDate desde, java.time.LocalDate hasta) {
-        // Comprobación de seguridad: si 'desde' es posterior a 'hasta', no hacemos la consulta
         if (desde.isAfter(hasta)) {
             return java.util.Collections.emptyList();
         }
-        return repository.findByIdProyectoAndIdDetalleEstimacionAndIdDepartamentoAndFechaBetween(idProyecto, idDetalleEstimacion, idDepartamento, desde, hasta);
+        return repository.obtenerDatosVistaDepartamentoFechas(idProyecto, idDetalleEstimacion, idDepartamento, desde, hasta);
     }
 }
