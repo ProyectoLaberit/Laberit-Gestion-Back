@@ -19,8 +19,6 @@ public class AuditController {
     @Autowired
     private AuditService auditService;
 
-    // ── Guard de acceso ───────────────────────────────────────────────────────
-
     private boolean esSuperAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return false;
@@ -29,9 +27,6 @@ public class AuditController {
                 .anyMatch(a -> a.equals("ROLE_SUPERADMINISTRADOR"));
     }
 
-    // ── Endpoints ─────────────────────────────────────────────────────────────
-
-    /** Todos los logs, ordenados del más reciente al más antiguo. */
     @GetMapping
     public ApiResponse obtenerTodos() {
         if (!esSuperAdmin()) {
@@ -39,41 +34,5 @@ public class AuditController {
         }
         List<AuditLog> logs = auditService.obtenerTodos();
         return new ApiResponse("Logs recuperados", true, logs);
-    }
-
-    /** Logs filtrados por proyecto. */
-    @GetMapping("/proyecto/{idProyecto}")
-    public ApiResponse obtenerPorProyecto(@PathVariable Long idProyecto) {
-        if (!esSuperAdmin()) {
-            return new ApiResponse("Acceso denegado.", false, null);
-        }
-        return new ApiResponse("Logs del proyecto", true, auditService.obtenerPorProyecto(idProyecto));
-    }
-
-    /** Logs filtrados por tipo de acción. */
-    @GetMapping("/accion/{accion}")
-    public ApiResponse obtenerPorAccion(@PathVariable String accion) {
-        if (!esSuperAdmin()) {
-            return new ApiResponse("Acceso denegado.", false, null);
-        }
-        return new ApiResponse("Logs por acción", true, auditService.obtenerPorAccion(accion));
-    }
-
-    /** Logs filtrados por usuario (email). */
-    @GetMapping("/usuario/{email}")
-    public ApiResponse obtenerPorUsuario(@PathVariable String email) {
-        if (!esSuperAdmin()) {
-            return new ApiResponse("Acceso denegado.", false, null);
-        }
-        return new ApiResponse("Logs del usuario", true, auditService.obtenerPorUsuario(email));
-    }
-
-    /** Logs filtrados por usuario (ID). */
-    @GetMapping("/usuario/id/{idUsuario}")
-    public ApiResponse obtenerPorUsuarioId(@PathVariable Integer idUsuario) {
-        if (!esSuperAdmin()) {
-            return new ApiResponse("Acceso denegado.", false, null);
-        }
-        return new ApiResponse("Logs del usuario", true, auditService.obtenerPorUsuario(idUsuario));
     }
 }
