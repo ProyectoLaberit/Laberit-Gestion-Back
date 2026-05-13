@@ -120,6 +120,17 @@
             <version>0.12.5</version>
             <scope>runtime</scope>
         </dependency>
+		
+		<!-- Permite que  Spring Boot pueda convertir objetos Java a JSON y viceversa usando la biblioteca Jackson (necesaria para las respuestas de la API REST) -->
+		<dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!-- Permite que  Jackson pueda convertir objetos de fecha y hora de Java 8 (como LocalDateTime) a JSON y viceversa -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
 
 	</dependencies>
 
