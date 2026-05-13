@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.demo.annotation.Auditable;
 import com.example.demo.dto.DetalleEstimacionDTO;
 import com.example.demo.dto.ResumenTiemposDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
@@ -49,6 +50,7 @@ public class DetalleEstimacionService {
      * @param usuarioId ID del usuario que sube el archivo.
      * @return El número total de tareas válidas insertadas en la base de datos.
      */
+    @Auditable(accion = "IMPORTAR_EXCEL", tabla = "excel", entidad = Excel.class)
     public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
         Excel registroExcel = new Excel();
         registroExcel.setIdProyecto(proyectoId);
@@ -547,6 +549,60 @@ public class DetalleEstimacionService {
             resultados.put(idProy, obtenerResumenProyecto(idProy));
         }
         return resultados;
+    }
+
+    // ==========================================================
+    // MÉTODOS DE CREACIÓN Y ACTUALIZACIÓN (Lógica de Negocio)
+    // ==========================================================
+
+    /**
+     * Actualiza los valores de una tarea existente.
+     */
+    @Auditable(accion = "ACTUALIZAR_ESTIMACION", tabla = "detalle_estimacion", entidad = DetalleEstimacion.class)
+    public DetalleEstimacion actualizarDetalle(Long id, DetalleEstimacionDTO detalleDTO) {
+        DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
+
+        // Solo actualizamos si el valor viene en el DTO
+        if (detalleDTO.getTarea() != null) detalle.setTarea(detalleDTO.getTarea());
+        if (detalleDTO.getIdDepartamento() != null) detalle.setIdDepartamento(detalleDTO.getIdDepartamento());
+        if (detalleDTO.getIdSubFase() != null) detalle.setIdFase(detalleDTO.getIdSubFase());
+        if (detalleDTO.getTiempoMax() != null) detalle.setTiempoMax(detalleDTO.getTiempoMax());
+        if (detalleDTO.getTiempoMin() != null) detalle.setTiempoMin(detalleDTO.getTiempoMin());
+
+        return detalleEstimacionRepository.save(detalle);
+    }
+
+    /**
+     * Crea una nueva tarea de estimación manualmente.
+     */
+    @Auditable(accion = "CREAR_ESTIMACION", tabla = "detalle_estimacion", entidad = DetalleEstimacion.class)
+    public DetalleEstimacion crearTarea(DetalleEstimacionDTO dto) {
+        if (dto.getTarea() == null || dto.getTarea().trim().isEmpty()) {
+            throw new RuntimeException("El nombre de la tarea es obligatorio.");
+        }
+        if (dto.getIdExcel() == null || dto.getIdSubFase() == null || dto.getIdDepartamento() == null) {
+            throw new RuntimeException("Faltan datos obligatorios (excel, fase o departamento).");
+        }
+        if (dto.getTiempoMin() == null || dto.getTiempoMax() == null) {
+            throw new RuntimeException("Los tiempos mínimo y máximo son obligatorios.");
+        }
+        if (dto.getTiempoMin() < 0 || dto.getTiempoMax() < 0) {
+            throw new RuntimeException("Los tiempos no pueden ser negativos.");
+        }
+        if (dto.getTiempoMin() > dto.getTiempoMax()) {
+            throw new RuntimeException("El tiempo mínimo no puede ser mayor que el máximo.");
+        }
+
+        DetalleEstimacion nueva = new DetalleEstimacion();
+        nueva.setIdExcel(dto.getIdExcel());
+        nueva.setIdFase(dto.getIdSubFase());
+        nueva.setIdDepartamento(dto.getIdDepartamento());
+        nueva.setTarea(dto.getTarea().trim());
+        nueva.setTiempoMin(dto.getTiempoMin());
+        nueva.setTiempoMax(dto.getTiempoMax());
+
+        return detalleEstimacionRepository.save(nueva);
     }
 
 } //<-- fin del servicio DetalleEstimacionService.java

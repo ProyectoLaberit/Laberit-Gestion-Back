@@ -9,18 +9,15 @@ import java.util.List;
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
-    // Todos los logs ordenados por fecha desc
+   // Devuelve todos los logs ordenados por fecha (el más nuevo primero)
     List<AuditLog> findAllByOrderByFechaHoraDesc();
-
-    // Logs de un proyecto concreto
-    List<AuditLog> findByIdProyectoOrderByFechaHoraDesc(Long idProyecto);
-
-    // Logs de un usuario concreto
-    List<AuditLog> findByUsuarioEmailOrderByFechaHoraDesc(String email);
-
-    // Logs de un usuario concreto por ID
-    List<AuditLog> findByIdUsuarioOrderByFechaHoraDesc(Integer idUsuario);
-
-    // Logs de un tipo de acción concreto
+    
+    // Buscar por el tipo de acción (ej. "ACTUALIZAR_USUARIO")
     List<AuditLog> findByAccionOrderByFechaHoraDesc(String accion);
+    
+    // Buscar por la tabla afectada (ej. "usuario")
+    List<AuditLog> findByTablaAfectadaOrderByFechaHoraDesc(String tablaAfectada);
+    
+    // Buscar todas las acciones que hizo un usuario en concreto
+    List<AuditLog> findByIdUsuarioOrderByFechaHoraDesc(Integer idUsuario);
 }

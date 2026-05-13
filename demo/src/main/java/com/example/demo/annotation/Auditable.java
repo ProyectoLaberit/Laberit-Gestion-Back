@@ -16,4 +16,6 @@ public @interface Auditable {
     String tabla();
 
     Class<?> entidad();
+
+    String descripcion() default "";
 }

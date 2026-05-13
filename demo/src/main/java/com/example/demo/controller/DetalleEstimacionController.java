@@ -25,8 +25,7 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class DetalleEstimacionController {
 
-    @Autowired
-    private DetalleEstimacionRepository detalleEstimacionRepository;
+   
 
     @Autowired
     private DetalleEstimacionService detalleEstimacionService;
@@ -34,8 +33,7 @@ public class DetalleEstimacionController {
     @Autowired
     private ExcelService excelService;
 
-    @Autowired
-    private AuditService auditService;
+   
     
     /**
      * Recupera la tabla de estimaciones del Excel VIGENTE (el más reciente o activo) de un proyecto.
@@ -71,11 +69,7 @@ public class DetalleEstimacionController {
 
         try {
             int filasGuardadas = detalleEstimacionService.procesarExcel(archivo, proyectoId, usuarioId);
-            auditService.registrar(
-                AuditService.IMPORTACION_EXCEL,
-                "Excel importado en proyecto " + proyectoId + " con " + filasGuardadas + " registros.",
-                (long) proyectoId
-            );
+           
             return new ApiResponse("Éxito: se importaron " + filasGuardadas + " registros.", true, filasGuardadas);
         } catch (Exception e) {
             return new ApiResponse("Error al procesar el Excel: " + e.getMessage(), false, null);
@@ -89,41 +83,15 @@ public class DetalleEstimacionController {
          * @param detalleDTO Objeto con los nuevos valores (tarea, tiempos, fase, depto).
          * @return ApiResponse confirmando la actualización.
     */
-    @PutMapping("/{id}")
+  @PutMapping("/{id}")
     public ApiResponse actualizarDetalle(@PathVariable Long id, @RequestBody DetalleEstimacionDTO detalleDTO) {
         try {
-            DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
-
-            // SOLO actualizamos si el front-end nos envía el dato
-            if (detalleDTO.getTarea() != null) {
-                detalle.setTarea(detalleDTO.getTarea());
-            }
-            if (detalleDTO.getIdDepartamento() != null) {
-                detalle.setIdDepartamento(detalleDTO.getIdDepartamento());
-            }
-            if (detalleDTO.getIdSubFase() != null) {
-                detalle.setIdFase(detalleDTO.getIdSubFase());
-            }
-            if (detalleDTO.getTiempoMax() != null) {
-                detalle.setTiempoMax(detalleDTO.getTiempoMax());
-            }
-            if (detalleDTO.getTiempoMin() != null) {
-                detalle.setTiempoMin(detalleDTO.getTiempoMin());
-            }
-
-            detalleEstimacionRepository.save(detalle);
-            auditService.registrar(
-                AuditService.CAMBIO_ESTIMACION,
-                "Estimación ID " + id + " modificada. Tarea: " + detalle.getTarea(),
-                null
-            );
+            detalleEstimacionService.actualizarDetalle(id, detalleDTO);
             return new ApiResponse("Tarea actualizada correctamente", true, null);
         } catch (Exception e) {
             return new ApiResponse("Error al actualizar: " + e.getMessage(), false, null);
         }
     }
-
 
     /**
         * Genera un nuevo archivo Excel basado en las estimaciones guardadas en la BD.
@@ -243,36 +211,7 @@ public class DetalleEstimacionController {
     @PostMapping
     public ApiResponse crearTarea(@RequestBody DetalleEstimacionDTO dto) {
         try {
-            if (dto.getTarea() == null || dto.getTarea().trim().isEmpty()) {
-                return new ApiResponse("El nombre de la tarea es obligatorio.", false, null);
-            }
-            if (dto.getIdExcel() == null || dto.getIdSubFase() == null || dto.getIdDepartamento() == null) {
-                return new ApiResponse("Faltan datos obligatorios (excel, fase o departamento).", false, null);
-            }
-            if (dto.getTiempoMin() == null || dto.getTiempoMax() == null) {
-                return new ApiResponse("Los tiempos mínimo y máximo son obligatorios.", false, null);
-            }
-            if (dto.getTiempoMin() < 0 || dto.getTiempoMax() < 0) {
-                return new ApiResponse("Los tiempos no pueden ser negativos.", false, null);
-            }
-            if (dto.getTiempoMin() > dto.getTiempoMax()) {
-                return new ApiResponse("El tiempo mínimo no puede ser mayor que el máximo.", false, null);
-            }
-
-            DetalleEstimacion nueva = new DetalleEstimacion();
-            nueva.setIdExcel(dto.getIdExcel());
-            nueva.setIdFase(dto.getIdSubFase());
-            nueva.setIdDepartamento(dto.getIdDepartamento());
-            nueva.setTarea(dto.getTarea().trim());
-            nueva.setTiempoMin(dto.getTiempoMin());
-            nueva.setTiempoMax(dto.getTiempoMax());
-
-            detalleEstimacionRepository.save(nueva);
-            auditService.registrar(
-                AuditService.CREACION_ESTIMACION,
-                "Tarea creada manualmente: \"" + nueva.getTarea() + "\" (dept=" + nueva.getIdDepartamento() + ")",
-                null
-            );
+            detalleEstimacionService.crearTarea(dto);
             return new ApiResponse("Tarea creada correctamente.", true, null);
         } catch (Exception e) {
             return new ApiResponse("Error al crear la tarea: " + e.getMessage(), false, null);

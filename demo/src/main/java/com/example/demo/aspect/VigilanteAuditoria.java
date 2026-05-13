@@ -4,12 +4,9 @@ import com.example.demo.annotation.Auditable;
 import com.example.demo.entity.AuditLog;
 import com.example.demo.repository.AuditLogRepository;
 import com.example.demo.services.AuditService;
-
-// Importaciones explícitas del conversor JSON (Ya vienen incluidas en Spring Boot Web)
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-
 import jakarta.persistence.EntityManager;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -30,8 +27,12 @@ public class VigilanteAuditoria {
     @Autowired
     private EntityManager entityManager;
 
+    /**
+     * Intercepta métodos marcados con @Auditable para registrar cambios.
+     */
     @Around("@annotation(auditable)")
     public Object vigilarMetodo(ProceedingJoinPoint joinPoint, Auditable auditable) throws Throwable {
+        System.out.println("¡EL VIGILANTE HA INTERCEPTADO EL MÉTODO: " + auditable.accion() + "!");
         
         Object[] argumentos = joinPoint.getArgs();
         String jsonAntes = null;
@@ -48,7 +49,8 @@ public class VigilanteAuditoria {
             }
         }
 
-        // 2. DEJAR QUE EL MÉTODO REAL SE EJECUTE
+        // 2. EJECUCIÓN: Dejar que el método original se ejecute
+        // Guardamos el resultado para devolverlo al final
         Object resultadoMetodo = joinPoint.proceed();
 
         // 3. SACAR LA "FOTO DEL DESPUÉS"
@@ -77,26 +79,33 @@ public class VigilanteAuditoria {
             log.setIdAfectado(idAfectado != null ? idAfectado : 0L);
             log.setDatosPrevios(jsonAntes);
             log.setDatosNuevos(jsonDespues);
+
+            String descripcionFinal = auditable.descripcion().isEmpty() 
+                ? "Cambio realizado en la tabla " + auditable.tabla() + " (ID: " + idAfectado + ")"
+                : auditable.descripcion();
             
+            log.setDescripcion(descripcionFinal);
+
             auditLogRepository.save(log);
         } catch (Exception e) {
             System.err.println("[AUDITORÍA ERROR] No se pudo guardar el log: " + e.getMessage());
         }
 
-        return resultadoMetodo;
+        // CRÍTICO: Devolvemos el resultado del método original para que el controlador funcione
+        return resultadoMetodo; 
     }
 
-    // ==========================================
-    // HERRAMIENTA BLINDADA DE CONVERSIÓN JSON
-    // ==========================================
+    /**
+     * Herramienta blindada para convertir entidades a JSON.
+     */
     private String convertirAJson(Object objeto) {
-        if (objeto == null) return null;
+        if (objeto == null) {
+            return null;
+        }
         try {
             ObjectMapper mapper = new ObjectMapper();
-            // Soporte para fechas de Java 8 (LocalDateTime)
             mapper.registerModule(new JavaTimeModule());
             mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-            // Evitar que explote si Hibernate devuelve un proxy vacío
             mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
             
             return mapper.writeValueAsString(objeto);

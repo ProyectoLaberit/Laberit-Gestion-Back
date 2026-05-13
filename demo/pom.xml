@@ -120,16 +120,22 @@
             <version>0.12.5</version>
             <scope>runtime</scope>
         </dependency>
-		
-		<!-- Permite que  Spring Boot pueda convertir objetos Java a JSON y viceversa usando la biblioteca Jackson (necesaria para las respuestas de la API REST) -->
+		<!-- Para trabajar con JSON en general (necesario para convertir objetos a JSON y viceversa) -->
 		<dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-        <!-- Permite que  Jackson pueda convertir objetos de fecha y hora de Java 8 (como LocalDateTime) a JSON y viceversa -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+		</dependency>
+		<!-- Para manejar correctamente las fechas y horas de Java 8+ en formato JSON (necesario para LocalDate, LocalDateTime, etc.) -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+		</dependency>
+		<!--Para usar AspectJ y poder aplicar aspectos de programación orientada a aspectos (AOP) en la aplicación, como por ejemplo para registrar el tiempo de ejecución de métodos o para manejar transacciones de forma declarativa. -->
+		<dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+            <version>1.9.21</version>
+            
         </dependency>
 
 	</dependencies>

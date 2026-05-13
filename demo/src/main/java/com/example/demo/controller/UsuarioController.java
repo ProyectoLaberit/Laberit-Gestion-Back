@@ -155,12 +155,7 @@ public class UsuarioController {
         }
         try {
             UsuarioDTO usuarioCreado = usuarioService.crearUsuario(usuarioDTO);
-            auditService.registrar(
-                AuditService.CREACION_USUARIO,
-                "Usuario creado: " + usuarioDTO.getEmail() + " con rol " + usuarioDTO.getRol(),
-                null,
-                usuarioCreado.getId()
-            );
+           
             return new ApiResponse("Usuario creado con éxito", true, usuarioCreado);
         } catch (RuntimeException e) {
             return new ApiResponse(e.getMessage(), false, null);
@@ -182,12 +177,7 @@ public class UsuarioController {
                 return new ApiResponse("No puedes eliminarte a ti mismo.", false, null);
             }
             usuarioService.eliminarUsuario(id);
-            auditService.registrar(
-                AuditService.BORRADO_USUARIO,
-                "Usuario ID " + id + " eliminado.",
-                null,
-                id
-            );
+            
             return new ApiResponse("Usuario eliminado correctamente", true, null);
         } catch (RuntimeException e) {
             return new ApiResponse(e.getMessage(), false, null);
@@ -266,12 +256,7 @@ public class UsuarioController {
             }
 
             usuarioService.cambiarRol(id, dto.getRol());
-            auditService.registrar(
-                AuditService.CAMBIO_ROL,
-                "Rol del usuario ID " + id + " cambiado a: " + dto.getRol(),
-                null,
-                id
-            );
+           
             return new ApiResponse("Rol actualizado correctamente.", true, null);
         } catch (RuntimeException e) {
             return new ApiResponse(e.getMessage(), false, null);

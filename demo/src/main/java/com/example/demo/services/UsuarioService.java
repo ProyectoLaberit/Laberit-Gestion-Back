@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import com.example.demo.annotation.Auditable;
 
 @Service
 public class UsuarioService {
@@ -114,7 +115,7 @@ public class UsuarioService {
 
         return dto;
     }
-
+    @Auditable(accion = "CREAR_USUARIO", tabla = "usuario", entidad = Usuario.class)
     public UsuarioDTO crearUsuario(UsuarioDTO dto) {
         if (usuarioRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new RuntimeException("Error: Ya existe un usuario registrado con este email.");
@@ -158,7 +159,7 @@ public class UsuarioService {
         respuesta.setExcels(guardado.getExcels());
         return respuesta;
     }
-
+    @Auditable(accion = "BORRAR_USUARIO", tabla = "usuario", entidad = Usuario.class)
     public void eliminarUsuario(Integer id) {
         if (!usuarioRepository.existsById(id)) {
             throw new RuntimeException("Error: No se puede eliminar. El usuario con ID " + id + " no existe.");
@@ -257,7 +258,7 @@ public class UsuarioService {
             throw new RuntimeException("Error al procesar la foto: " + e.getMessage());
         }
     }
-
+    @Auditable(accion = "CAMBIAR_ROL", tabla = "usuario", entidad = Usuario.class)
     public void cambiarRol(Integer idUsuario, String rolNuevo) {
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado."));
@@ -276,7 +277,7 @@ public class UsuarioService {
         usuario.getRoles().add(nuevoRolObj);
         usuarioRepository.save(usuario);
     }
-
+    @Auditable(accion = "ACTUALIZAR_USUARIO", tabla = "usuario", entidad = Usuario.class)
     public UsuarioDTO actualizarUsuario(Integer id, UsuarioDTO dto) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));

@@ -2,7 +2,8 @@ package com.example.demo.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 @Entity
 @Table(name = "audit_log")
 public class AuditLog {
@@ -24,9 +25,11 @@ public class AuditLog {
     private Long idAfectado;
 
     // Almacenamos el JSON como String, pero le decimos a Postgres que es JSONB
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "datos_previos", columnDefinition = "jsonb")
     private String datosPrevios;
 
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "datos_nuevos", columnDefinition = "jsonb")
     private String datosNuevos;
 
