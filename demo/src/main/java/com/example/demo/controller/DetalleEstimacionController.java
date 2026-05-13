@@ -13,6 +13,7 @@ import com.example.demo.services.ExcelService;
 import com.example.demo.services.AuditService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -257,4 +258,13 @@ public class DetalleEstimacionController {
         }
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarEstimacion(@PathVariable Long id) {
+        try {
+            detalleEstimacionService.eliminarTarea(id);
+            return ResponseEntity.ok().body("{\"mensaje\": \"Estimación eliminada correctamente\", \"success\": true}");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("{\"mensaje\": \"" + e.getMessage() + "\", \"success\": false}");
+        }
+    }
 } // <-- fin del controlador -->

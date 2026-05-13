@@ -1,5 +1,6 @@
 package com.example.demo.services;
 
+import com.example.demo.annotation.Auditable;
 import com.example.demo.dto.DepartamentoDTO;
 import com.example.demo.entity.Departamento;
 import com.example.demo.repository.DepartamentoRepository;
@@ -40,6 +41,12 @@ public class DepartamentoService {
      *
      * @param dto Objeto de transferencia de datos que contiene la información del nuevo departamento.
      */
+    @Auditable(
+        accion = "CREAR_DEPARTAMENTO", 
+        tabla = "departamento", 
+        entidad = Departamento.class,
+        descripcion = "Se creó el departamento '#{#dto.nombre}'"
+    )
     public void crear(DepartamentoDTO dto) {
         Departamento depto = new Departamento();
         depto.setNombre(dto.getNombre());
@@ -64,6 +71,12 @@ public class DepartamentoService {
         * @param id  ID del departamento a actualizar.
         * @param dto Objeto de transferencia de datos que contiene la nueva información del departamento.
         */
+       @Auditable(
+        accion = "ACTUALIZAR_DEPARTAMENTO", 
+        tabla = "departamento", 
+        entidad = Departamento.class,
+        descripcion = "Se actualizó el departamento '#{#dto.nombre}' (ID: #{#id})"
+    )
     public void actualizar(Integer id, DepartamentoDTO dto) {
         Departamento depto = deptoRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Departamento no encontrado con ID: " + id));
@@ -94,6 +107,12 @@ public class DepartamentoService {
         *
         * @param id ID del departamento a eliminar.
         */
+       @Auditable(
+        accion = "BORRAR_DEPARTAMENTO", 
+        tabla = "departamento", 
+        entidad = Departamento.class,
+        descripcion = "Se eliminó el departamento con ID: #{#id}"
+    )
     public void eliminar(Integer id) {
         if (!deptoRepo.existsById(id)) {
             throw new RuntimeException("El departamento no existe");

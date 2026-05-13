@@ -1,5 +1,6 @@
 package com.example.demo.services;
 
+import com.example.demo.annotation.Auditable;
 import com.example.demo.entity.ImputacionClockify;
 import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.ImputacionClockifyRepository;
@@ -52,6 +53,12 @@ public class ImputacionClockifyService {
      * Vincula manualmente una imputación y "enseña" al Excel el número de GitLab
      * para que las próximas se validen solas.
      */
+    @Auditable(
+        accion = "VINCULAR_IMPUTACION", 
+        tabla = "imputacion_clockify", 
+        entidad = ImputacionClockify.class,
+        descripcion = "Se vinculó manualmente la imputación con ID '#{#idImputacionClockify}' a la tarea con ID '#{#idDetalleEstimacion}'"
+    )
     public ImputacionClockify vincularImputacionManual(Long idImputacionClockify, Long idDetalleEstimacion) {
         // 1. Buscamos la imputación en la base de datos
         ImputacionClockify imputacion = repository.findById(idImputacionClockify).orElse(null);
@@ -119,6 +126,12 @@ public class ImputacionClockifyService {
      * Guarda los cambios realizados en un objeto de imputación ya existente 
      * en la base de datos.
      */
+    @Auditable(
+        accion = "ACTUALIZAR_IMPUTACION", 
+        tabla = "imputacion_clockify", 
+        entidad = ImputacionClockify.class,
+        descripcion = "Se actualizaron los datos de la imputación (Clockify ID original: '#{#imputacion.idClockifyOriginal}')"
+    )
     public ImputacionClockify actualizarImputacion(ImputacionClockify imputacion) {
         return repository.save(imputacion);
     }
@@ -152,6 +165,12 @@ public class ImputacionClockifyService {
      * Si pasa a ser válida, se le asigna el ID de la tarea indicada. 
      * Si pasa a ser inválida, se limpia su ID de tarea dejándola huérfana.
      */
+    @Auditable(
+        accion = "ALTERNAR_ESTADO_IMPUTACION", 
+        tabla = "imputacion_clockify", 
+        entidad = ImputacionClockify.class,
+        descripcion = "Se cambió el estado de la imputación con ID '#{#idImputacion}' (Nueva tarea asociada: #{#idDetalleEstimacion})"
+    )
     public ImputacionClockify alternarEstadoValidacion(Long idImputacion, Long idDetalleEstimacion) {
         ImputacionClockify imputacion = repository.findById(idImputacion).orElse(null);
         if (imputacion != null) {
@@ -175,6 +194,12 @@ public class ImputacionClockifyService {
      * Modifica el texto descriptivo de una imputación 
      * específica y guarda los cambios.
      */
+    @Auditable(
+        accion = "EDITAR_TAREA_IMPUTACION", 
+        tabla = "imputacion_clockify", 
+        entidad = ImputacionClockify.class,
+        descripcion = "Se editó la descripción extraída a '#{#nuevaTarea}' en la imputación '#{#idImputacion}'"
+    )
     public ImputacionClockify editarTareaExtraida(Long idImputacion, String nuevaTarea) {
         ImputacionClockify imputacion = repository.findById(idImputacion).orElse(null);
         
@@ -189,6 +214,12 @@ public class ImputacionClockifyService {
      * Elimina permanentemente un registro de imputación de la base de datos 
      * si este existe.
      */
+    @Auditable(
+        accion = "BORRAR_IMPUTACION", 
+        tabla = "imputacion_clockify", 
+        entidad = ImputacionClockify.class,
+        descripcion = "Se borró permanentemente la imputación con ID: #{#idImputacion}"
+    )
     public boolean borrarImputacion(Long idImputacion) {
         if (repository.existsById(idImputacion)) {
             repository.deleteById(idImputacion);

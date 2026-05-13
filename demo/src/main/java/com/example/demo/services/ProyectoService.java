@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.annotation.Auditable;
 import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.entity.Proyecto;
 import com.example.demo.repository.ProyectoRepository;
@@ -33,7 +34,12 @@ public class ProyectoService {
         p.getExcels()
     )).collect(Collectors.toList());
 }
-
+    @Auditable(
+        accion = "CREAR_PROYECTO", 
+        tabla = "proyecto", 
+        entidad = Proyecto.class,
+        descripcion = "Se creó un nuevo proyecto llamado '#{#dto.nombre}'"
+    )
     public ProyectoDTO crearProyecto(ProyectoDTO dto) {
         Proyecto nuevoProyecto = new Proyecto();
 
@@ -58,7 +64,12 @@ public class ProyectoService {
             guardado.getExcels()
         );
     }
-
+    @Auditable(
+        accion = "BORRAR_PROYECTO", 
+        tabla = "proyecto", 
+        entidad = Proyecto.class,
+        descripcion = "Se eliminó del sistema el proyecto '#{#resultado.nombre}'"
+    )
     public void eliminarProyecto(Long id) {
         if (!proyectoRepository.existsById(id)) {
             throw new RuntimeException("No se puede eliminar: El proyecto con ID " + id + " no existe.");
@@ -66,6 +77,12 @@ public class ProyectoService {
         proyectoRepository.deleteById(id);
     }
 
+    @Auditable(
+        accion = "ACTUALIZAR_PROYECTO", 
+        tabla = "proyecto", 
+        entidad = Proyecto.class,
+        descripcion = "Se actualizaron los datos del proyecto '#{#proyectoDTO.nombre}' (ID: #{#id})"
+    )
     public ProyectoDTO actualizarProyecto(Long id, ProyectoDTO proyectoDTO) {
         Proyecto proyecto = proyectoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));

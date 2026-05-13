@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import com.example.demo.annotation.Auditable;
 import com.example.demo.dto.ClockifyTareaDTO;
 import com.example.demo.dto.DetalleEstimacionDTO;
 import com.example.demo.dto.FaseDTO;
@@ -513,6 +514,12 @@ public class ClockifyService {
      * @param projectId ID de nuestro proyecto local.
      * @return Número de imputaciones nuevas guardadas.
      */
+    @Auditable(
+        accion = "SINCRONIZAR_CLOCKIFY", 
+        tabla = "proyecto", 
+        entidad = Proyecto.class,
+        descripcion = "Se sincronizaron las imputaciones de Clockify para el proyecto con ID: #{#projectId}"
+    )
   public int sincronizarImputaciones(Long projectId) {
         Proyecto p = proyectoRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));

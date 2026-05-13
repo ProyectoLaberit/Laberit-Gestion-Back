@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.annotation.Auditable;
 import com.example.demo.dto.HistorialExcelDTO;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
@@ -25,6 +26,12 @@ public class ExcelService {
      * * @param excel El objeto Excel que se va a guardar (debe traer vigente = true desde el controlador).
      * @return El Excel guardado con su ID autogenerado.
      */
+    @Auditable(
+        accion = "NUEVO_EXCEL_VIGENTE", 
+        tabla = "excel", 
+        entidad = Excel.class,
+        descripcion = "Se ha establecido un nuevo Excel vigente para el proyecto con ID: #{#excel.idProyecto}"
+    )
     @Transactional
     public Excel guardarDatosExcel(Excel excel) {
         if (excel.getIdProyecto() != null) {

@@ -50,7 +50,12 @@ public class DetalleEstimacionService {
      * @param usuarioId ID del usuario que sube el archivo.
      * @return El número total de tareas válidas insertadas en la base de datos.
      */
-    @Auditable(accion = "IMPORTAR_EXCEL", tabla = "excel", entidad = Excel.class)
+    @Auditable(
+        accion = "IMPORTAR_EXCEL", 
+        tabla = "excel", 
+        entidad = Excel.class,
+        descripcion = "Se importó un nuevo documento Excel para el proyecto con ID: #{#proyectoId}"
+    )
     public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
         Excel registroExcel = new Excel();
         registroExcel.setIdProyecto(proyectoId);
@@ -558,7 +563,12 @@ public class DetalleEstimacionService {
     /**
      * Actualiza los valores de una tarea existente.
      */
-    @Auditable(accion = "ACTUALIZAR_ESTIMACION", tabla = "detalle_estimacion", entidad = DetalleEstimacion.class)
+   @Auditable(
+        accion = "ACTUALIZAR_ESTIMACION", 
+        tabla = "detalle_estimacion", 
+        entidad = DetalleEstimacion.class,
+        descripcion = "Se actualizaron los datos de la estimación '#{#resultado.tarea}'"
+    )
     public DetalleEstimacion actualizarDetalle(Long id, DetalleEstimacionDTO detalleDTO) {
         DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
@@ -576,7 +586,12 @@ public class DetalleEstimacionService {
     /**
      * Crea una nueva tarea de estimación manualmente.
      */
-    @Auditable(accion = "CREAR_ESTIMACION", tabla = "detalle_estimacion", entidad = DetalleEstimacion.class)
+    @Auditable(
+        accion = "CREAR_ESTIMACION", 
+        tabla = "detalle_estimacion", 
+        entidad = DetalleEstimacion.class,
+        descripcion = "Se creó manualmente la estimación para la tarea '#{#dto.tarea}'"
+    )
     public DetalleEstimacion crearTarea(DetalleEstimacionDTO dto) {
         if (dto.getTarea() == null || dto.getTarea().trim().isEmpty()) {
             throw new RuntimeException("El nombre de la tarea es obligatorio.");
@@ -603,6 +618,25 @@ public class DetalleEstimacionService {
         nueva.setTiempoMax(dto.getTiempoMax());
 
         return detalleEstimacionRepository.save(nueva);
+    }
+
+    /**
+     * Elimina una tarea de estimación existente.
+     * Devuelve la entidad borrada para que el Vigilante pueda leer su nombre.
+     */
+    @Auditable(
+        accion = "BORRAR_ESTIMACION", 
+        tabla = "detalle_estimacion", 
+        entidad = DetalleEstimacion.class,
+        descripcion = "Se eliminó la estimación de la tarea '#{#resultado.tarea}'"
+    )
+    public DetalleEstimacion eliminarTarea(Long id) {
+        DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
+
+        detalleEstimacionRepository.delete(detalle);
+        
+        return detalle; // Lo devolvemos para que SpEL pueda leer "resultado.tarea"
     }
 
 } //<-- fin del servicio DetalleEstimacionService.java

@@ -27,9 +27,6 @@ public class VigilanteAuditoria {
     @Autowired
     private EntityManager entityManager;
 
-    /**
-     * Intercepta métodos marcados con @Auditable para registrar cambios.
-     */
     @Around("@annotation(auditable)")
     public Object vigilarMetodo(ProceedingJoinPoint joinPoint, Auditable auditable) throws Throwable {
         System.out.println("¡EL VIGILANTE HA INTERCEPTADO EL MÉTODO: " + auditable.accion() + "!");
@@ -50,7 +47,6 @@ public class VigilanteAuditoria {
         }
 
         // 2. EJECUCIÓN: Dejar que el método original se ejecute
-        // Guardamos el resultado para devolverlo al final
         Object resultadoMetodo = joinPoint.proceed();
 
         // 3. SACAR LA "FOTO DEL DESPUÉS"
@@ -80,18 +76,47 @@ public class VigilanteAuditoria {
             log.setDatosPrevios(jsonAntes);
             log.setDatosNuevos(jsonDespues);
 
-            String descripcionFinal = auditable.descripcion().isEmpty() 
-                ? "Cambio realizado en la tabla " + auditable.tabla() + " (ID: " + idAfectado + ")"
-                : auditable.descripcion();
+            // --- MAGIA PARA LA DESCRIPCIÓN DINÁMICA (SpEL) ---
+            String descripcionFinal = auditable.descripcion();
+
+            if (!descripcionFinal.isEmpty() && descripcionFinal.contains("#{")) {
+                try {
+                    org.aspectj.lang.reflect.MethodSignature signature = (org.aspectj.lang.reflect.MethodSignature) joinPoint.getSignature();
+                    String[] nombresParametros = signature.getParameterNames();
+
+                    org.springframework.expression.spel.support.StandardEvaluationContext context = new org.springframework.expression.spel.support.StandardEvaluationContext();
+
+                    // Mapear los parámetros de entrada (ej: dto)
+                    for (int i = 0; i < argumentos.length; i++) {
+                        context.setVariable(nombresParametros[i], argumentos[i]);
+                    }
+
+                    // Mapear el objeto devuelto (ej: resultado)
+                    if (resultadoMetodo != null) {
+                        context.setVariable("resultado", resultadoMetodo);
+                    }
+
+                    org.springframework.expression.ExpressionParser parser = new org.springframework.expression.spel.standard.SpelExpressionParser();
+                    org.springframework.expression.ParserContext templateContext = new org.springframework.expression.common.TemplateParserContext();
+
+                    // Parsear el texto
+                    descripcionFinal = parser.parseExpression(descripcionFinal, templateContext).getValue(context, String.class);
+
+                } catch (Exception e) {
+                    System.err.println("[AUDITORÍA WARNING] No se pudo traducir la descripción dinámica: " + e.getMessage());
+                }
+            } else if (descripcionFinal.isEmpty()) {
+                descripcionFinal = "Cambio realizado en la tabla " + auditable.tabla() + " (ID: " + idAfectado + ")";
+            }
             
             log.setDescripcion(descripcionFinal);
+            // --- FIN DE LA MAGIA ---
 
             auditLogRepository.save(log);
         } catch (Exception e) {
             System.err.println("[AUDITORÍA ERROR] No se pudo guardar el log: " + e.getMessage());
         }
 
-        // CRÍTICO: Devolvemos el resultado del método original para que el controlador funcione
         return resultadoMetodo; 
     }
 
