@@ -1,7 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.ApiResponse;
-import com.example.demo.entity.AuditLog;
+import com.example.demo.dto.AuditLogDTO;
 import com.example.demo.services.AuditService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -32,7 +32,7 @@ public class AuditController {
         if (!esSuperAdmin()) {
             return new ApiResponse("Acceso denegado. Solo el SuperAdministrador puede ver los logs.", false, null);
         }
-        List<AuditLog> logs = auditService.obtenerTodos();
+        List<AuditLogDTO> logs = auditService.obtenerTodos();
         return new ApiResponse("Logs recuperados", true, logs);
     }
 }
