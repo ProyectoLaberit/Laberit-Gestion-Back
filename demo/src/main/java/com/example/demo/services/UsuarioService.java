@@ -164,12 +164,12 @@ public class UsuarioService {
         respuesta.setExcels(guardado.getExcels());
         return respuesta;
     }
-   @Auditable(
-        accion = "BORRAR_USUARIO", 
-        tabla = "usuario", 
-        entidad = Usuario.class,
-        descripcion = "Se eliminó al usuario '#{#resultado.nombre}' (Email: #{#resultado.email})"
-    )
+  @Auditable(
+    accion = "BORRAR_USUARIO", 
+    tabla = "usuario", 
+    entidad = Usuario.class,
+    descripcion = "Se eliminó al usuario '#{#antiguo.nombre}' (Email: #{#antiguo.email})"
+)
     public void eliminarUsuario(Integer id) {
         if (!usuarioRepository.existsById(id)) {
             throw new RuntimeException("Error: No se puede eliminar. El usuario con ID " + id + " no existe.");
