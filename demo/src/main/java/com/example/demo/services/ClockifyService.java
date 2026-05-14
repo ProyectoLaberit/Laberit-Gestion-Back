@@ -510,219 +510,233 @@ public class ClockifyService {
         }
 
         /**
-     * Sincroniza las entradas de tiempo de Clockify con nuestra base de datos local.
-     * @param projectId ID de nuestro proyecto local.
-     * @return Número de imputaciones nuevas guardadas.
-     */
-    @Auditable(
-        accion = "SINCRONIZAR_CLOCKIFY", 
-        tabla = "proyecto", 
-        entidad = Proyecto.class,
-        descripcion = "Se sincronizaron las imputaciones de Clockify para el proyecto con ID: #{#projectId}"
-    )
-  public int sincronizarImputaciones(Long projectId) {
-        Proyecto p = proyectoRepository.findById(projectId)
-                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
+         * Sincroniza las entradas de tiempo de Clockify con nuestra base de datos
+         * local.
+         * 
+         * @param projectId ID de nuestro proyecto local.
+         * @return Número de imputaciones nuevas guardadas.
+         */
+        @Auditable(accion = "SINCRONIZAR_CLOCKIFY", tabla = "proyecto", entidad = Proyecto.class, descripcion = "Se sincronizaron las imputaciones de Clockify para el proyecto con ID: #{#projectId}")
+        public int sincronizarImputaciones(Long projectId) {
+                Proyecto p = proyectoRepository.findById(projectId)
+                                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
 
-        Excel excelVigente = excelRepository.findFirstByIdProyectoAndVigenteTrue(projectId);
-        String clockifyId = p.getClockifyId();
-        ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Api-Key", clockify.getClave());
-        HttpEntity<String> entity = new HttpEntity<>(headers);
+                Excel excelVigente = excelRepository.findFirstByIdProyectoAndVigenteTrue(projectId);
+                String clockifyId = p.getClockifyId();
+                ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
 
-        // 1. Obtener ID del usuario maestro
-        ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
-                clockify.getUrlReal() + "/user", HttpMethod.GET, entity,
-                new ParameterizedTypeReference<Map<String, Object>>() {});
-        String userId = (String) userResponse.getBody().get("id");
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("X-Api-Key", clockify.getClave());
+                HttpEntity<String> entity = new HttpEntity<>(headers);
 
-        // -- OBTENER ETIQUETAS DE CLOCKIFY --
-        String tagsUrl = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/tags";
-        ResponseEntity<List<Map<String, Object>>> tagsResponse = restTemplate.exchange(
-                tagsUrl, HttpMethod.GET, entity,
-                new ParameterizedTypeReference<List<Map<String, Object>>>() {});
-        
-        Map<String, String> mapaEtiquetas = new HashMap<>();
-        if (tagsResponse.getBody() != null) {
-            for (Map<String, Object> tag : tagsResponse.getBody()) {
-                mapaEtiquetas.put((String) tag.get("id"), (String) tag.get("name"));
-            }
-        }
+                // 1. Obtener ID del usuario maestro
+                ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
+                                clockify.getUrlReal() + "/user", HttpMethod.GET, entity,
+                                new ParameterizedTypeReference<Map<String, Object>>() {
+                                });
+                String userId = (String) userResponse.getBody().get("id");
 
-        // Obtener listas de BD local
-        List<Departamento> departamentosBD = departamentoRepository.findAll();
-        List<com.example.demo.entity.Fase> todasLasFasesBD = faseRepository.findAll();
+                // -- OBTENER ETIQUETAS DE CLOCKIFY --
+                String tagsUrl = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/tags";
+                ResponseEntity<List<Map<String, Object>>> tagsResponse = restTemplate.exchange(
+                                tagsUrl, HttpMethod.GET, entity,
+                                new ParameterizedTypeReference<List<Map<String, Object>>>() {
+                                });
 
-        // 2. Obtener TODAS las entradas de tiempo mediante PAGINACIÓN DINÁMICA
-        List<Map<String, Object>> entradasClockify = new ArrayList<>();
-        int paginaActual = 1;
-        int tamanoPagina = 100;
-        boolean hayMasPaginas = true;
-
-        while (hayMasPaginas) {
-            String url = clockify.getUrlReal() + "/workspaces/" + workspaceId + 
-                         "/user/" + userId + "/time-entries?page=" + paginaActual + "&page-size=" + tamanoPagina;
-
-            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, entity,
-                    new ParameterizedTypeReference<List<Map<String, Object>>>() {});
-
-            List<Map<String, Object>> paginaResultados = response.getBody();
-
-            if (paginaResultados != null && !paginaResultados.isEmpty()) {
-                entradasClockify.addAll(paginaResultados);
-                
-                if (paginaResultados.size() < tamanoPagina) {
-                    hayMasPaginas = false;
-                } else {
-                    paginaActual++;
-                }
-            } else {
-                hayMasPaginas = false;
-            }
-        }
-
-        List<ImputacionClockify> nuevasImputaciones = new ArrayList<>();
-
-        // 3. Procesar cada entrada
-        for (Map<String, Object> entry : entradasClockify) {
-            
-            if (!clockifyId.equals(entry.get("projectId"))) { 
-                continue; 
-            }
-            
-            String idEntrada = (String) entry.get("id");
-            String description = (String) entry.get("description");
-            
-            if (description == null || description.isEmpty()) { 
-                continue; 
-            }
-
-            Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
-            double horasClockify = convertirDuracionAHoras((String) timeInterval.get("duration"));
-
-            ImputacionClockify imputacionExistente = imputacionService.obtenerPorIdClockify(idEntrada);
-            
-            if (imputacionExistente != null) {
-                if (Math.abs(imputacionExistente.getHorasTrabajadas() - horasClockify) > 0.01) {
-                    imputacionExistente.setHorasTrabajadas(horasClockify);
-                    imputacionService.actualizarImputacion(imputacionExistente);
-                }
-                continue;
-            }
-
-            ImputacionClockify imputacion = new ImputacionClockify();
-            imputacion.setIdClockifyOriginal(idEntrada);
-            imputacion.setIdProyecto(projectId);
-            imputacion.setDescripcionOriginal(description);
-            imputacion.setHorasTrabajadas(horasClockify);
-
-            String subfase = null;
-            if (description.contains("[") && description.contains("]")) {
-                subfase = description.substring(description.indexOf("[") + 1, description.indexOf("]"));
-                imputacion.setSubfaseExtraida(detalleEstimacionService.normalizarTexto(subfase));
-            }
-
-            long idGit = -1;
-            if (description.contains("#")) {
-                try {
-                    int start = description.indexOf("#") + 1;
-                    int end = description.indexOf(" ", start);
-                    if (end == -1) { end = description.length(); }
-                    idGit = Long.parseLong(description.substring(start, end));
-                    // Eliminamos imputacion.setIdGitlab() para aplicar la separación de responsabilidades
-                } catch (Exception e) {}
-            }
-
-            if (description.contains("#")) {
-                int start = description.indexOf("#");
-                int firstSpace = description.indexOf(" ", start);
-                if (firstSpace != -1) {
-                    String titulo = description.substring(firstSpace + 1).trim();
-                    imputacion.setTareaExtraida(detalleEstimacionService.normalizarTexto(titulo));
-                }
-            }
-
-            // -- MAPEO DE DEPARTAMENTO (TAG) --
-            List<String> tagIds = (List<String>) entry.get("tagIds");
-            if (tagIds != null && !tagIds.isEmpty()) {
-                String idEtiqueta = tagIds.get(0); 
-                String nombreEtiquetaClockify = mapaEtiquetas.get(idEtiqueta);
-                
-                if (nombreEtiquetaClockify != null) {
-                    String etiquetaLimpia = detalleEstimacionService.normalizarTexto(nombreEtiquetaClockify);
-                    
-                    for (Departamento depto : departamentosBD) {
-                        if (detalleEstimacionService.normalizarTexto(depto.getNombre()).equals(etiquetaLimpia)) {
-                            imputacion.setIdDepartamento(depto.getId()); 
-                            break;
+                Map<String, String> mapaEtiquetas = new HashMap<>();
+                if (tagsResponse.getBody() != null) {
+                        for (Map<String, Object> tag : tagsResponse.getBody()) {
+                                mapaEtiquetas.put((String) tag.get("id"), (String) tag.get("name"));
                         }
-                    }
                 }
-            }
 
-            // -- FECHAS --
-            try {
-                String startStr = (String) timeInterval.get("start");
-                if (startStr != null) {
-                    java.time.Instant start = java.time.Instant.parse(startStr);
-                    java.time.ZonedDateTime zdtStart = start.atZone(java.time.ZoneId.systemDefault());
-                    imputacion.setFecha(zdtStart.toLocalDate());
-                    imputacion.setHoraInicio(zdtStart.toLocalTime());
-                }
-                String endStr = (String) timeInterval.get("end");
-                if (endStr != null) {
-                    java.time.Instant end = java.time.Instant.parse(endStr);
-                    java.time.ZonedDateTime zdtEnd = end.atZone(java.time.ZoneId.systemDefault());
-                    imputacion.setHoraFin(zdtEnd.toLocalTime());
-                }
-            } catch (Exception e) {
-                imputacion.setFecha(java.time.LocalDate.now());
-            }
+                // Obtener listas de BD local
+                List<Departamento> departamentosBD = departamentoRepository.findAll();
+                List<com.example.demo.entity.Fase> todasLasFasesBD = faseRepository.findAll();
 
-            // -- CRUCE POR TEXTO Y APRENDIZAJE DE ID --
-            boolean esValida = false;
-            String subfaseLimpia = imputacion.getSubfaseExtraida(); 
-            String tareaLimpia = imputacion.getTareaExtraida();     
+                // 2. Obtener TODAS las entradas de tiempo mediante PAGINACIÓN DINÁMICA
+                List<Map<String, Object>> entradasClockify = new ArrayList<>();
+                int paginaActual = 1;
+                int tamanoPagina = 100;
+                boolean hayMasPaginas = true;
 
-            if (subfaseLimpia != null && !subfaseLimpia.isEmpty() && tareaLimpia != null && !tareaLimpia.isEmpty() && excelVigente != null) {
-                
-                Integer idFaseEncontrada = todasLasFasesBD.stream()
-                    .filter(f -> f.getFasePadre() != null && detalleEstimacionService.normalizarTexto(f.getNombre()).equals(subfaseLimpia))
-                    .map(com.example.demo.entity.Fase::getId)
-                    .findFirst()
-                    .orElse(null);
+                while (hayMasPaginas) {
+                        String url = clockify.getUrlReal() + "/workspaces/" + workspaceId +
+                                        "/user/" + userId + "/time-entries?page=" + paginaActual + "&page-size="
+                                        + tamanoPagina;
 
-                if (idFaseEncontrada != null && imputacion.getIdDepartamento() != null) {
-                    DetalleEstimacion estimacion = detalleEstimacionRepository.findFirstByIdExcelAndIdFaseAndTareaIgnoreCaseAndIdDepartamento(
-                            excelVigente.getIdExcel(),
-                            idFaseEncontrada,
-                            tareaLimpia,
-                            imputacion.getIdDepartamento()
-                    );
+                        ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                                        url, HttpMethod.GET, entity,
+                                        new ParameterizedTypeReference<List<Map<String, Object>>>() {
+                                        });
 
-                    if (estimacion != null) {
-                        imputacion.setIdDetalleEstimacion(estimacion.getId()); 
-                        esValida = true;
+                        List<Map<String, Object>> paginaResultados = response.getBody();
 
-                        if ((estimacion.getNumeroGitlab() == null || estimacion.getNumeroGitlab().trim().isEmpty()) && idGit != -1) {
-                            estimacion.setNumeroGitlab(String.valueOf(idGit));
-                            detalleEstimacionRepository.save(estimacion);
+                        if (paginaResultados != null && !paginaResultados.isEmpty()) {
+                                entradasClockify.addAll(paginaResultados);
+
+                                if (paginaResultados.size() < tamanoPagina) {
+                                        hayMasPaginas = false;
+                                } else {
+                                        paginaActual++;
+                                }
+                        } else {
+                                hayMasPaginas = false;
                         }
-                    }
                 }
-            }
 
-            imputacion.setValida(esValida);
-            nuevasImputaciones.add(imputacion);
+                List<ImputacionClockify> nuevasImputaciones = new ArrayList<>();
+
+                // 3. Procesar cada entrada
+                for (Map<String, Object> entry : entradasClockify) {
+
+                        if (!clockifyId.equals(entry.get("projectId"))) {
+                                continue;
+                        }
+
+                        String idEntrada = (String) entry.get("id");
+                        String description = (String) entry.get("description");
+
+                        if (description == null || description.isEmpty()) {
+                                continue;
+                        }
+
+                        Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
+                        double horasClockify = convertirDuracionAHoras((String) timeInterval.get("duration"));
+
+                        ImputacionClockify imputacionExistente = imputacionService.obtenerPorIdClockify(idEntrada);
+                        ImputacionClockify imputacion;
+
+                        // 🔥 EL ARREGLO ESTÁ AQUÍ 🔥
+                        // Si ya existe, usamos esa misma para "rellenarle" los campos nuevos. Si no,
+                        // creamos una nueva.
+                        if (imputacionExistente != null) {
+                                imputacion = imputacionExistente;
+                        } else {
+                                imputacion = new ImputacionClockify();
+                                imputacion.setIdClockifyOriginal(idEntrada);
+                        }
+                        
+                        imputacion.setIdClockifyOriginal(idEntrada);
+                        imputacion.setIdProyecto(projectId);
+                        imputacion.setDescripcionOriginal(description);
+                        imputacion.setHorasTrabajadas(horasClockify);
+
+                        String subfase = null;
+                        if (description.contains("[") && description.contains("]")) {
+                                subfase = description.substring(description.indexOf("[") + 1, description.indexOf("]"));
+                                imputacion.setSubfaseExtraida(detalleEstimacionService.normalizarTexto(subfase));
+                        }
+
+                        long idGit = -1;
+                        if (description.contains("#")) {
+                                try {
+                                        int start = description.indexOf("#") + 1;
+                                        int end = description.indexOf(" ", start);
+                                        if (end == -1) {
+                                                end = description.length();
+                                        }
+                                        idGit = Long.parseLong(description.substring(start, end));
+                                        // Eliminamos imputacion.setIdGitlab() para aplicar la separación de
+                                        // responsabilidades
+                                } catch (Exception e) {
+                                }
+                        }
+
+                        if (description.contains("#")) {
+                                int start = description.indexOf("#");
+                                int firstSpace = description.indexOf(" ", start);
+                                if (firstSpace != -1) {
+                                        String titulo = description.substring(firstSpace + 1).trim();
+                                        imputacion.setTareaExtraida(detalleEstimacionService.normalizarTexto(titulo));
+                                }
+                        }
+
+                        // -- MAPEO DE DEPARTAMENTO (TAG) --
+                        List<String> tagIds = (List<String>) entry.get("tagIds");
+                        if (tagIds != null && !tagIds.isEmpty()) {
+                                String idEtiqueta = tagIds.get(0);
+                                String nombreEtiquetaClockify = mapaEtiquetas.get(idEtiqueta);
+
+                                if (nombreEtiquetaClockify != null) {
+                                        String etiquetaLimpia = detalleEstimacionService
+                                                        .normalizarTexto(nombreEtiquetaClockify);
+
+                                        for (Departamento depto : departamentosBD) {
+                                                if (detalleEstimacionService.normalizarTexto(depto.getNombre())
+                                                                .equals(etiquetaLimpia)) {
+                                                        imputacion.setIdDepartamento(depto.getId());
+                                                        break;
+                                                }
+                                        }
+                                }
+                        }
+
+                        // -- FECHAS --
+                        try {
+                                String startStr = (String) timeInterval.get("start");
+                                if (startStr != null) {
+                                        java.time.Instant start = java.time.Instant.parse(startStr);
+                                        java.time.ZonedDateTime zdtStart = start
+                                                        .atZone(java.time.ZoneId.systemDefault());
+                                        imputacion.setFecha(zdtStart.toLocalDate());
+                                        imputacion.setHoraInicio(zdtStart.toLocalTime());
+                                }
+                                String endStr = (String) timeInterval.get("end");
+                                if (endStr != null) {
+                                        java.time.Instant end = java.time.Instant.parse(endStr);
+                                        java.time.ZonedDateTime zdtEnd = end.atZone(java.time.ZoneId.systemDefault());
+                                        imputacion.setHoraFin(zdtEnd.toLocalTime());
+                                }
+                        } catch (Exception e) {
+                                imputacion.setFecha(java.time.LocalDate.now());
+                        }
+
+                        // -- CRUCE POR TEXTO Y APRENDIZAJE DE ID --
+                        boolean esValida = false;
+                        String subfaseLimpia = imputacion.getSubfaseExtraida();
+                        String tareaLimpia = imputacion.getTareaExtraida();
+
+                        if (subfaseLimpia != null && !subfaseLimpia.isEmpty() && tareaLimpia != null
+                                        && !tareaLimpia.isEmpty() && excelVigente != null) {
+
+                                Integer idFaseEncontrada = todasLasFasesBD.stream()
+                                                .filter(f -> f.getFasePadre() != null && detalleEstimacionService
+                                                                .normalizarTexto(f.getNombre()).equals(subfaseLimpia))
+                                                .map(com.example.demo.entity.Fase::getId)
+                                                .findFirst()
+                                                .orElse(null);
+
+                                if (idFaseEncontrada != null && imputacion.getIdDepartamento() != null) {
+                                        DetalleEstimacion estimacion = detalleEstimacionRepository
+                                                        .findFirstByIdExcelAndIdFaseAndTareaIgnoreCaseAndIdDepartamento(
+                                                                        excelVigente.getIdExcel(),
+                                                                        idFaseEncontrada,
+                                                                        tareaLimpia,
+                                                                        imputacion.getIdDepartamento());
+
+                                        if (estimacion != null) {
+                                                imputacion.setIdDetalleEstimacion(estimacion.getId());
+                                                esValida = true;
+
+                                                if ((estimacion.getNumeroGitlab() == null
+                                                                || estimacion.getNumeroGitlab().trim().isEmpty())
+                                                                && idGit != -1) {
+                                                        estimacion.setNumeroGitlab(String.valueOf(idGit));
+                                                        detalleEstimacionRepository.save(estimacion);
+                                                }
+                                        }
+                                }
+                        }
+
+                        imputacion.setValida(esValida);
+                        nuevasImputaciones.add(imputacion);
+                }
+
+                if (!nuevasImputaciones.isEmpty()) {
+                        imputacionService.guardarImputaciones(nuevasImputaciones);
+                }
+
+                return nuevasImputaciones.size();
         }
-
-        if (!nuevasImputaciones.isEmpty()) {
-                imputacionService.guardarImputaciones(nuevasImputaciones);
-        }
-
-        return nuevasImputaciones.size();
-    }
 }
