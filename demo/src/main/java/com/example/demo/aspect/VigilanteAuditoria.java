@@ -29,7 +29,6 @@ public class VigilanteAuditoria {
 
     @Around("@annotation(auditable)")
     public Object vigilarMetodo(ProceedingJoinPoint joinPoint, Auditable auditable) throws Throwable {
-        System.out.println("¡EL VIGILANTE HA INTERCEPTADO EL MÉTODO: " + auditable.accion() + "!");
         
         Object[] argumentos = joinPoint.getArgs();
         String jsonAntes = null;
@@ -41,7 +40,7 @@ public class VigilanteAuditoria {
             
             Object entidadAntigua = entityManager.find(auditable.entidad(), idAfectado);
             if (entidadAntigua != null) {
-                entityManager.detach(entidadAntigua);
+                // CORRECCIÓN: Se elimina el detach() para no romper la sesión de Hibernate
                 jsonAntes = convertirAJson(entidadAntigua);
             }
         }
@@ -123,6 +122,7 @@ public class VigilanteAuditoria {
     /**
      * Herramienta blindada para convertir entidades a JSON.
      */
+  
     private String convertirAJson(Object objeto) {
         if (objeto == null) {
             return null;
@@ -138,4 +138,6 @@ public class VigilanteAuditoria {
             return "{\"error\": \"No se pudo serializar el objeto: " + e.getMessage() + "\"}";
         }
     }
+
+  
 }
