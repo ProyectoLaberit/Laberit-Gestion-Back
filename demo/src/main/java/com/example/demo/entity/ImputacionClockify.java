@@ -51,6 +51,9 @@ public class ImputacionClockify {
     @Column(name = "valida", nullable = false)
     private Boolean valida = false;
 
+    @Column(name = "id_gitlab")
+    private Long idGitlab;
+
     public ImputacionClockify() {
     }
 
@@ -92,4 +95,7 @@ public class ImputacionClockify {
 
     public Boolean getValida() { return valida; }
     public void setValida(Boolean valida) { this.valida = valida; }
+
+    public Long getIdGitlab() { return idGitlab; }
+    public void setIdGitlab(Long idGitlab) { this.idGitlab = idGitlab; }
 }
