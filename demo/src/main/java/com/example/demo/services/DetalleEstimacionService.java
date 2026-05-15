@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.annotation.Auditable;
 import com.example.demo.dto.DetalleEstimacionDTO;
+import com.example.demo.dto.HistorialExcelDTO;
 import com.example.demo.dto.ResumenTiemposDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
 import com.example.demo.entity.Departamento;
@@ -505,7 +506,13 @@ public class DetalleEstimacionService {
                     dto.setTiempoMax(entidad.getTiempoMax());
                     dto.setNumeroGitlab(entidad.getNumeroGitlab());
 
-                    Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(entidad.getId());
+                    Double horasReales = obtenerHorasRealesCompartidas(
+                            idProyecto,
+                            entidad.getIdFase(),
+                            entidad.getTarea(),
+                            entidad.getIdDepartamento(),
+                            entidad.getNumeroGitlab()
+                    );
                     dto.setTiempoReal(horasReales != null ? Math.round(horasReales * 10.0) / 10.0 : 0.0);
 
                     String nombreDepto = todosLosDeptos.stream()
@@ -614,6 +621,65 @@ public class DetalleEstimacionService {
 
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
         return excel != null ? excel.getIdExcel() : null;
+    }
+
+    private Double obtenerHorasRealesCompartidas(
+            Long idProyecto,
+            Integer idSubfase,
+            String tarea,
+            Integer idDepartamento,
+            String numeroGitlab) {
+        List<Integer> idsExcels = excelService.obtenerHistorialExcels(idProyecto).stream()
+                .map(HistorialExcelDTO::getIdExcel)
+                .collect(Collectors.toList());
+
+        if (idsExcels.isEmpty()) {
+            return 0.0;
+        }
+
+        Map<Integer, String> nombresFase = obtenerMapaNombresFase();
+        String subfaseNormalizada = normalizarTexto(nombresFase.get(idSubfase));
+        String tareaNormalizada = normalizarTexto(tarea);
+        String gitlabNormalizado = normalizarTexto(numeroGitlab);
+        java.util.Set<Long> detallesSumados = new java.util.HashSet<>();
+        double suma = 0.0;
+
+        for (Integer idExcel : idsExcels) {
+            List<DetalleEstimacion> detallesExcel = detalleEstimacionRepository.findByIdExcel(idExcel);
+
+            List<DetalleEstimacion> coincidencias = detallesExcel.stream()
+                    .filter(det -> det.getIdDepartamento() != null && det.getIdDepartamento().equals(idDepartamento))
+                    .filter(det -> normalizarTexto(nombresFase.get(det.getIdFase())).equals(subfaseNormalizada))
+                    .filter(det -> coincideDetalleCompartido(det, tareaNormalizada, gitlabNormalizado))
+                    .collect(Collectors.toList());
+
+            for (DetalleEstimacion detalle : coincidencias) {
+                if (!detallesSumados.add(detalle.getId())) {
+                    continue;
+                }
+
+                Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(detalle.getId());
+                if (horasReales != null) {
+                    suma += horasReales;
+                }
+            }
+        }
+
+        return suma;
+    }
+
+    private boolean coincideDetalleCompartido(DetalleEstimacion detalle, String tareaNormalizada, String gitlabNormalizado) {
+        String gitlabDetalle = normalizarTexto(detalle.getNumeroGitlab());
+        if (!gitlabNormalizado.isEmpty() && !gitlabDetalle.isEmpty()) {
+            return gitlabDetalle.equals(gitlabNormalizado);
+        }
+
+        return detalle.getTarea() != null && normalizarTexto(detalle.getTarea()).equals(tareaNormalizada);
+    }
+
+    private Map<Integer, String> obtenerMapaNombresFase() {
+        return faseRepository.findAll().stream()
+                .collect(Collectors.toMap(Fase::getId, Fase::getNombre, (a, b) -> a));
     }
 
     /**
