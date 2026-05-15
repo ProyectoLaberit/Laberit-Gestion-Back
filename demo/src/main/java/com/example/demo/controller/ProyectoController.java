@@ -99,4 +99,13 @@ public class ProyectoController {
         return new ApiResponse("Proyecto actualizado correctamente", true, actualizado);
     }
 
+    /**
+     * Alias de compatibilidad para clientes que aun envian POST al editar.
+     */
+    @PostMapping("/{id}")
+    public ApiResponse actualizarProyectoCompat(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
+        ProyectoDTO actualizado = proyectoService.actualizarProyecto(id, proyectoDTO);
+        return new ApiResponse("Proyecto actualizado correctamente", true, actualizado);
+    }
+
 }
