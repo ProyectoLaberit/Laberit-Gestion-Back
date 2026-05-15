@@ -3,6 +3,9 @@ package com.example.demo.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,6 +38,17 @@ public class FaseController {
     @Autowired
     private FaseRepository faseRepository;
 
+    private boolean esAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return false;
+        }
+
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(a -> a.equals("ROLE_ADMINISTRADOR") || a.equals("ROLE_SUPERADMINISTRADOR"));
+    }
+
     /**
      * Devuelve todas las fases raíz (sin fase padre) para poblar el select del paso 2.
      */
@@ -55,6 +69,10 @@ public class FaseController {
      */
     @PostMapping
     public ApiResponse crearFase(@RequestBody FaseDTO dto) {
+        if (!esAdmin()) {
+            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
+        }
+
         try {
             if (dto.getNombre() == null || dto.getNombre().trim().isEmpty()) {
                 return new ApiResponse("El nombre de la fase es obligatorio.", false, null);
@@ -75,6 +93,10 @@ public class FaseController {
      */
     @PostMapping("/subfase")
     public ApiResponse crearSubfase(@RequestBody FaseDTO dto) {
+        if (!esAdmin()) {
+            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
+        }
+
         try {
             if (dto.getNombre() == null || dto.getNombre().trim().isEmpty()) {
                 return new ApiResponse("El nombre de la subfase es obligatorio.", false, null);

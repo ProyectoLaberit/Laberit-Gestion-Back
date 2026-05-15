@@ -14,6 +14,9 @@ import com.example.demo.services.AuditService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,6 +36,17 @@ public class DetalleEstimacionController {
 
     @Autowired
     private ExcelService excelService;
+
+    private boolean esAdmin() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            return false;
+        }
+
+        return auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(a -> a.equals("ROLE_ADMINISTRADOR") || a.equals("ROLE_SUPERADMINISTRADOR"));
+    }
 
    
     
@@ -211,7 +225,35 @@ public class DetalleEstimacionController {
      */
     @PostMapping
     public ApiResponse crearTarea(@RequestBody DetalleEstimacionDTO dto) {
+        if (!esAdmin()) {
+            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
+        }
+
         try {
+            detalleEstimacionService.crearTarea(dto);
+            return new ApiResponse("Tarea creada correctamente.", true, null);
+        } catch (Exception e) {
+            return new ApiResponse("Error al crear la tarea: " + e.getMessage(), false, null);
+        }
+    }
+
+    /**
+     * Crea una nueva estimacion manual para el Excel vigente del proyecto.
+     * Este es el endpoint que usa crearfases.html.
+     */
+    @PostMapping("/proyecto/{idProyecto}/manual")
+    public ApiResponse crearTareaManual(@PathVariable Long idProyecto, @RequestBody DetalleEstimacionDTO dto) {
+        if (!esAdmin()) {
+            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
+        }
+
+        try {
+            Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
+            if (excel == null) {
+                return new ApiResponse("El proyecto no tiene un Excel vigente asociado.", false, null);
+            }
+
+            dto.setIdExcel(excel.getIdExcel());
             detalleEstimacionService.crearTarea(dto);
             return new ApiResponse("Tarea creada correctamente.", true, null);
         } catch (Exception e) {
