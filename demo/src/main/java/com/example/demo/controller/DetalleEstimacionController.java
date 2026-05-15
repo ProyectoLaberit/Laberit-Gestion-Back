@@ -151,7 +151,7 @@ public class DetalleEstimacionController {
         @RequestParam(required = false) Integer idExcelElegido) {
     
     // Ahora recibimos una lista de DTOs con cada departamento y sus tiempos
-    List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallePorCriterios(idProyecto, idSubfase, tarea, idExcelElegido);
+    List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallePorCriteriosHistorico(idProyecto, idSubfase, tarea, idExcelElegido);
 
     if (detalles.isEmpty()) {
         return new ApiResponse("No se encontraron registros para esta tarea y subfase", false, detalles);
@@ -192,7 +192,7 @@ public class DetalleEstimacionController {
             
         try {
             // Llamamos directamente a tu lógica pasándole los dos IDs
-            List<TareaSubfaseDTO> tareas = detalleEstimacionService.obtenerTareasSubfase(idProyecto, idSubfase,idExcelElegido);
+            List<TareaSubfaseDTO> tareas = detalleEstimacionService.obtenerTareasSubfaseHistorico(idProyecto, idSubfase, idExcelElegido);
             
             if (tareas.isEmpty()) {
                 return new ApiResponse("No hay tareas para esta subfase o el proyecto no tiene Excel activo", true, tareas);
@@ -265,9 +265,11 @@ public class DetalleEstimacionController {
      * Obtiene los resúmenes de tiempos de TODAS las subfases de un proyecto de golpe.
      */
     @GetMapping("/resumen/subfases/{idProyecto}")
-    public ApiResponse obtenerResumenTodasSubfases(@PathVariable Long idProyecto) {
+    public ApiResponse obtenerResumenTodasSubfases(
+            @PathVariable Long idProyecto,
+            @RequestParam(required = false) Integer idExcelElegido) {
         try {
-            Map<Integer, ResumenTiemposDTO> resumenes = detalleEstimacionService.obtenerResumenTodasSubfases(idProyecto);
+            Map<Integer, ResumenTiemposDTO> resumenes = detalleEstimacionService.obtenerResumenTodasSubfasesHistorico(idProyecto, idExcelElegido);
             return new ApiResponse("Resumen masivo recuperado", true, resumenes);
         } catch (Exception e) {
             return new ApiResponse("Error al calcular resumen masivo: " + e.getMessage(), false, null);

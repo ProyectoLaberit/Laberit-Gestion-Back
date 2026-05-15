@@ -299,14 +299,12 @@ public class DetalleEstimacionService {
      * @return DTO ligero con la información matemática y de IDs.
      */
     public List<DetalleEstimacionDTO> obtenerDetallePorCriterios(Long idProyecto, Integer idSubfase, String nombreTarea, Integer idExcelElegido) {
-        // 1. Obtener el Excel vigente
-        Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
-        if (excel == null) {
+        Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
+        if (idExcelBase == null) {
             return new java.util.ArrayList<>();
         }
 
-        // 2. Traer todas las estimaciones y los departamentos para cruzar nombres
-        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
+        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(idExcelBase);
         List<com.example.demo.entity.Departamento> todosLosDeptos = departamentoRepository.findAll();
 
         // 3. Filtrar todas las filas que coincidan con la subfase y el nombre de la tarea
@@ -342,32 +340,6 @@ public class DetalleEstimacionService {
                 })
                 .collect(java.util.stream.Collectors.toList());
 
-
-        // Si el Front-end nos manda un ID de Excel para comparar, hacemos el cruce de datos
-        if (idExcelElegido != null) {
-            // Traemos las tareas del Excel que el usuario ha seleccionado en el desplegable
-            List<DetalleEstimacion> estimacionesElegidas = detalleEstimacionRepository.findByIdExcel(idExcelElegido);
-                
-            // Recorremos las tareas principales que ya filtramos
-            for (DetalleEstimacionDTO principal : listaPrincipal) {
-                    
-                // Buscamos su equivalente en el Excel elegido
-                for (DetalleEstimacion comparado : estimacionesElegidas) {
-                        
-                    // Comprobamos que sea exactamente la misma tarea en el mismo departamento
-                    boolean mismaSubfase = comparado.getIdFase() != null && comparado.getIdFase().equals(idSubfase);
-                    boolean mismaTarea = comparado.getTarea() != null && comparado.getTarea().equalsIgnoreCase(nombreTarea.trim());
-                    boolean mismoDepto = comparado.getIdDepartamento() == principal.getIdDepartamento();
-
-                    // Si coinciden, le pasamos los tiempos a las nuevas variables del DTO
-                    if (mismaSubfase && mismaTarea && mismoDepto) {
-                        principal.setTiempoMinElegido(comparado.getTiempoMin());
-                        principal.setTiempoMaxElegido(comparado.getTiempoMax());
-                        break; // Dejamos de buscar porque ya la hemos encontrado
-                    }
-                }
-            }
-        }
 
         return listaPrincipal;
 
@@ -504,6 +476,144 @@ public class DetalleEstimacionService {
         }
 
         return resultado;
+    }
+
+    public List<DetalleEstimacionDTO> obtenerDetallePorCriteriosHistorico(
+            Long idProyecto,
+            Integer idSubfase,
+            String nombreTarea,
+            Integer idExcelElegido) {
+        Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
+        if (idExcelBase == null) {
+            return new ArrayList<>();
+        }
+
+        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(idExcelBase);
+        List<Departamento> todosLosDeptos = departamentoRepository.findAll();
+
+        return todasLasEstimaciones.stream()
+                .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
+                .filter(d -> d.getTarea() != null && d.getTarea().equalsIgnoreCase(nombreTarea.trim()))
+                .map(entidad -> {
+                    DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
+                    dto.setId(entidad.getId());
+                    dto.setIdExcel(entidad.getIdExcel());
+                    dto.setIdDepartamento(entidad.getIdDepartamento());
+                    dto.setIdSubFase(entidad.getIdFase());
+                    dto.setTarea(entidad.getTarea());
+                    dto.setTiempoMin(entidad.getTiempoMin());
+                    dto.setTiempoMax(entidad.getTiempoMax());
+                    dto.setNumeroGitlab(entidad.getNumeroGitlab());
+
+                    Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(entidad.getId());
+                    dto.setTiempoReal(horasReales != null ? Math.round(horasReales * 10.0) / 10.0 : 0.0);
+
+                    String nombreDepto = todosLosDeptos.stream()
+                            .filter(d -> d.getId() == entidad.getIdDepartamento())
+                            .map(Departamento::getNombre)
+                            .findFirst()
+                            .orElse("Desconocido");
+
+                    dto.setNombreDepartamento(nombreDepto);
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<TareaSubfaseDTO> obtenerTareasSubfaseHistorico(long idProyecto, Integer idSubfase, Integer idExcelElegido) {
+        Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
+        if (idExcelBase == null) {
+            return new ArrayList<>();
+        }
+
+        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(idExcelBase);
+
+        Map<String, List<DetalleEstimacion>> tareasAgrupadas = todasLasEstimaciones.stream()
+                .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
+                .filter(d -> d.getTarea() != null)
+                .collect(Collectors.groupingBy(DetalleEstimacion::getTarea));
+
+        List<TareaSubfaseDTO> resultado = new ArrayList<>();
+
+        for (Map.Entry<String, List<DetalleEstimacion>> entry : tareasAgrupadas.entrySet()) {
+            TareaSubfaseDTO dto = new TareaSubfaseDTO();
+            dto.setNombreTarea(entry.getKey());
+            dto.setIdTarea(entry.getValue().get(0).getId());
+
+            double sumaMin = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMin).sum();
+            double sumaMax = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMax).sum();
+
+            double sumaReal = 0.0;
+            for (DetalleEstimacion det : entry.getValue()) {
+                Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(det.getId());
+                if (horasReales != null) {
+                    sumaReal += horasReales;
+                }
+            }
+
+            dto.setTiempoTotalMin(sumaMin);
+            dto.setTiempoTotalMax(sumaMax);
+            dto.setTiempoTotalReal(Math.round(sumaReal * 10.0) / 10.0);
+            resultado.add(dto);
+        }
+
+        return resultado;
+    }
+
+    public Map<Integer, ResumenTiemposDTO> obtenerResumenTodasSubfasesHistorico(Long idProyecto, Integer idExcelElegido) {
+        Map<Integer, ResumenTiemposDTO> resultado = new java.util.HashMap<>();
+        Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
+
+        if (idExcelBase == null) {
+            return resultado;
+        }
+
+        List<DetalleEstimacion> todasLasTareas = detalleEstimacionRepository.findByIdExcel(idExcelBase);
+        List<Object[]> sumasBD = imputacionClockifyRepository.sumarHorasValidasAgrupadasPorDetalle(idProyecto);
+
+        Map<Long, Double> mapaHorasReales = new java.util.HashMap<>();
+        for (Object[] fila : sumasBD) {
+            Long idDetalle = (Long) fila[0];
+            Double suma = (Double) fila[1];
+            mapaHorasReales.put(idDetalle, suma != null ? suma : 0.0);
+        }
+
+        Map<Integer, List<DetalleEstimacion>> tareasPorSubfase = todasLasTareas.stream()
+                .filter(d -> d.getIdFase() != null)
+                .collect(Collectors.groupingBy(DetalleEstimacion::getIdFase));
+
+        for (Map.Entry<Integer, List<DetalleEstimacion>> entry : tareasPorSubfase.entrySet()) {
+            Integer idSubfase = entry.getKey();
+            List<DetalleEstimacion> tareas = entry.getValue();
+
+            double sumaRealTotal = 0.0;
+            double sumaMinTotal = 0.0;
+            double sumaMaxTotal = 0.0;
+
+            for (DetalleEstimacion det : tareas) {
+                Double realValido = mapaHorasReales.getOrDefault(det.getId(), 0.0);
+                sumaRealTotal += realValido;
+                sumaMinTotal += det.getTiempoMin() != null ? det.getTiempoMin() : 0.0;
+                sumaMaxTotal += det.getTiempoMax() != null ? det.getTiempoMax() : 0.0;
+            }
+
+            double mediaEstimada = (sumaMinTotal + sumaMaxTotal) / 2.0;
+            sumaRealTotal = Math.round(sumaRealTotal * 10.0) / 10.0;
+            mediaEstimada = Math.round(mediaEstimada * 10.0) / 10.0;
+
+            resultado.put(idSubfase, new ResumenTiemposDTO(sumaRealTotal, mediaEstimada));
+        }
+
+        return resultado;
+    }
+
+    private Integer resolverIdExcelBase(Long idProyecto, Integer idExcelElegido) {
+        if (idExcelElegido != null) {
+            return idExcelElegido;
+        }
+
+        Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
+        return excel != null ? excel.getIdExcel() : null;
     }
 
     /**
