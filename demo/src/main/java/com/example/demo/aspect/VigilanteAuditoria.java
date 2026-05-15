@@ -33,12 +33,13 @@ public class VigilanteAuditoria {
         Object[] argumentos = joinPoint.getArgs();
         String jsonAntes = null;
         Long idAfectado = null;
+        Object entidadAntigua = null; // 1. Declarado aquí arriba
 
         // 1. INTENTAR SACAR LA "FOTO DEL ANTES"
         if (argumentos.length > 0 && argumentos[0] instanceof Number) {
             idAfectado = ((Number) argumentos[0]).longValue();
             
-            Object entidadAntigua = entityManager.find(auditable.entidad(), idAfectado);
+            entidadAntigua = entityManager.find(auditable.entidad(), idAfectado); // 2. Asignamos a la variable
             if (entidadAntigua != null) {
                 // CORRECCIÓN: Se elimina el detach() para no romper la sesión de Hibernate
                 jsonAntes = convertirAJson(entidadAntigua);
@@ -93,6 +94,11 @@ public class VigilanteAuditoria {
                     // Mapear el objeto devuelto (ej: resultado)
                     if (resultadoMetodo != null) {
                         context.setVariable("resultado", resultadoMetodo);
+                    }
+
+                    // 3. ¡AQUÍ ESTÁ LA INYECCIÓN DEL ANTIGUO!
+                    if (entidadAntigua != null) {
+                        context.setVariable("antiguo", entidadAntigua);
                     }
 
                     org.springframework.expression.ExpressionParser parser = new org.springframework.expression.spel.standard.SpelExpressionParser();
