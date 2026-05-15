@@ -89,6 +89,8 @@ public class ProyectoService {
 
         proyecto.setNombre(proyectoDTO.getNombre());
         proyecto.setDescripcion(proyectoDTO.getDescripcion());
+        proyecto.setClockifyId(proyectoDTO.getClockifyId());
+        proyecto.setGitlabId(proyectoDTO.getGitlabId());
         proyecto.setFechaInicio(proyectoDTO.getFechaInicio());
         proyecto.setFechaFin(proyectoDTO.getFechaFin());
         proyecto.setActivo(proyectoDTO.isActivo());
