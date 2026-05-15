@@ -60,12 +60,13 @@ public class ImputacionClockifyController {
     public ResponseEntity<ApiResponse> obtenerPorDepartamento(
             @PathVariable Long idProyecto, 
             @PathVariable Long idDetalleEstimacion, 
-            @PathVariable Integer idDepartamento) {
+            @PathVariable Integer idDepartamento,
+            @RequestParam(required = false, defaultValue = "") String subfase) {
         try {
-            List<ImputacionClockify> lista = service.obtenerPorDepartamentoYDetalle(idProyecto, idDetalleEstimacion, idDepartamento);
-            return ResponseEntity.ok(new ApiResponse("Imputaciones del departamento obtenidas", true, lista));
+            List<ImputacionClockify> lista = service.obtenerPorDepartamentoYDetalle(idProyecto, idDetalleEstimacion, idDepartamento, subfase);
+            return ResponseEntity.ok(new ApiResponse("Imputaciones obtenidas", true, lista));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener imputaciones del departamento", false, null));
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener imputaciones", false, null));
         }
     }
 
@@ -154,15 +155,14 @@ public class ImputacionClockifyController {
             @PathVariable Long idProyecto, 
             @PathVariable Long idDetalleEstimacion, 
             @PathVariable Integer idDepartamento,
+            @RequestParam(required = false, defaultValue = "") String subfase,
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate desde,
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate hasta) {
         try {
-            // Si el usuario cruzó las fechas, le mandamos un mensaje de error claro
             if (desde.isAfter(hasta)) {
                 return ResponseEntity.badRequest().body(new ApiResponse("La fecha 'desde' no puede ser posterior a 'hasta'", false, null));
             }
-            
-            List<ImputacionClockify> lista = service.filtrarPorFechas(idProyecto, idDetalleEstimacion, idDepartamento, desde, hasta);
+            List<ImputacionClockify> lista = service.filtrarPorFechas(idProyecto, idDetalleEstimacion, idDepartamento, subfase, desde, hasta);
             return ResponseEntity.ok(new ApiResponse("Imputaciones filtradas por fecha", true, lista));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al filtrar por fechas", false, null));

@@ -15,8 +15,8 @@ public class ImputacionClockifyService {
     @Autowired
     private ImputacionClockifyRepository repository;
 
-   @Autowired
-   private DetalleEstimacionRepository detalleEstimacionRepository;
+    @Autowired
+    private DetalleEstimacionRepository detalleEstimacionRepository;
 
     /**
      * Calcula y devuelve la suma total de horas trabajadas que están marcadas como válidas 
@@ -140,8 +140,20 @@ public class ImputacionClockifyService {
      * Filtra y devuelve las imputaciones que coinciden con un proyecto, 
      * una tarea y un departamento específicos.
      */
-    public List<ImputacionClockify> obtenerPorDepartamentoYDetalle(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento) {
-        return repository.obtenerDatosVistaDepartamento(idProyecto, idDetalleEstimacion, idDepartamento);
+    public List<ImputacionClockify> obtenerPorDepartamentoYDetalle(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento, String subfase) {
+        // Obtenemos los datos brutos del repo
+        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamento(idProyecto, idDetalleEstimacion, idDepartamento);
+        
+        String subfaseLimpia = normalizar(subfase);
+        
+        // Filtramos en memoria (ultra rápido y a prueba de tildes)
+        return listaBruta.stream().filter(imp -> {
+            if (Boolean.TRUE.equals(imp.getValida())) {
+                return true; // Las correctas pasan siempre
+            }
+            // Las huérfanas solo pasan si coinciden las subfases normalizadas
+            return normalizar(imp.getSubfaseExtraida()).equals(subfaseLimpia);
+        }).collect(java.util.stream.Collectors.toList());
     }
 
     /**
@@ -231,10 +243,30 @@ public class ImputacionClockifyService {
     /**
      * Filtra las imputaciones por fechas asegurándose de que el rango sea válido.
      */
-    public List<ImputacionClockify> filtrarPorFechas(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento, java.time.LocalDate desde, java.time.LocalDate hasta) {
+    public List<ImputacionClockify> filtrarPorFechas(Long idProyecto, Long idDetalleEstimacion, Integer idDepartamento, String subfase, java.time.LocalDate desde, java.time.LocalDate hasta) {
         if (desde.isAfter(hasta)) {
             return java.util.Collections.emptyList();
         }
-        return repository.obtenerDatosVistaDepartamentoFechas(idProyecto, idDetalleEstimacion, idDepartamento, desde, hasta);
+        
+        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamentoFechas(idProyecto, idDetalleEstimacion, idDepartamento, desde, hasta);
+        
+        String subfaseLimpia = normalizar(subfase);
+        
+        return listaBruta.stream().filter(imp -> {
+            if (Boolean.TRUE.equals(imp.getValida())) {
+                return true; 
+            }
+            return normalizar(imp.getSubfaseExtraida()).equals(subfaseLimpia);
+        }).collect(java.util.stream.Collectors.toList());
+    }
+
+    // Limpia tildes y espacios
+    private String normalizar(String texto) {
+        if (texto == null || texto.trim().isEmpty()) {
+            return "";
+        }
+        String limpio = texto.trim().toLowerCase();
+        String normalizado = java.text.Normalizer.normalize(limpio, java.text.Normalizer.Form.NFD);
+        return normalizado.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 }
