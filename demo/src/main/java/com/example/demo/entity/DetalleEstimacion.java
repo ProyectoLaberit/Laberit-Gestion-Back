@@ -10,17 +10,11 @@ public class DetalleEstimacion {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "id_excel")
+    @Column(name = "id_excel", nullable = false)
     private Integer idExcel;
 
-    @Column(name = "id_fase")
-    private Integer idFase; // Este ID apunta a la Subfase (ej: el 4 de Análisis)
-
-    @Column(name = "id_departamento")
-    private Integer idDepartamento;
-
-    @Column(name = "tarea")
-    private String tarea;
+    @Column(name = "id_tarea_proyecto", nullable = false)
+    private Long idTareaProyecto;
 
     @Column(name = "tiempo_min")
     private Double tiempoMin;
@@ -28,37 +22,26 @@ public class DetalleEstimacion {
     @Column(name = "tiempo_max")
     private Double tiempoMax;
 
-    @Column(name = "tiempo_real", nullable = true)
-    private Double tiempoReal;
-
-    @Column(name = "numero_gitlab", length = 45, nullable = true)
-    private String numeroGitlab;
-
-    @Column(name = "completada", nullable = false)
-    private Boolean completada = false;
-    // Constructores, Getters y Setters
     public DetalleEstimacion() {}
 
+    // Getters y Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
     public Integer getIdExcel() { return idExcel; }
     public void setIdExcel(Integer idExcel) { this.idExcel = idExcel; }
-    public Integer getIdFase() { return idFase; }
-    public void setIdFase(Integer idFase) { this.idFase = idFase; }
-    public Integer getIdDepartamento() { return idDepartamento; }
-    public void setIdDepartamento(Integer idDepartamento) { this.idDepartamento = idDepartamento; }
-    public String getTarea() { return tarea; }
-    public void setTarea(String tarea) { this.tarea = tarea; }
+
+    public Long getIdTareaProyecto() { return idTareaProyecto; }
+    public void setIdTareaProyecto(Long idTareaProyecto) { this.idTareaProyecto = idTareaProyecto; }
+
     public Double getTiempoMin() { return tiempoMin; }
     public void setTiempoMin(Double tiempoMin) { this.tiempoMin = tiempoMin; }
+
     public Double getTiempoMax() { return tiempoMax; }
     public void setTiempoMax(Double tiempoMax) { this.tiempoMax = tiempoMax; }
-    public Double getTiempoReal() { return tiempoReal; }
-    public void setTiempoReal(Double tiempoReal) { this.tiempoReal = tiempoReal; }
-    public String getNumeroGitlab() { return numeroGitlab; }
-    public void setNumeroGitlab(String numeroGitlab) { this.numeroGitlab = numeroGitlab; }
-    public Boolean getCompletada() { return completada; }
-    public void setCompletada(Boolean completada) { this.completada = completada; }
 
-    
+    @Transient
+public String getTarea() {
+    return "Presupuesto ID: " + this.id;
+}
 }

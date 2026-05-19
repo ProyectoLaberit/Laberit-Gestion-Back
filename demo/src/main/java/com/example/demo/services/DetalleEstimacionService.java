@@ -3,6 +3,7 @@ package com.example.demo.services;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,9 +23,13 @@ import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
 import com.example.demo.entity.Fase;
 import com.example.demo.entity.RangoDepartamento;
+import com.example.demo.entity.TareaProyecto;
 import com.example.demo.repository.DepartamentoRepository;
 import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.FaseRepository;
+import com.example.demo.repository.TareaProyectoRepository;
+import com.example.demo.repository.ExcelRepository;
+import com.example.demo.repository.ImputacionClockifyRepository;
 
 @Service
 public class DetalleEstimacionService {
@@ -32,6 +37,9 @@ public class DetalleEstimacionService {
     @Autowired
     private DetalleEstimacionRepository detalleEstimacionRepository;
     
+    @Autowired
+    private TareaProyectoRepository tareaProyectoRepository;
+
     @Autowired
     private DepartamentoRepository departamentoRepository;
 
@@ -42,14 +50,18 @@ public class DetalleEstimacionService {
     private ExcelService excelService;
 
     @Autowired
-    private com.example.demo.repository.ImputacionClockifyRepository imputacionClockifyRepository;
+    private ExcelRepository excelRepository;
+
+    @Autowired
+    private ImputacionClockifyRepository imputacionClockifyRepository;
 
     /**
-     * Procesa un archivo Excel físico, extrae las estimaciones y las guarda en BD.
-     * * @param archivo El archivo MultipartFile subido desde el cliente.
+     * Procesa un archivo Excel físico, implementa la estrategia Find-or-Create en el 
+     * pivote TareaProyecto y guarda los presupuestos de estimación numéricos puros en BD.
+     * @param archivo El archivo MultipartFile subido desde el cliente.
      * @param proyectoId ID del proyecto al que pertenece la estimación.
      * @param usuarioId ID del usuario que sube el archivo.
-     * @return El número total de tareas válidas insertadas en la base de datos.
+     * @return El número total de presupuestos de tareas insertadas en la base de datos.
      */
     @Auditable(
         accion = "IMPORTAR_EXCEL", 
@@ -94,15 +106,19 @@ public class DetalleEstimacionService {
         String nombreTareaActual = null; 
 
         for (Row fila : hoja) {
-            if (fila.getRowNum() < 4) { continue; }
-            if (esFilaFinal(fila)) { break; }
+            if (fila.getRowNum() < 4) { 
+                continue; 
+            }
+            if (esFilaFinal(fila)) { 
+                break; 
+            }
 
             String valFase = formatter.formatCellValue(fila.getCell(0));
             String faseLimpia = normalizarTexto(valFase);
             
             if (!faseLimpia.isEmpty()) {
                 idFasePadreActual = todasLasFasesBD.stream()
-                    .filter(f -> f.getFasePadre() == null && normalizarTexto(f.getNombre()).equals(faseLimpia))
+                    .filter(f -> { return f.getFasePadre() == null && normalizarTexto(f.getNombre()).equals(faseLimpia); })
                     .map(Fase::getId)
                     .findFirst()
                     .orElse(null);
@@ -117,7 +133,7 @@ public class DetalleEstimacionService {
             if (!subfaseLimpia.isEmpty() && idFasePadreActual != null) {
                 final Integer idPadre = idFasePadreActual;
                 idSubfaseActual = todasLasFasesBD.stream()
-                    .filter(f -> f.getFasePadre() != null && f.getFasePadre().equals(idPadre) && normalizarTexto(f.getNombre()).equals(subfaseLimpia))
+                    .filter(f -> { return f.getFasePadre() != null && f.getFasePadre().equals(idPadre) && normalizarTexto(f.getNombre()).equals(subfaseLimpia); })
                     .map(Fase::getId)
                     .findFirst()
                     .orElse(null);
@@ -143,12 +159,26 @@ public class DetalleEstimacionService {
                     Double max = extraerNumeroDeCelda(fila.getCell(depto.getColMax()), evaluator);
 
                     if ((min != null && min > 0) || (max != null && max > 0)) {
+                        final Integer idDepto = depto.getIdBD();
+                        final Integer idSubfase = idSubfaseActual;
+                        final String nomTarea = nombreTareaActual;
+
+                        // Estrategia Find-or-Create en el pivote global TareaProyecto
+                        TareaProyecto tareaProyecto = tareaProyectoRepository
+                            .findByIdProyectoAndIdFaseAndIdDepartamentoAndTarea(proyectoId, idSubfase, idDepto, nomTarea)
+                            .orElseGet(() -> {
+                                TareaProyecto tp = new TareaProyecto();
+                                tp.setIdProyecto(proyectoId);
+                                tp.setIdFase(idSubfase);
+                                tp.setIdDepartamento(idDepto);
+                                tp.setTarea(nomTarea);
+                                tp.setCompletada(false);
+                                return tareaProyectoRepository.save(tp);
+                            });
+
                         DetalleEstimacion detalle = new DetalleEstimacion();
                         detalle.setIdExcel(idExcelGenerado);
-                        detalle.setIdDepartamento(depto.getIdBD());
-                        detalle.setIdFase(idSubfaseActual);
-                        detalle.setTarea(nombreTareaActual);
-                        
+                        detalle.setIdTareaProyecto(tareaProyecto.getId());
                         detalle.setTiempoMin(min != null ? min : 0.0);
                         detalle.setTiempoMax(max != null ? max : 0.0);
                         
@@ -165,13 +195,10 @@ public class DetalleEstimacionService {
         return listaParaGuardar.size();
     }
 
-    // ==========================================================
-    // MÉTODOS AUXILIARES Y NORMALIZACIÓN
-    // ==========================================================
-
     /**
-     * Limpia un texto: quita espacios, pasa a minúsculas y elimina tildes.
-     * Vital para comparar cadenas del Excel (ej. "Análisis") con BD ("analisis").
+     * Limpia un texto eliminando espacios, pasando a minúsculas y removiendo tildes o caracteres especiales.
+     * @param texto El texto original.
+     * @return El texto completamente normalizado.
      */
     public String normalizarTexto(String texto) {
         if (texto == null || texto.trim().isEmpty()) {
@@ -183,199 +210,247 @@ public class DetalleEstimacionService {
     }
 
     /**
-     * Busca el ID de un departamento en la BD basándose en su nombre limpio.
+     * Identifica el ID de un departamento en la base de datos partiendo de su nombre normalizado.
+     * @param nombre Nombre del departamento.
+     * @return ID del departamento o -1 si no se localiza.
      */
     private int determinarDepartamento(String nombre) {
         String nombreLimpio = normalizarTexto(nombre);
         return departamentoRepository.findAll().stream()
-                .filter(d -> normalizarTexto(d.getNombre()).equals(nombreLimpio))
-                .map(d -> d.getId())
+                .filter(d -> { return normalizarTexto(d.getNombre()).equals(nombreLimpio); })
+                .map(d -> { return d.getId(); })
                 .findFirst()
                 .orElse(-1);
     }
 
     /**
-     * Extrae el valor numérico de una celda con extrema seguridad.
-     * Evalúa fórmulas dinámicas, recoge números crudos y parsea Strings (sustituyendo comas por puntos).
+     * Extrae el valor de una celda numérica evaluando de forma segura fórmulas y parseando strings.
+     * @param celda Celda de Apache POI.
+     * @param evaluator Evaluador de fórmulas del libro de Excel.
+     * @return Double con el valor de la celda o null.
      */
     private Double extraerNumeroDeCelda(Cell celda, FormulaEvaluator evaluator) {
-        if (celda == null) { return null; }
+        if (celda == null) { 
+            return null; 
+        }
         CellType type = celda.getCellType();
         if (type == CellType.FORMULA) {
             try {
                 CellValue cv = evaluator.evaluate(celda);
-                if (cv.getCellType() == CellType.NUMERIC) { return cv.getNumberValue(); }
-            } catch (Exception e) { return null; }
+                if (cv.getCellType() == CellType.NUMERIC) { 
+                    return cv.getNumberValue(); 
+                }
+            } catch (Exception e) { 
+                return null; 
+            }
         }
-        if (type == CellType.NUMERIC) { return celda.getNumericCellValue(); }
+        if (type == CellType.NUMERIC) { 
+            return celda.getNumericCellValue(); 
+        }
         if (type == CellType.STRING) {
-            try { return Double.parseDouble(celda.getStringCellValue().trim().replace(",", ".")); } catch (Exception e) { return null; }
+            try { 
+                return Double.parseDouble(celda.getStringCellValue().trim().replace(",", ".")); 
+            } catch (Exception e) { 
+                return null; 
+            }
         }
         return null;
     }
 
     /**
-     * Detiene el procesado si encuentra la palabra "total" en la primera columna, 
-     * evitando leer filas basura al final del Excel.
+     * Evalúa si se ha llegado al final de la matriz útil de estimaciones detectando el string "total".
+     * @param fila Fila del libro Excel.
+     * @return True si la fila marca el fin del procesamiento.
      */
     private boolean esFilaFinal(Row fila) {
-        if (fila == null) { return true; }
+        if (fila == null) { 
+            return true; 
+        }
         Cell cellA = fila.getCell(0);
         return cellA != null && normalizarTexto(cellA.toString()).contains("total");
     }
 
-    // ==========================================================
-    // MÉTODOS DE CONSULTA Y EXPORTACIÓN
-    // ==========================================================
-
     /**
-     * Obtiene el listado completo de estimaciones para mostrar en una tabla visual del Frontend.
-     * Carga los nombres bonitos (String) de Departamentos y Fases para facilitar el pintado.
-     * * @param idExcel ID del Excel vigente a consultar.
-     * @return Lista de DTOs enriquecidos con datos de texto.
+     * Recupera y enriquece los detalles de estimación de un Excel cruzando los datos numéricos con el pivote TareaProyecto.
+     * @param idExcel ID del libro Excel.
+     * @return Lista de DTOs mapeados con los nombres de fases y departamentos.
      */
     public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
         List<DetalleEstimacion> detalles = detalleEstimacionRepository.findByIdExcel(idExcel);
         List<Fase> todasLasFases = faseRepository.findAll();
         List<Departamento> todosLosDeptos = departamentoRepository.findAll();
 
+        Excel excel = excelRepository.findById(idExcel).orElse(null);
+        Long idProyecto = (excel != null) ? excel.getIdProyecto() : null;
+        
+        List<TareaProyecto> todasTareasProyecto = (idProyecto != null) 
+            ? tareaProyectoRepository.findAll().stream().filter(t -> { return t.getIdProyecto().equals(idProyecto); }).collect(Collectors.toList())
+            : new ArrayList<>();
+            
+        Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
+            .collect(Collectors.toMap(TareaProyecto::getId, t -> { return t; }, (a, b) -> { return a; }));
+
         return detalles.stream().map(entidad -> {
             DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
             dto.setId(entidad.getId()); 
             dto.setIdExcel(entidad.getIdExcel());
-            dto.setIdDepartamento(entidad.getIdDepartamento());
-            dto.setIdSubFase(entidad.getIdFase());
-            dto.setTarea(entidad.getTarea());
+            dto.setIdTareaProyecto(entidad.getIdTareaProyecto());
             dto.setTiempoMin(entidad.getTiempoMin());
             dto.setTiempoMax(entidad.getTiempoMax());
 
-            String nombreDepto = todosLosDeptos.stream()
-                    .filter(d -> d.getId() == entidad.getIdDepartamento()) 
-                    .map(d -> d.getNombre())
-                    .findFirst()
-                    .orElse("Desconocido");
-            dto.setNombreDepartamento(nombreDepto);
+            TareaProyecto tp = mapaTareasProyecto.get(entidad.getIdTareaProyecto());
+            if (tp != null) {
+                dto.setIdDepartamento(tp.getIdDepartamento());
+                dto.setIdSubFase(tp.getIdFase());
+                dto.setTarea(tp.getTarea());
+                dto.setCompletada(tp.getCompletada());
 
-            Fase subfase = todasLasFases.stream()
-                    .filter(f -> f.getId().equals(entidad.getIdFase()))
-                    .findFirst()
-                    .orElse(null);
+                String nombreDepto = todosLosDeptos.stream()
+                        .filter(d -> { return d.getId() == tp.getIdDepartamento(); }) 
+                        .map(Departamento::getNombre)
+                        .findFirst()
+                        .orElse("Desconocido");
+                dto.setNombreDepartamento(nombreDepto);
 
-            if (subfase != null) {
-                dto.setNombreSubfase(subfase.getNombre());
+                Fase subfase = todasLasFases.stream()
+                        .filter(f -> { return f.getId().equals(tp.getIdFase()); })
+                        .findFirst()
+                        .orElse(null);
 
-                if (subfase.getFasePadre() != null) {
-                    String nombrePadre = todasLasFases.stream()
-                            .filter(f -> f.getId().equals(subfase.getFasePadre()))
-                            .map(f -> f.getNombre())
-                            .findFirst()
-                            .orElse("Desconocido");
-                    dto.setNombreFase(nombrePadre);
+                if (subfase != null) {
+                    dto.setNombreSubfase(subfase.getNombre());
+
+                    if (subfase.getFasePadre() != null) {
+                        String nombrePadre = todasLasFases.stream()
+                                .filter(f -> { return f.getId().equals(subfase.getFasePadre()); })
+                                .map(Fase::getNombre)
+                                .findFirst()
+                                .orElse("Desconocido");
+                        dto.setNombreFase(nombrePadre);
+                    } else {
+                        dto.setNombreFase(subfase.getNombre());
+                        dto.setNombreSubfase("-");
+                    }
                 } else {
-                    dto.setNombreFase(subfase.getNombre());
-                    dto.setNombreSubfase("-");
+                    dto.setNombreFase("Desconocido");
+                    dto.setNombreSubfase("Desconocido");
                 }
-            } else {
-                dto.setNombreFase("Desconocido");
-                dto.setNombreSubfase("Desconocido");
             }
-
             return dto;
         }).collect(Collectors.toList());
     }
 
     /**
-     * Obtiene los registros puros de la BD (sin transformar a DTO).
+     * Recupera las entidades de estimación puras (numéricas) asociadas a un Excel.
+     * @param idExcel ID del Excel.
+     * @return Lista de DetalleEstimacion.
      */
     public List<DetalleEstimacion> obtenerDetallesEntidadPorExcel(Integer idExcel) {
         return detalleEstimacionRepository.findByIdExcel(idExcel);
     }
 
     /**
-     * Consulta súper ligera para verificar tiempos u horas de una tarea en concreto.
-     * No carga los nombres de diccionarios (Departamentos/Fases) por rendimiento.
-     * * @param idProyecto Para buscar su excel vigente.
-     * @param idSubfase Fase en la que se encuentra la tarea.
-     * @param nombreTarea Nombre exacto (o casi exacto) de la tarea a buscar.
-     * @return DTO ligero con la información matemática y de IDs.
+     * Busca las estimaciones detalladas que coinciden con un proyecto, subfase y nombre de tarea específicos cruzando datos con el pivote.
+     * @param idProyecto ID del proyecto.
+     * @param idSubfase ID de la subfase.
+     * @param nombreTarea Texto de la tarea.
+     * @param idExcelElegido ID opcional del Excel del historial.
+     * @return Lista de DTOs desglosados por departamento con sus respectivos tiempos estimados y reales.
      */
     public List<DetalleEstimacionDTO> obtenerDetallePorCriterios(Long idProyecto, Integer idSubfase, String nombreTarea, Integer idExcelElegido) {
         Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
         if (idExcelBase == null) {
-            return new java.util.ArrayList<>();
+            return new ArrayList<>();
         }
 
         List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(idExcelBase);
-        List<com.example.demo.entity.Departamento> todosLosDeptos = departamentoRepository.findAll();
+        List<Departamento> todosLosDeptos = departamentoRepository.findAll();
+        
+        List<TareaProyecto> todasTareasProyecto = tareaProyectoRepository.findAll().stream()
+                .filter(t -> { return t.getIdProyecto().equals(idProyecto); })
+                .collect(Collectors.toList());
+                
+        Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
+                .collect(Collectors.toMap(TareaProyecto::getId, t -> { return t; }, (a, b) -> { return a; }));
 
-        // 3. Filtrar todas las filas que coincidan con la subfase y el nombre de la tarea
-        List<DetalleEstimacionDTO> listaPrincipal = todasLasEstimaciones.stream()
-                .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
-                .filter(d -> d.getTarea() != null && d.getTarea().equalsIgnoreCase(nombreTarea.trim()))
+        return todasLasEstimaciones.stream()
+                .filter(d -> {
+                    TareaProyecto tp = mapaTareasProyecto.get(d.getIdTareaProyecto());
+                    return tp != null && tp.getIdFase().equals(idSubfase) && tp.getTarea().equalsIgnoreCase(nombreTarea.trim());
+                })
                 .map(entidad -> {
+                    TareaProyecto tp = mapaTareasProyecto.get(entidad.getIdTareaProyecto());
                     DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
                     dto.setId(entidad.getId());
                     dto.setIdExcel(entidad.getIdExcel());
-                    dto.setIdDepartamento(entidad.getIdDepartamento());
-                    dto.setIdSubFase(entidad.getIdFase());
-                    dto.setTarea(entidad.getTarea());
+                    dto.setIdTareaProyecto(entidad.getIdTareaProyecto());
                     dto.setTiempoMin(entidad.getTiempoMin());
                     dto.setTiempoMax(entidad.getTiempoMax());
 
-                    // 1. Añadimos el número de GitLab directamente de la entidad
-                    dto.setNumeroGitlab(entidad.getNumeroGitlab());
+                    if (tp != null) {
+                        dto.setIdDepartamento(tp.getIdDepartamento());
+                        dto.setIdSubFase(tp.getIdFase());
+                        dto.setTarea(tp.getTarea());
+                        dto.setCompletada(tp.getCompletada());
 
-                    // 2. Calculamos el tiempo real desde Clockify (redondeado a 1 decimal para evitar fallos visuales)
+                        String nombreDepto = todosLosDeptos.stream()
+                            .filter(d -> { return d.getId() == tp.getIdDepartamento(); })
+                            .map(Departamento::getNombre)
+                            .findFirst()
+                            .orElse("Desconocido");
+                        dto.setNombreDepartamento(nombreDepto);
+                    }
+
                     Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(entidad.getId());
                     dto.setTiempoReal(horasReales != null ? Math.round(horasReales * 10.0) / 10.0 : 0.0);
 
-                    // 3. Buscamos el nombre del departamento de forma segura (tu código original)
-                    String nombreDepto = todosLosDeptos.stream()
-                        .filter(d -> d.getId() == entidad.getIdDepartamento())
-                        .map(d -> d.getNombre())
-                        .findFirst()
-                        .orElse("Desconocido");
-                    
-                    dto.setNombreDepartamento(nombreDepto);
                     return dto;
                 })
-                .collect(java.util.stream.Collectors.toList());
-
-
-        return listaPrincipal;
-
+                .collect(Collectors.toList());
     }
 
+    /**
+     * Obtiene e integra los totales estimativos y reales de las tareas de una subfase del proyecto actual.
+     * @param idProyecto ID del proyecto.
+     * @param idSubfase ID de la subfase.
+     * @param idExcelElegido ID opcional del Excel.
+     * @return Lista de DTOs agregados por nombre de tarea.
+     */
     public List<TareaSubfaseDTO> obtenerTareasSubfase(long idProyecto, Integer idSubfase, Integer idExcelElegido){
-
-       // 1. Con el id del proyecto buscar su excel vigente
-        Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
-        if (excel == null) {
-            return new ArrayList<>(); // Si no hay excel, devolvemos lista vacía
+        Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
+        if (idExcelBase == null) {
+            return new ArrayList<>();
         }
 
-        // 2. Con el excel vigente ir a la tabla de estimaciones y buscar las tareas asociadas
-        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
+        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(idExcelBase);
+        
+        List<TareaProyecto> todasTareasProyecto = tareaProyectoRepository.findAll().stream()
+                .filter(t -> { return t.getIdProyecto().equals(idProyecto); })
+                .collect(Collectors.toList());
+                
+        Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
+                .collect(Collectors.toMap(TareaProyecto::getId, t -> { return t; }, (a, b) -> { return a; }));
 
-        // 3. Filtrar por la subfase que queremos y agruparlas por su nombre
         Map<String, List<DetalleEstimacion>> tareasAgrupadas = todasLasEstimaciones.stream()
-                .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
-                .filter(d -> d.getTarea() != null)
-                .collect(Collectors.groupingBy(DetalleEstimacion::getTarea));
+                .filter(d -> {
+                    TareaProyecto tp = mapaTareasProyecto.get(d.getIdTareaProyecto());
+                    return tp != null && tp.getIdFase().equals(idSubfase);
+                })
+                .collect(Collectors.groupingBy(d -> {
+                    TareaProyecto tp = mapaTareasProyecto.get(d.getIdTareaProyecto());
+                    return tp != null ? tp.getTarea() : "Desconocido";
+                }));
 
-        // 4. Sumar los tiempos minimos y maximos para devolver solamente el nombre y esos tiempos
         List<TareaSubfaseDTO> resultado = new ArrayList<>();
         
         for (Map.Entry<String, List<DetalleEstimacion>> entry : tareasAgrupadas.entrySet()) {
             TareaSubfaseDTO dto = new TareaSubfaseDTO();
             dto.setNombreTarea(entry.getKey());
-
             dto.setIdTarea(entry.getValue().get(0).getId());
 
             double sumaMin = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMin).sum();
             double sumaMax = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMax).sum();
 
-            // -- SUMAR TIEMPO REAL DE TODOS LOS DEPARTAMENTOS DE ESTA TAREA --
             double sumaReal = 0.0;
             for (DetalleEstimacion det : entry.getValue()) {
                 Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(det.getId());
@@ -392,25 +467,25 @@ public class DetalleEstimacionService {
         }
 
         if (idExcelElegido != null) {
-            // Traemos las tareas del Excel que queremos comparar
             List<DetalleEstimacion> estimacionesElegidas = detalleEstimacionRepository.findByIdExcel(idExcelElegido);
             
-            // Las agrupamos por tarea
             Map<String, List<DetalleEstimacion>> agrupadasElegidas = estimacionesElegidas.stream()
-                    .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
-                    .filter(d -> d.getTarea() != null)
-                    .collect(Collectors.groupingBy(DetalleEstimacion::getTarea));
+                    .filter(d -> {
+                        TareaProyecto tp = mapaTareasProyecto.get(d.getIdTareaProyecto());
+                        return tp != null && tp.getIdFase().equals(idSubfase);
+                    })
+                    .collect(Collectors.groupingBy(d -> {
+                        TareaProyecto tp = mapaTareasProyecto.get(d.getIdTareaProyecto());
+                        return tp != null ? tp.getTarea() : "Desconocido";
+                    }));
 
-            // Recorremos el resultado del excel en el que nos encontramos
             for (TareaSubfaseDTO dto : resultado) {
-                // Si la tarea existe en el Excel elegido, sumamos sus tiempos
                 if (agrupadasElegidas.containsKey(dto.getNombreTarea())) {
                     List<DetalleEstimacion> tareasElegidas = agrupadasElegidas.get(dto.getNombreTarea());
                     
                     double sumaMinElegido = tareasElegidas.stream().mapToDouble(DetalleEstimacion::getTiempoMin).sum();
                     double sumaMaxElegido = tareasElegidas.stream().mapToDouble(DetalleEstimacion::getTiempoMax).sum();
                     
-                    // Guardamos los totales
                     dto.setTiempoTotalMinElegido(sumaMinElegido);
                     dto.setTiempoTotalMaxElegido(sumaMaxElegido);
                 }
@@ -421,38 +496,47 @@ public class DetalleEstimacionService {
     }
 
     /**
-     * Calcula los totales de TODAS las subfases de un proyecto de una sola vez.
+     * Calcula masivamente los resúmenes y medias de tiempos de todas las subfases indexándolos por el ID de subfase.
+     * @param idProyecto ID del proyecto.
+     * @return Map indexado por ID de subfase con sus resúmenes numéricos de tiempos reales y medias estimadas.
      */
     public Map<Integer, ResumenTiemposDTO> obtenerResumenTodasSubfases(Long idProyecto) {
-        Map<Integer, ResumenTiemposDTO> resultado = new java.util.HashMap<>();
+        Map<Integer, ResumenTiemposDTO> resultado = new HashMap<>();
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
         
         if (excel == null) {
             return resultado;
         }
 
-        // Traemos todas las tareas del Excel
         List<DetalleEstimacion> todasLasTareas = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
-        
-        // Traemos TODAS las sumas de horas del proyecto de golpe
         List<Object[]> sumasBD = imputacionClockifyRepository.sumarHorasValidasAgrupadasPorDetalle(idProyecto);
         
-        // Convertimos el resultado en un diccionario rápido en memoria { idTarea : sumaHoras }
-        Map<Long, Double> mapaHorasReales = new java.util.HashMap<>();
+        Map<Long, Double> mapaHorasReales = new HashMap<>();
         for (Object[] fila : sumasBD) {
             Long idDetalle = (Long) fila[0];
             Double suma = (Double) fila[1];
             mapaHorasReales.put(idDetalle, suma != null ? suma : 0.0);
         }
 
-        // Agrupamos las tareas por Subfase
-        Map<Integer, List<DetalleEstimacion>> tareasPorSubfase = todasLasTareas.stream()
-            .filter(d -> d.getIdFase() != null)
-            .collect(Collectors.groupingBy(DetalleEstimacion::getIdFase));
+        List<TareaProyecto> todasTareasProyecto = tareaProyectoRepository.findAll().stream()
+                .filter(t -> { return t.getIdProyecto().equals(idProyecto); })
+                .collect(Collectors.toList());
+                
+        Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
+                .collect(Collectors.toMap(TareaProyecto::getId, t -> { return t; }, (a, b) -> { return a; }));
 
-        // Calculamos los totales
+        Map<Integer, List<DetalleEstimacion>> tareasPorSubfase = todasLasTareas.stream()
+            .filter(d -> { return mapaTareasProyecto.containsKey(d.getIdTareaProyecto()); })
+            .collect(Collectors.groupingBy(d -> {
+                TareaProyecto tp = mapaTareasProyecto.get(d.getIdTareaProyecto());
+                return tp != null ? tp.getIdFase() : -1;
+            }));
+
         for (Map.Entry<Integer, List<DetalleEstimacion>> entry : tareasPorSubfase.entrySet()) {
             Integer idSubfase = entry.getKey();
+            if (idSubfase == -1) {
+                continue;
+            }
             List<DetalleEstimacion> tareas = entry.getValue();
 
             double sumaRealTotal = 0.0;
@@ -460,7 +544,6 @@ public class DetalleEstimacionService {
             double sumaMaxTotal = 0.0;
 
             for (DetalleEstimacion det : tareas) {
-                // Buscamos la suma en nuestro diccionario de memoria al instante
                 Double realValido = mapaHorasReales.getOrDefault(det.getId(), 0.0);
                 
                 sumaRealTotal += realValido;
@@ -479,239 +562,86 @@ public class DetalleEstimacionService {
         return resultado;
     }
 
-    public List<DetalleEstimacionDTO> obtenerDetallePorCriteriosHistorico(
-            Long idProyecto,
-            Integer idSubfase,
-            String nombreTarea,
-            Integer idExcelElegido) {
-        Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
-        if (idExcelBase == null) {
-            return new ArrayList<>();
-        }
-
-        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(idExcelBase);
-        List<Departamento> todosLosDeptos = departamentoRepository.findAll();
-
-        return todasLasEstimaciones.stream()
-                .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
-                .filter(d -> d.getTarea() != null && d.getTarea().equalsIgnoreCase(nombreTarea.trim()))
-                .map(entidad -> {
-                    DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
-                    dto.setId(entidad.getId());
-                    dto.setIdExcel(entidad.getIdExcel());
-                    dto.setIdDepartamento(entidad.getIdDepartamento());
-                    dto.setIdSubFase(entidad.getIdFase());
-                    dto.setTarea(entidad.getTarea());
-                    dto.setTiempoMin(entidad.getTiempoMin());
-                    dto.setTiempoMax(entidad.getTiempoMax());
-                    dto.setNumeroGitlab(entidad.getNumeroGitlab());
-
-                    Double horasReales = obtenerHorasRealesCompartidas(
-                            idProyecto,
-                            entidad.getIdFase(),
-                            entidad.getTarea(),
-                            entidad.getIdDepartamento(),
-                            entidad.getNumeroGitlab()
-                    );
-                    dto.setTiempoReal(horasReales != null ? Math.round(horasReales * 10.0) / 10.0 : 0.0);
-
-                    String nombreDepto = todosLosDeptos.stream()
-                            .filter(d -> d.getId() == entidad.getIdDepartamento())
-                            .map(Departamento::getNombre)
-                            .findFirst()
-                            .orElse("Desconocido");
-
-                    dto.setNombreDepartamento(nombreDepto);
-                    return dto;
-                })
-                .collect(Collectors.toList());
+    /**
+     * Alias histórico para obtener los desgloses específicos cruzando la información con el pivote TareaProyecto.
+     * @param idProyecto ID del proyecto.
+     * @param idSubfase ID de la subfase.
+     * @param nombreTarea Texto descriptivo de la tarea.
+     * @param idExcelElegido ID del documento Excel a forzar.
+     * @return Lista de DTOs enriquecidos listos para renderizar.
+     */
+    public List<DetalleEstimacionDTO> obtenerDetallePorCriteriosHistorico(Long idProyecto, Integer idSubfase, String nombreTarea, Integer idExcelElegido) {
+        return obtenerDetallePorCriterios(idProyecto, idSubfase, nombreTarea, idExcelElegido);
     }
 
+    /**
+     * Alias histórico para recuperar agregaciones de tareas por subfase vinculadas al pivote.
+     * @param idProyecto ID del proyecto.
+     * @param idSubfase ID de la subfase.
+     * @param idExcelElegido ID opcional del Excel del historial.
+     * @return Lista agregada de tareas de subfase.
+     */
     public List<TareaSubfaseDTO> obtenerTareasSubfaseHistorico(long idProyecto, Integer idSubfase, Integer idExcelElegido) {
-        Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
-        if (idExcelBase == null) {
-            return new ArrayList<>();
-        }
-
-        List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(idExcelBase);
-
-        Map<String, List<DetalleEstimacion>> tareasAgrupadas = todasLasEstimaciones.stream()
-                .filter(d -> d.getIdFase() != null && d.getIdFase().equals(idSubfase))
-                .filter(d -> d.getTarea() != null)
-                .collect(Collectors.groupingBy(DetalleEstimacion::getTarea));
-
-        List<TareaSubfaseDTO> resultado = new ArrayList<>();
-
-        for (Map.Entry<String, List<DetalleEstimacion>> entry : tareasAgrupadas.entrySet()) {
-            TareaSubfaseDTO dto = new TareaSubfaseDTO();
-            dto.setNombreTarea(entry.getKey());
-            dto.setIdTarea(entry.getValue().get(0).getId());
-
-            double sumaMin = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMin).sum();
-            double sumaMax = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMax).sum();
-
-            double sumaReal = 0.0;
-            for (DetalleEstimacion det : entry.getValue()) {
-                Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(det.getId());
-                if (horasReales != null) {
-                    sumaReal += horasReales;
-                }
-            }
-
-            dto.setTiempoTotalMin(sumaMin);
-            dto.setTiempoTotalMax(sumaMax);
-            dto.setTiempoTotalReal(Math.round(sumaReal * 10.0) / 10.0);
-            resultado.add(dto);
-        }
-
-        return resultado;
+        return obtenerTareasSubfase(idProyecto, idSubfase, idExcelElegido);
     }
 
+    /**
+     * Alias histórico para la recopilación masiva de resúmenes de subfase en base al pivote.
+     * @param idProyecto ID del proyecto.
+     * @param idExcelElegido ID del documento Excel.
+     * @return Map estructurado con los cálculos agregados.
+     */
     public Map<Integer, ResumenTiemposDTO> obtenerResumenTodasSubfasesHistorico(Long idProyecto, Integer idExcelElegido) {
-        Map<Integer, ResumenTiemposDTO> resultado = new java.util.HashMap<>();
-        Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
-
-        if (idExcelBase == null) {
-            return resultado;
-        }
-
-        List<DetalleEstimacion> todasLasTareas = detalleEstimacionRepository.findByIdExcel(idExcelBase);
-        List<Object[]> sumasBD = imputacionClockifyRepository.sumarHorasValidasAgrupadasPorDetalle(idProyecto);
-
-        Map<Long, Double> mapaHorasReales = new java.util.HashMap<>();
-        for (Object[] fila : sumasBD) {
-            Long idDetalle = (Long) fila[0];
-            Double suma = (Double) fila[1];
-            mapaHorasReales.put(idDetalle, suma != null ? suma : 0.0);
-        }
-
-        Map<Integer, List<DetalleEstimacion>> tareasPorSubfase = todasLasTareas.stream()
-                .filter(d -> d.getIdFase() != null)
-                .collect(Collectors.groupingBy(DetalleEstimacion::getIdFase));
-
-        for (Map.Entry<Integer, List<DetalleEstimacion>> entry : tareasPorSubfase.entrySet()) {
-            Integer idSubfase = entry.getKey();
-            List<DetalleEstimacion> tareas = entry.getValue();
-
-            double sumaRealTotal = 0.0;
-            double sumaMinTotal = 0.0;
-            double sumaMaxTotal = 0.0;
-
-            for (DetalleEstimacion det : tareas) {
-                Double realValido = mapaHorasReales.getOrDefault(det.getId(), 0.0);
-                sumaRealTotal += realValido;
-                sumaMinTotal += det.getTiempoMin() != null ? det.getTiempoMin() : 0.0;
-                sumaMaxTotal += det.getTiempoMax() != null ? det.getTiempoMax() : 0.0;
-            }
-
-            double mediaEstimada = (sumaMinTotal + sumaMaxTotal) / 2.0;
-            sumaRealTotal = Math.round(sumaRealTotal * 10.0) / 10.0;
-            mediaEstimada = Math.round(mediaEstimada * 10.0) / 10.0;
-
-            resultado.put(idSubfase, new ResumenTiemposDTO(sumaRealTotal, mediaEstimada));
-        }
-
-        return resultado;
+        return obtenerResumenTodasSubfases(idProyecto);
     }
 
+    /**
+     * Resuelve de forma segura qué ID de Excel se debe utilizar como base para las consultas analíticas.
+     * @param idProyecto ID del proyecto local.
+     * @param idExcelElegido ID explícito enviado, o null si se requiere usar el vigente.
+     * @return El Integer correspondiente al ID del documento definitivo o null.
+     */
     private Integer resolverIdExcelBase(Long idProyecto, Integer idExcelElegido) {
         if (idExcelElegido != null) {
             return idExcelElegido;
         }
-
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
         return excel != null ? excel.getIdExcel() : null;
     }
 
-    private Double obtenerHorasRealesCompartidas(
-            Long idProyecto,
-            Integer idSubfase,
-            String tarea,
-            Integer idDepartamento,
-            String numeroGitlab) {
-        List<Integer> idsExcels = excelService.obtenerHistorialExcels(idProyecto).stream()
-                .map(HistorialExcelDTO::getIdExcel)
-                .collect(Collectors.toList());
-
-        if (idsExcels.isEmpty()) {
-            return 0.0;
-        }
-
-        Map<Integer, String> nombresFase = obtenerMapaNombresFase();
-        String subfaseNormalizada = normalizarTexto(nombresFase.get(idSubfase));
-        String tareaNormalizada = normalizarTexto(tarea);
-        String gitlabNormalizado = normalizarTexto(numeroGitlab);
-        java.util.Set<Long> detallesSumados = new java.util.HashSet<>();
-        double suma = 0.0;
-
-        for (Integer idExcel : idsExcels) {
-            List<DetalleEstimacion> detallesExcel = detalleEstimacionRepository.findByIdExcel(idExcel);
-
-            List<DetalleEstimacion> coincidencias = detallesExcel.stream()
-                    .filter(det -> det.getIdDepartamento() != null && det.getIdDepartamento().equals(idDepartamento))
-                    .filter(det -> normalizarTexto(nombresFase.get(det.getIdFase())).equals(subfaseNormalizada))
-                    .filter(det -> coincideDetalleCompartido(det, tareaNormalizada, gitlabNormalizado))
-                    .collect(Collectors.toList());
-
-            for (DetalleEstimacion detalle : coincidencias) {
-                if (!detallesSumados.add(detalle.getId())) {
-                    continue;
-                }
-
-                Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(detalle.getId());
-                if (horasReales != null) {
-                    suma += horasReales;
-                }
-            }
-        }
-
-        return suma;
-    }
-
-    private boolean coincideDetalleCompartido(DetalleEstimacion detalle, String tareaNormalizada, String gitlabNormalizado) {
-        String gitlabDetalle = normalizarTexto(detalle.getNumeroGitlab());
-        if (!gitlabNormalizado.isEmpty() && !gitlabDetalle.isEmpty()) {
-            return gitlabDetalle.equals(gitlabNormalizado);
-        }
-
-        return detalle.getTarea() != null && normalizarTexto(detalle.getTarea()).equals(tareaNormalizada);
-    }
-
+    /**
+     * Obtiene el mapa completo de resolución de nombres de fases de la base de datos.
+     * @return Un mapa indexando IDs de Fases con sus nombres textuales.
+     */
     private Map<Integer, String> obtenerMapaNombresFase() {
         return faseRepository.findAll().stream()
-                .collect(Collectors.toMap(Fase::getId, Fase::getNombre, (a, b) -> a));
+                .collect(Collectors.toMap(Fase::getId, Fase::getNombre, (a, b) -> { return a; }));
     }
 
     /**
-     * Calcula los totales de un proyecto completo:
-     * - La suma de todo el tiempo real validado del proyecto.
-     * - La media entre la suma total de mínimos y máximos de su Excel vigente.
+     * Calcula los totales completos de un proyecto calculando la suma de tiempos reales válidos globales 
+     * y la media matemática total del presupuesto del Excel establecido como vigente.
+     * @param idProyecto ID del proyecto a resumir.
+     * @return DTO ResumenTiemposDTO con los resultados matemáticos listos.
      */
     public ResumenTiemposDTO obtenerResumenProyecto(Long idProyecto) {
-        // Tiempo real total
         Double realTotal = imputacionClockifyRepository.sumarHorasTotalesProyecto(idProyecto);
-        
-        // Tiempo estimado medio del Excel vigente
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
         double mediaEstimada = 0.0;
         
         if (excel != null) {
-            // Traemos todas las tareas de ese Excel
             List<DetalleEstimacion> todasLasTareas = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
             
-            // Sumamos todos los mínimos y todos los máximos del proyecto
             double sumaMin = todasLasTareas.stream()
-                    .mapToDouble(t -> t.getTiempoMin() != null ? t.getTiempoMin() : 0.0)
+                    .mapToDouble(t -> { return t.getTiempoMin() != null ? t.getTiempoMin() : 0.0; })
                     .sum();
             double sumaMax = todasLasTareas.stream()
-                    .mapToDouble(t -> t.getTiempoMax() != null ? t.getTiempoMax() : 0.0)
+                    .mapToDouble(t -> { return t.getTiempoMax() != null ? t.getTiempoMax() : 0.0; })
                     .sum();
             
-            // Calculamos la media de la estimación total
             mediaEstimada = (sumaMin + sumaMax) / 2.0;
         }
 
-        // Redondeo
         double realRedondeado = Math.round((realTotal != null ? realTotal : 0.0) * 10.0) / 10.0;
         double mediaRedondeada = Math.round(mediaEstimada * 10.0) / 10.0;
 
@@ -719,54 +649,68 @@ public class DetalleEstimacionService {
     }
 
     /**
-     * Obtiene el resumen de tiempos para una lista de proyectos.
-     * Devuelve un Map donde la clave es el ID del proyecto y el valor su resumen.
+     * Procesa masivamente los resúmenes de una colección de proyectos en bloque.
+     * @param idsProyectos Lista de identificadores de proyectos.
+     * @return Map asociando el ID del proyecto con su DTO de resumen correspondiente.
      */
     public Map<Long, ResumenTiemposDTO> obtenerResumenVariosProyectos(List<Long> idsProyectos) {
-        Map<Long, ResumenTiemposDTO> resultados = new java.util.HashMap<>();
-        
+        Map<Long, ResumenTiemposDTO> resultados = new HashMap<>();
         for (Long idProy : idsProyectos) {
-            // Aprovechamos el método para un solo proyecto
             resultados.put(idProy, obtenerResumenProyecto(idProy));
         }
         return resultados;
     }
 
-    // ==========================================================
-    // MÉTODOS DE CREACIÓN Y ACTUALIZACIÓN (Lógica de Negocio)
-    // ==========================================================
-
     /**
-     * Actualiza los valores de una tarea existente.
+     * Modifica los valores matemáticos de un presupuesto en BD y actualiza de forma segura el pivote textual TareaProyecto asociado.
+     * @param id ID único de la fila del presupuesto de estimación.
+     * @param detalleDTO DTO con la nueva información descriptiva o presupuestaria.
+     * @return El DetalleEstimacion actualizado y persistido en el sistema.
      */
-   @Auditable(
+    @Auditable(
         accion = "ACTUALIZAR_ESTIMACION", 
         tabla = "detalle_estimacion", 
         entidad = DetalleEstimacion.class,
-        descripcion = "Se actualizaron los datos de la estimación '#{#resultado.tarea}'"
+        descripcion = "Se actualizaron los datos numéricos de la estimación."
     )
     public DetalleEstimacion actualizarDetalle(Long id, DetalleEstimacionDTO detalleDTO) {
         DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
 
-        // Solo actualizamos si el valor viene en el DTO
-        if (detalleDTO.getTarea() != null) detalle.setTarea(detalleDTO.getTarea());
-        if (detalleDTO.getIdDepartamento() != null) detalle.setIdDepartamento(detalleDTO.getIdDepartamento());
-        if (detalleDTO.getIdSubFase() != null) detalle.setIdFase(detalleDTO.getIdSubFase());
-        if (detalleDTO.getTiempoMax() != null) detalle.setTiempoMax(detalleDTO.getTiempoMax());
-        if (detalleDTO.getTiempoMin() != null) detalle.setTiempoMin(detalleDTO.getTiempoMin());
+        if (detalleDTO.getTiempoMax() != null) { 
+            detalle.setTiempoMax(detalleDTO.getTiempoMax()); 
+        }
+        if (detalleDTO.getTiempoMin() != null) { 
+            detalle.setTiempoMin(detalleDTO.getTiempoMin()); 
+        }
 
+        TareaProyecto tp = tareaProyectoRepository.findById(detalle.getIdTareaProyecto())
+            .orElseThrow(() -> new RuntimeException("No se localizó la tarea global pivote asociada."));
+
+        if (detalleDTO.getTarea() != null) { 
+            tp.setTarea(detalleDTO.getTarea().trim()); 
+        }
+        if (detalleDTO.getIdDepartamento() != null) { 
+            tp.setIdDepartamento(detalleDTO.getIdDepartamento()); 
+        }
+        if (detalleDTO.getIdSubFase() != null) { 
+            tp.setIdFase(detalleDTO.getIdSubFase()); 
+        }
+        
+        tareaProyectoRepository.save(tp);
         return detalleEstimacionRepository.save(detalle);
     }
 
     /**
-     * Crea una nueva tarea de estimación manualmente.
+     * Da de alta un nuevo presupuesto de estimación manual aplicando el patrón Find-or-Create en la TareaProyecto global.
+     * @param dto DTO que contiene la identidad conceptual de la tarea y sus nuevos tiempos estimados.
+     * @return La nueva entidad DetalleEstimacion registrada con éxito.
      */
     @Auditable(
         accion = "CREAR_ESTIMACION", 
         tabla = "detalle_estimacion", 
         entidad = DetalleEstimacion.class,
-        descripcion = "Se creó manualmente la estimación para la tarea '#{#dto.tarea}'"
+        descripcion = "Se creó manualmente una estimación de tarea."
     )
     public DetalleEstimacion crearTarea(DetalleEstimacionDTO dto) {
         if (dto.getTarea() == null || dto.getTarea().trim().isEmpty()) {
@@ -785,11 +729,25 @@ public class DetalleEstimacionService {
             throw new RuntimeException("El tiempo mínimo no puede ser mayor que el máximo.");
         }
 
+        Excel excel = excelRepository.findById(dto.getIdExcel())
+            .orElseThrow(() -> new RuntimeException("El documento Excel base no existe."));
+        Long idProyecto = excel.getIdProyecto();
+
+        TareaProyecto tareaProyecto = tareaProyectoRepository
+            .findByIdProyectoAndIdFaseAndIdDepartamentoAndTarea(idProyecto, dto.getIdSubFase(), dto.getIdDepartamento(), dto.getTarea().trim())
+            .orElseGet(() -> {
+                TareaProyecto tp = new TareaProyecto();
+                tp.setIdProyecto(idProyecto);
+                tp.setIdFase(dto.getIdSubFase());
+                tp.setIdDepartamento(dto.getIdDepartamento());
+                tp.setTarea(dto.getTarea().trim());
+                tp.setCompletada(false);
+                return tareaProyectoRepository.save(tp);
+            });
+
         DetalleEstimacion nueva = new DetalleEstimacion();
         nueva.setIdExcel(dto.getIdExcel());
-        nueva.setIdFase(dto.getIdSubFase());
-        nueva.setIdDepartamento(dto.getIdDepartamento());
-        nueva.setTarea(dto.getTarea().trim());
+        nueva.setIdTareaProyecto(tareaProyecto.getId());
         nueva.setTiempoMin(dto.getTiempoMin());
         nueva.setTiempoMax(dto.getTiempoMax());
 
@@ -797,10 +755,11 @@ public class DetalleEstimacionService {
     }
 
     /**
-     * Elimina una tarea de estimación existente.
-     * Devuelve la entidad borrada para que el Vigilante pueda leer su nombre.
+     * Elimina de forma permanente un presupuesto de estimación específico de la base de datos.
+     * @param id ID único de la estimación numérico a remover.
+     * @return La entidad DetalleEstimacion eliminada.
      */
-    @Auditable(
+   @Auditable(
         accion = "BORRAR_ESTIMACION", 
         tabla = "detalle_estimacion", 
         entidad = DetalleEstimacion.class,
@@ -811,8 +770,6 @@ public class DetalleEstimacionService {
             .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
 
         detalleEstimacionRepository.delete(detalle);
-        
-        return detalle; // Lo devolvemos para que SpEL pueda leer "resultado.tarea"
+        return detalle;
     }
-
-} //<-- fin del servicio DetalleEstimacionService.java
+}

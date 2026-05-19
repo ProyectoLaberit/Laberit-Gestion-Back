@@ -7,6 +7,7 @@ public class DetalleEstimacionDTO {
     
     private Long id;
     private Integer idExcel;
+    private Long idTareaProyecto; // NUEVO CAMPO PIVOTE
     
     // IDs originales por si el front necesita hacer updates
     private Integer idDepartamento;
@@ -30,7 +31,7 @@ public class DetalleEstimacionDTO {
     // Constructor vacío
     public DetalleEstimacionDTO() {}
 
-    // Constructor completo para facilitar el mapeo
+    // Constructor completo original (se mantiene para compatibilidad)
     public DetalleEstimacionDTO(Long id, Integer idExcel, Integer idDepartamento, Integer idFase,
                                 String nombreDepartamento, String nombreFase, String nombreSubfase,
                                 String tarea, Double tiempoMin, Double tiempoMax) {
@@ -55,6 +56,9 @@ public class DetalleEstimacionDTO {
     
     public Integer getIdExcel() { return idExcel; }
     public void setIdExcel(Integer idExcel) { this.idExcel = idExcel; }
+
+    public Long getIdTareaProyecto() { return idTareaProyecto; }
+    public void setIdTareaProyecto(Long idTareaProyecto) { this.idTareaProyecto = idTareaProyecto; }
     
     public Integer getIdDepartamento() { return idDepartamento; }
     public void setIdDepartamento(Integer idDepartamento) { this.idDepartamento = idDepartamento; }
