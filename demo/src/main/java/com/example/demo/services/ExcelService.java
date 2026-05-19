@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.FormulaEvaluator;
@@ -26,10 +27,12 @@ import com.example.demo.entity.Departamento;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
 import com.example.demo.entity.Fase;
+import com.example.demo.entity.TareaProyecto;
 import com.example.demo.repository.DepartamentoRepository;
 import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.ExcelRepository;
 import com.example.demo.repository.FaseRepository;
+import com.example.demo.repository.TareaProyectoRepository;
 
 @Service
 public class ExcelService {
@@ -45,6 +48,9 @@ public class ExcelService {
 
     @Autowired
     private FaseRepository faseRepository;
+
+    @Autowired
+    private TareaProyectoRepository tareaProyectoRepository;
 
     @Auditable(
         accion = "NUEVO_EXCEL_VIGENTE", 
@@ -99,18 +105,30 @@ public class ExcelService {
         List<DetalleEstimacion> detalles = detalleEstimacionRepository.findByIdExcel(idExcel);
         List<Departamento> departamentos = departamentoRepository.findAll();
         List<Fase> fases = faseRepository.findAll();
+
+        // Extraemos el Excel base para obtener el Proyecto y cargar el pivote TareaProyecto
+        Excel excel = excelRepository.findById(idExcel)
+            .orElseThrow(() -> new RuntimeException("Excel no encontrado"));
+            
+        List<TareaProyecto> tareasPivot = tareaProyectoRepository.findAll().stream()
+                .filter(t -> t.getIdProyecto().equals(excel.getIdProyecto()))
+                .collect(Collectors.toList());
+        
+        // Creamos un diccionario en memoria para cruzar rápido los datos sin saturar la BD
+        Map<Long, TareaProyecto> mapaTareas = tareasPivot.stream()
+                .collect(Collectors.toMap(TareaProyecto::getId, t -> t, (a, b) -> a));
         
         Sheet hoja = workbook.getSheet("Propuesta actualizada");
         
         Map<Integer, Integer[]> columnasPorDepto = obtenerMapeoColumnas(departamentos);
         Map<String, Integer> mapaFases = obtenerMapeoFases(fases);
-        Map<Integer, Map<String, List<DetalleEstimacion>>> recamaraTareas = agruparTareasPorSubfase(detalles);
+        Map<Integer, Map<String, List<DetalleEstimacion>>> recamaraTareas = agruparTareasPorSubfase(detalles, mapaTareas);
 
         // Primera Pasada: Coincidencias Exactas (Francotirador)
-        procesarNombresExactos(hoja, mapaFases, columnasPorDepto, recamaraTareas);
+        procesarNombresExactos(hoja, mapaFases, columnasPorDepto, recamaraTareas, mapaTareas);
 
         // Segunda Pasada: Relleno de Huecos Vacíos/Genéricos (Cola de inyección)
-        procesarHuecosEnBlanco(hoja, mapaFases, columnasPorDepto, recamaraTareas);
+        procesarHuecosEnBlanco(hoja, mapaFases, columnasPorDepto, recamaraTareas, mapaTareas);
 
         evaluator.evaluateAll();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -160,25 +178,28 @@ public class ExcelService {
      * Organiza y agrupa la lista de estimaciones en una estructura indexada en memoria (3D).
      * Agrupa por ID de subfase y asocia todas las filas de departamentos correspondientes a una tarea única.
      * @param detalles Lista de estimaciones obtenidas del idExcel específico.
+     * @param mapaTareas Diccionario de resolución del pivote central.
      * @return Un mapa anidado estructurado por ID de Subfase y Nombre de Tarea normalizado.
      */
-    private Map<Integer, Map<String, List<DetalleEstimacion>>> agruparTareasPorSubfase(List<DetalleEstimacion> detalles) {
+    private Map<Integer, Map<String, List<DetalleEstimacion>>> agruparTareasPorSubfase(List<DetalleEstimacion> detalles, Map<Long, TareaProyecto> mapaTareas) {
         Map<Integer, Map<String, List<DetalleEstimacion>>> recamara = new HashMap<>();
         for (DetalleEstimacion det : detalles) {
-            if (det.getIdFase() == null || det.getTarea() == null) {
+            TareaProyecto tp = mapaTareas.get(det.getIdTareaProyecto());
+            
+            if (tp == null || tp.getIdFase() == null || tp.getTarea() == null) {
                 continue;
             }
             
-            if (!recamara.containsKey(det.getIdFase())) {
-                recamara.put(det.getIdFase(), new HashMap<>());
+            if (!recamara.containsKey(tp.getIdFase())) {
+                recamara.put(tp.getIdFase(), new HashMap<>());
             }
             
-            String claveTarea = normalizarTextoAuxiliar(det.getTarea());
-            if (!recamara.get(det.getIdFase()).containsKey(claveTarea)) {
-                recamara.get(det.getIdFase()).put(claveTarea, new ArrayList<>());
+            String claveTarea = normalizarTextoAuxiliar(tp.getTarea());
+            if (!recamara.get(tp.getIdFase()).containsKey(claveTarea)) {
+                recamara.get(tp.getIdFase()).put(claveTarea, new ArrayList<>());
             }
             
-            recamara.get(det.getIdFase()).get(claveTarea).add(det);
+            recamara.get(tp.getIdFase()).get(claveTarea).add(det);
         }
         return recamara;
     }
@@ -190,8 +211,9 @@ public class ExcelService {
      * @param mapaFases Mapa de resolución de IDs de fases.
      * @param columnasPorDepto Coordenadas de columnas de los departamentos.
      * @param recamaraTareas Estructura con las tareas pendientes por subfase.
+     * @param mapaTareas Diccionario de resolución del pivote central.
      */
-    private void procesarNombresExactos(Sheet hoja, Map<String, Integer> mapaFases, Map<Integer, Integer[]> columnasPorDepto, Map<Integer, Map<String, List<DetalleEstimacion>>> recamaraTareas) {
+    private void procesarNombresExactos(Sheet hoja, Map<String, Integer> mapaFases, Map<Integer, Integer[]> columnasPorDepto, Map<Integer, Map<String, List<DetalleEstimacion>>> recamaraTareas, Map<Long, TareaProyecto> mapaTareas) {
         Integer idSubfaseActual = null;
         int totalFilas = hoja.getLastRowNum();
 
@@ -220,7 +242,12 @@ public class ExcelService {
             if (recamaraTareas.containsKey(idSubfaseActual) && recamaraTareas.get(idSubfaseActual).containsKey(claveTarea)) {
                 List<DetalleEstimacion> listaDeptos = recamaraTareas.get(idSubfaseActual).get(claveTarea);
                 for (DetalleEstimacion det : listaDeptos) {
-                    Integer[] columnas = columnasPorDepto.get(det.getIdDepartamento());
+                    TareaProyecto tp = mapaTareas.get(det.getIdTareaProyecto());
+                    if (tp == null) {
+                        continue;
+                    }
+                    
+                    Integer[] columnas = columnasPorDepto.get(tp.getIdDepartamento());
                     if (columnas != null) {
                         Cell celdaMin = fila.getCell(columnas[0], MissingCellPolicy.CREATE_NULL_AS_BLANK);
                         celdaMin.setCellValue(det.getTiempoMin() != null ? det.getTiempoMin() : 0.0);
@@ -241,8 +268,9 @@ public class ExcelService {
      * @param mapaFases Mapa de resolución de IDs de fases.
      * @param columnasPorDepto Coordenadas de columnas de los departamentos.
      * @param recamaraTareas Estructura con las tareas sobrantes en memoria.
+     * @param mapaTareas Diccionario de resolución del pivote central.
      */
-    private void procesarHuecosEnBlanco(Sheet hoja, Map<String, Integer> mapaFases, Map<Integer, Integer[]> columnasPorDepto, Map<Integer, Map<String, List<DetalleEstimacion>>> recamaraTareas) {
+    private void procesarHuecosEnBlanco(Sheet hoja, Map<String, Integer> mapaFases, Map<Integer, Integer[]> columnasPorDepto, Map<Integer, Map<String, List<DetalleEstimacion>>> recamaraTareas, Map<Long, TareaProyecto> mapaTareas) {
         Integer idSubfaseActual = null;
         int totalFilas = hoja.getLastRowNum();
 
@@ -275,11 +303,19 @@ public class ExcelService {
                     List<DetalleEstimacion> listaDeptos = recamaraTareas.get(idSubfaseActual).get(primeraClave);
                     
                     if (!listaDeptos.isEmpty()) {
-                        celdaTarea.setCellValue(listaDeptos.get(0).getTarea());
+                        TareaProyecto tpPrimero = mapaTareas.get(listaDeptos.get(0).getIdTareaProyecto());
+                        if (tpPrimero != null) {
+                            celdaTarea.setCellValue(tpPrimero.getTarea());
+                        }
                     }
 
                     for (DetalleEstimacion det : listaDeptos) {
-                        Integer[] columnas = columnasPorDepto.get(det.getIdDepartamento());
+                        TareaProyecto tp = mapaTareas.get(det.getIdTareaProyecto());
+                        if (tp == null) {
+                            continue;
+                        }
+                        
+                        Integer[] columnas = columnasPorDepto.get(tp.getIdDepartamento());
                         if (columnas != null) {
                             Cell celdaMin = fila.getCell(columnas[0], MissingCellPolicy.CREATE_NULL_AS_BLANK);
                             celdaMin.setCellValue(det.getTiempoMin() != null ? det.getTiempoMin() : 0.0);
