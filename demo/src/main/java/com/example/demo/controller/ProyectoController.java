@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.ProyectoDTO;
@@ -36,13 +38,16 @@ public class ProyectoController {
      * @return ApiResponse json con los proyectos que siguen los filtros
      */
     @GetMapping("/cargar")
-    public ApiResponse obtenerProyectos(
+    public ResponseEntity<ApiResponse> obtenerProyectos(
             @RequestParam(required = false) Boolean activo,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
-
-        List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(activo, desde, hasta);
-        return new ApiResponse("Listado de proyectos recuperado", true, lista);
+        try {
+            List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(activo, desde, hasta);
+            return ResponseEntity.ok(new ApiResponse("Listado de proyectos recuperado", true, lista));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al cargar los proyectos: " + e.getMessage(), false, null));
+        }
     }
 
     /**
@@ -52,16 +57,13 @@ public class ProyectoController {
      */
     @PostMapping
     // @RequestBody: Recibe el JSON del formulario y lo convierte en el ProyectoDTO
-    public ApiResponse crearProyecto(@RequestBody ProyectoDTO proyectoDTO) {
+    @PreAuthorize("hasAnyAuthority('SuperAdministrador', 'Administrador')")
+    public ResponseEntity<ApiResponse> crearProyecto(@RequestBody ProyectoDTO proyectoDTO) {
         try {
-            // Mandamos el DTO al servicio para que lo guarde
             ProyectoDTO proyectoGuardado = proyectoService.crearProyecto(proyectoDTO);
-
-            // Respondemos con éxito y devolvemos el proyecto ya con su ID generado
-            return new ApiResponse("Proyecto creado correctamente", true, proyectoGuardado);
+            return ResponseEntity.ok(new ApiResponse("Proyecto creado correctamente", true, proyectoGuardado));
         } catch (Exception e) {
-            // Si falta algún dato obligatorio o la base de datos falla
-            return new ApiResponse("Error al crear el proyecto: " + e.getMessage(), false, null);
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al crear el proyecto: " + e.getMessage(), false, null));
         }
     }
 
@@ -71,16 +73,13 @@ public class ProyectoController {
      * @return ApiResponse json que contiene true si se ha eliminado o false si no
      */
     @DeleteMapping("/{id}")
-    public ApiResponse eliminarProyecto(@PathVariable Long id) {
+    @PreAuthorize("hasAuthority('SuperAdministrador')")
+    public ResponseEntity<ApiResponse> eliminarProyecto(@PathVariable Long id) {
         try {
-            // Llamamos al servicio para ejecutar el borrado
-            proyectoService.eliminarProyecto(id);
-
-            // Respondemos con éxito
-            return new ApiResponse("Proyecto eliminado permanentemente", true, null);
+            ProyectoDTO proyectoEliminado = proyectoService.eliminarProyecto(id);
+            return ResponseEntity.ok(new ApiResponse("Proyecto eliminado permanentemente", true, proyectoEliminado));
         } catch (Exception e) {
-            // Si el ID no existe o hay un error de conexión
-            return new ApiResponse("Error al eliminar: " + e.getMessage(), false, null);
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al eliminar: " + e.getMessage(), false, null));
         }
     }
 
@@ -91,20 +90,28 @@ public class ProyectoController {
      * @return ApiResponse json que contiene el proyecto actualizado
      */
     @PutMapping("/{id}")
-    public ApiResponse actualizarProyecto(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
-        // Recibe el ID del proyecto y los datos nuevos desde el cuerpo de la petición
-        ProyectoDTO actualizado = proyectoService.actualizarProyecto(id, proyectoDTO);
-        // Devuelve una respuesta con el proyecto ya actualizado
-        return new ApiResponse("Proyecto actualizado correctamente", true, actualizado);
+    @PreAuthorize("hasAnyAuthority('SuperAdministrador', 'Administrador')")
+    public ResponseEntity<ApiResponse> actualizarProyecto(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
+        try {
+            ProyectoDTO actualizado = proyectoService.actualizarProyecto(id, proyectoDTO);
+            return ResponseEntity.ok(new ApiResponse("Proyecto actualizado correctamente", true, actualizado));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al actualizar el proyecto: " + e.getMessage(), false, null));
+        }
     }
 
     /**
      * Alias de compatibilidad para clientes que aun envian POST al editar.
      */
     @PostMapping("/{id}")
-    public ApiResponse actualizarProyectoCompat(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
-        ProyectoDTO actualizado = proyectoService.actualizarProyecto(id, proyectoDTO);
-        return new ApiResponse("Proyecto actualizado correctamente", true, actualizado);
+    @PreAuthorize("hasAnyAuthority('SuperAdministrador', 'Administrador')")
+    public ResponseEntity<ApiResponse> actualizarProyectoCompat(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
+        try {
+            ProyectoDTO actualizado = proyectoService.actualizarProyecto(id, proyectoDTO);
+            return ResponseEntity.ok(new ApiResponse("Proyecto actualizado correctamente (Compatibilidad)", true, actualizado));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al actualizar el proyecto: " + e.getMessage(), false, null));
+        }
     }
 
 }

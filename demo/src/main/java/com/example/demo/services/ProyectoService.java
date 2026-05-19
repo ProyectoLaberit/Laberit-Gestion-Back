@@ -20,6 +20,13 @@ public class ProyectoService {
 
     // Inyectamos el servicio de Clockify
 
+    /**
+     * Recupera una lista de todos los proyectos filtrada por su estado de actividad y un rango de fechas.
+     * * @param activo Boolean que indica si se buscan proyectos activos (true) o inactivos (false). Puede ser null.
+     * @param desde Fecha de inicio del rango de búsqueda.
+     * @param hasta Fecha de fin del rango de búsqueda.
+     * @return Lista de objetos ProyectoDTO con la información de los proyectos encontrados.
+     */
     public List<ProyectoDTO> obtenerTodosLosProyectos(Boolean activo, LocalDate desde, LocalDate hasta) {
         List<Proyecto> proyectosDB = proyectoRepository.findByFiltrosOpcionales(activo, desde, hasta);
 
@@ -33,6 +40,12 @@ public class ProyectoService {
             p.getExcels()
         )).collect(Collectors.toList());
     }
+
+    /**
+     * Crea un nuevo proyecto en la base de datos con los datos proporcionados en el DTO.
+     * * @param dto Objeto ProyectoDTO con la información del proyecto a crear.
+     * @return El ProyectoDTO recién creado y persistido.
+     */
     @Auditable(
         accion = "CREAR_PROYECTO", 
         tabla = "proyecto", 
@@ -63,19 +76,41 @@ public class ProyectoService {
             guardado.getExcels()
         );
     }
+
+    /**
+     * Elimina permanentemente un proyecto del sistema utilizando su identificador único.
+     * * @param id Identificador único (ID) del proyecto a eliminar.
+     */
     @Auditable(
         accion = "BORRAR_PROYECTO", 
         tabla = "proyecto", 
         entidad = Proyecto.class,
         descripcion = "Se eliminó del sistema el proyecto '#{#resultado.nombre}'"
     )
-    public void eliminarProyecto(Long id) {
-        if (!proyectoRepository.existsById(id)) {
-            throw new RuntimeException("No se puede eliminar: El proyecto con ID " + id + " no existe.");
-        }
-        proyectoRepository.deleteById(id);
+    public ProyectoDTO eliminarProyecto(Long id) {
+        Proyecto proyecto = proyectoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("No se puede eliminar: El proyecto con ID " + id + " no existe."));
+
+        ProyectoDTO dto = new ProyectoDTO(
+            proyecto.getId(),
+            proyecto.getNombre(),
+            proyecto.getDescripcion(),
+            proyecto.getFechaInicio(),
+            proyecto.getFechaFin(),
+            proyecto.isActivo(),
+            proyecto.getExcels()
+        );
+
+        proyectoRepository.delete(proyecto);
+        return dto;
     }
 
+    /**
+     * Actualiza los datos de un proyecto existente con la información proporcionada.
+     * * @param id Identificador único del proyecto que se va a modificar.
+     * @param proyectoDTO Objeto ProyectoDTO con los nuevos datos a guardar.
+     * @return El ProyectoDTO con la información actualizada.
+     */
     @Auditable(
         accion = "ACTUALIZAR_PROYECTO", 
         tabla = "proyecto", 
