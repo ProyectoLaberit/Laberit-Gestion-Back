@@ -7,10 +7,8 @@ import com.example.demo.dto.ResumenTiemposDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
-import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.services.DetalleEstimacionService;
 import com.example.demo.services.ExcelService;
-import com.example.demo.services.AuditService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +27,7 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class DetalleEstimacionController {
 
-   
+
 
     @Autowired
     private DetalleEstimacionService detalleEstimacionService;
@@ -48,7 +46,7 @@ public class DetalleEstimacionController {
                 .anyMatch(a -> a.equals("ROLE_ADMINISTRADOR") || a.equals("ROLE_SUPERADMINISTRADOR"));
     }
 
-   
+
     
     /**
      * Recupera la tabla de estimaciones del Excel VIGENTE (el más reciente o activo) de un proyecto.
@@ -84,7 +82,7 @@ public class DetalleEstimacionController {
 
         try {
             int filasGuardadas = detalleEstimacionService.procesarExcel(archivo, proyectoId, usuarioId);
-           
+
             return new ApiResponse("Éxito: se importaron " + filasGuardadas + " registros.", true, filasGuardadas);
         } catch (Exception e) {
             return new ApiResponse("Error al procesar el Excel: " + e.getMessage(), false, null);
@@ -98,7 +96,7 @@ public class DetalleEstimacionController {
          * @param detalleDTO Objeto con los nuevos valores (tarea, tiempos, fase, depto).
          * @return ApiResponse confirmando la actualización.
     */
-  @PutMapping("/{id}")
+    @PutMapping("/{id}")
     public ApiResponse actualizarDetalle(@PathVariable Long id, @RequestBody DetalleEstimacionDTO detalleDTO) {
         try {
             detalleEstimacionService.actualizarDetalle(id, detalleDTO);

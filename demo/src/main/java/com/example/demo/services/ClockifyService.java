@@ -1,6 +1,5 @@
 package com.example.demo.services;
 
-import org.apache.tomcat.util.digester.SystemPropertySource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -13,27 +12,18 @@ import org.springframework.web.client.RestTemplate;
 
 import com.example.demo.annotation.Auditable;
 import com.example.demo.dto.ClockifyTareaDTO;
-import com.example.demo.dto.DetalleEstimacionDTO;
-import com.example.demo.dto.FaseDTO;
-import com.example.demo.dto.GitLabTareaDTO;
 import com.example.demo.dto.ProyectoClockifyDTO;
-import com.example.demo.dto.SubFaseDTO;
 import com.example.demo.entity.ApiConfig;
 import com.example.demo.entity.Departamento;
-import com.example.demo.entity.DetalleEstimacion;
-import com.example.demo.entity.Excel;
 import com.example.demo.entity.ImputacionClockify;
 import com.example.demo.entity.Proyecto;
 import com.example.demo.repository.ApiConfigRepository;
 import com.example.demo.repository.DepartamentoRepository;
-import com.example.demo.repository.DetalleEstimacionRepository;
-import com.example.demo.repository.ExcelRepository;
 import com.example.demo.repository.FaseRepository;
 import com.example.demo.repository.ProyectoRepository;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -62,16 +52,10 @@ public class ClockifyService {
         private FaseRepository faseRepository;
 
         @Autowired
-        private GitLabService gitLabService;
-
-        @Autowired
-        private ExcelRepository excelRepository;
-
-        @Autowired
         private ImputacionClockifyService imputacionService;
 
         @Autowired
-        private DetalleEstimacionRepository detalleEstimacionRepository;
+        private com.example.demo.repository.TareaProyectoRepository tareaProyectoRepository;
 
         @Value("${clockify.workspace.id}")
         private String workspaceId;
@@ -100,26 +84,25 @@ public class ClockifyService {
                 headers.set("X-Api-Key", clockify.getClave());
                 HttpEntity<String> entity = new HttpEntity<>(headers);
 
-                List<GitLabTareaDTO> tareasGit = gitLabService.obtenerTareasPorProyecto(projectId);
+                // Cargamos todas las fases para cruzar los nombres
+                List<com.example.demo.entity.Fase> todasLasFases = faseRepository.findAll();
 
-                Set<Long> ids = tareasGit.stream()
-                                .map(GitLabTareaDTO::getIid)
-                                .collect(Collectors.toSet());
+                // Cargamos las tareas del nuevo pivote
+                List<com.example.demo.entity.TareaProyecto> tareasDelProyecto = tareaProyectoRepository.findByIdProyecto(projectId);
 
-                Excel exc = excelRepository.findFirstByIdProyectoAndVigenteTrue(projectId);
+                Set<String> tarValidas = tareasDelProyecto.stream()
+                        .map(com.example.demo.entity.TareaProyecto::getTarea)
+                        .map(detalleEstimacionService::normalizarTexto)
+                        .collect(Collectors.toSet());
 
-                List<DetalleEstimacionDTO> detalles = detalleEstimacionService
-                                .obtenerDetallesPorExcel(exc.getIdExcel());
-
-                Set<String> subValidas = detalles.stream()
-                                .map(DetalleEstimacionDTO::getNombreSubfase)
-                                .map(detalleEstimacionService::normalizarTexto)
-                                .collect(Collectors.toSet());
-
-                Set<String> tarValidas = detalles.stream()
-                                .map(DetalleEstimacionDTO::getTarea)
-                                .map(detalleEstimacionService::normalizarTexto)
-                                .collect(Collectors.toSet());
+                Set<String> subValidas = tareasDelProyecto.stream()
+                        .map(tp -> todasLasFases.stream()
+                                .filter(f -> f.getId().equals(tp.getIdFase()))
+                                .map(com.example.demo.entity.Fase::getNombre)
+                                .findFirst()
+                                .orElse(""))
+                        .map(detalleEstimacionService::normalizarTexto)
+                        .collect(Collectors.toSet());
 
                 ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
                                 clockify.getUrlReal() + "/user",
@@ -166,18 +149,6 @@ public class ClockifyService {
                                         ? detalleEstimacionService.normalizarTexto(subfase)
                                         : null;
 
-                        long idGit = -1;
-                        if (description.contains("#")) {
-                                try {
-                                        int start = description.indexOf("#") + 1;
-                                        int end = description.indexOf(" ", start);
-                                        if (end == -1)
-                                                end = description.length();
-                                        idGit = Long.parseLong(description.substring(start, end));
-                                } catch (Exception e) {
-                                }
-                        }
-
                         String titulo = null;
                         if (description.contains("#")) {
                                 int start = description.indexOf("#");
@@ -193,9 +164,7 @@ public class ClockifyService {
 
                         boolean subfaseValida = subfaseNormalizada != null && subValidas.contains(subfaseNormalizada);
                         boolean tareaValida = tituloNormalizado != null && tarValidas.contains(tituloNormalizado);
-                        boolean idValido = idGit != -1 && ids.contains(idGit);
-
-                        boolean esValida = formatoCorrecto && subfaseValida && tareaValida && idValido;
+                        boolean esValida = formatoCorrecto && subfaseValida && tareaValida;
 
                         if (!esValida)
                                 continue;
@@ -243,7 +212,6 @@ public class ClockifyService {
                                 ClockifyTareaDTO nuevoDto = new ClockifyTareaDTO(
                                                 titulo,
                                                 horas,
-                                                (int) idGit,
                                                 nombreTag,
                                                 description,
                                                 fecha,
@@ -328,26 +296,25 @@ public class ClockifyService {
                 headers.set("X-Api-Key", clockify.getClave());
                 HttpEntity<String> entity = new HttpEntity<>(headers);
 
-                List<GitLabTareaDTO> tareasGit = gitLabService.obtenerTareasPorProyecto(projectId);
+                // Cargamos todas las fases para cruzar los nombres
+                List<com.example.demo.entity.Fase> todasLasFases = faseRepository.findAll();
 
-                Set<Long> ids = tareasGit.stream()
-                                .map(GitLabTareaDTO::getIid)
-                                .collect(Collectors.toSet());
+                // Cargamos las tareas del nuevo pivote
+                List<com.example.demo.entity.TareaProyecto> tareasDelProyecto = tareaProyectoRepository.findByIdProyecto(projectId);
 
-                Excel exc = excelRepository.findFirstByIdProyectoAndVigenteTrue(projectId);
+                Set<String> tarValidas = tareasDelProyecto.stream()
+                        .map(com.example.demo.entity.TareaProyecto::getTarea)
+                        .map(detalleEstimacionService::normalizarTexto)
+                        .collect(Collectors.toSet());
 
-                List<DetalleEstimacionDTO> detalles = detalleEstimacionService
-                                .obtenerDetallesPorExcel(exc.getIdExcel());
-
-                Set<String> subValidas = detalles.stream()
-                                .map(DetalleEstimacionDTO::getNombreSubfase)
-                                .map(detalleEstimacionService::normalizarTexto)
-                                .collect(Collectors.toSet());
-
-                Set<String> tarValidas = detalles.stream()
-                                .map(DetalleEstimacionDTO::getTarea)
-                                .map(detalleEstimacionService::normalizarTexto)
-                                .collect(Collectors.toSet());
+                Set<String> subValidas = tareasDelProyecto.stream()
+                        .map(tp -> todasLasFases.stream()
+                                .filter(f -> f.getId().equals(tp.getIdFase()))
+                                .map(com.example.demo.entity.Fase::getNombre)
+                                .findFirst()
+                                .orElse(""))
+                        .map(detalleEstimacionService::normalizarTexto)
+                        .collect(Collectors.toSet());
 
                 ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
                                 clockify.getUrlReal() + "/user",
@@ -394,18 +361,6 @@ public class ClockifyService {
                                         ? detalleEstimacionService.normalizarTexto(subfase)
                                         : null;
 
-                        long idGit = -1;
-                        if (description.contains("#")) {
-                                try {
-                                        int start = description.indexOf("#") + 1;
-                                        int end = description.indexOf(" ", start);
-                                        if (end == -1)
-                                                end = description.length();
-                                        idGit = Long.parseLong(description.substring(start, end));
-                                } catch (Exception e) {
-                                }
-                        }
-
                         String titulo = null;
                         if (description.contains("#")) {
                                 int start = description.indexOf("#");
@@ -421,10 +376,8 @@ public class ClockifyService {
 
                         boolean tareaValida = tituloNormalizado != null && tarValidas.contains(tituloNormalizado);
                         boolean subfaseValida = subfaseNormalizada != null && subValidas.contains(subfaseNormalizada);
-                        boolean idValido = idGit != -1 && ids.contains(idGit);
-
-                        boolean esValida = formatoCorrecto && subfaseValida && idValido && tareaValida;
-
+                        boolean esValida = formatoCorrecto && subfaseValida && tareaValida;
+                        
                         List<String> tagIds = (List<String>) entry.get("tagIds");
                         String nombreTag = null;
                         if (tagIds != null && !tagIds.isEmpty()) {
@@ -463,7 +416,6 @@ public class ClockifyService {
                                 ClockifyTareaDTO dto = new ClockifyTareaDTO(
                                                 description,
                                                 horas,
-                                                0,
                                                 nombreTag,
                                                 description,
                                                 fecha,
@@ -514,215 +466,199 @@ public class ClockifyService {
      * @param projectId ID de nuestro proyecto local.
      * @return Número de imputaciones nuevas guardadas.
      */
-    @Auditable(
-        accion = "SINCRONIZAR_CLOCKIFY", 
-        tabla = "proyecto", 
-        entidad = Proyecto.class,
-        descripcion = "Se sincronizaron las imputaciones de Clockify para el proyecto con ID: #{#projectId}"
-    )
-  public int sincronizarImputaciones(Long projectId) {
-        Proyecto p = proyectoRepository.findById(projectId)
-                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
+        @Auditable(
+                accion = "SINCRONIZAR_CLOCKIFY", 
+                tabla = "proyecto", 
+                entidad = Proyecto.class,
+                descripcion = "Se sincronizaron las imputaciones de Clockify para el proyecto con ID: #{#projectId}"
+        )
+        public int sincronizarImputaciones(Long projectId) {
+                Proyecto p = proyectoRepository.findById(projectId)
+                        .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
 
-        Excel excelVigente = excelRepository.findFirstByIdProyectoAndVigenteTrue(projectId);
-        String clockifyId = p.getClockifyId();
-        ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
-        
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Api-Key", clockify.getClave());
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-
-        // 1. Obtener ID del usuario maestro
-        ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
-                clockify.getUrlReal() + "/user", HttpMethod.GET, entity,
-                new ParameterizedTypeReference<Map<String, Object>>() {});
-        String userId = (String) userResponse.getBody().get("id");
-
-        // -- OBTENER ETIQUETAS DE CLOCKIFY --
-        String tagsUrl = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/tags";
-        ResponseEntity<List<Map<String, Object>>> tagsResponse = restTemplate.exchange(
-                tagsUrl, HttpMethod.GET, entity,
-                new ParameterizedTypeReference<List<Map<String, Object>>>() {});
-        
-        Map<String, String> mapaEtiquetas = new HashMap<>();
-        if (tagsResponse.getBody() != null) {
-            for (Map<String, Object> tag : tagsResponse.getBody()) {
-                mapaEtiquetas.put((String) tag.get("id"), (String) tag.get("name"));
-            }
-        }
-
-        // Obtener listas de BD local
-        List<Departamento> departamentosBD = departamentoRepository.findAll();
-        List<com.example.demo.entity.Fase> todasLasFasesBD = faseRepository.findAll();
-
-        // 2. Obtener TODAS las entradas de tiempo mediante PAGINACIÓN DINÁMICA
-        List<Map<String, Object>> entradasClockify = new ArrayList<>();
-        int paginaActual = 1;
-        int tamanoPagina = 100;
-        boolean hayMasPaginas = true;
-
-        while (hayMasPaginas) {
-            String url = clockify.getUrlReal() + "/workspaces/" + workspaceId + 
-                         "/user/" + userId + "/time-entries?page=" + paginaActual + "&page-size=" + tamanoPagina;
-
-            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, entity,
-                    new ParameterizedTypeReference<List<Map<String, Object>>>() {});
-
-            List<Map<String, Object>> paginaResultados = response.getBody();
-
-            if (paginaResultados != null && !paginaResultados.isEmpty()) {
-                entradasClockify.addAll(paginaResultados);
+                String clockifyId = p.getClockifyId();
+                ApiConfig clockify = repositorioApi.findByNombre("Clockify Maestro");
                 
-                if (paginaResultados.size() < tamanoPagina) {
-                    hayMasPaginas = false;
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("X-Api-Key", clockify.getClave());
+                HttpEntity<String> entity = new HttpEntity<>(headers);
+
+                // 1. Obtener ID del usuario maestro
+                ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
+                        clockify.getUrlReal() + "/user", HttpMethod.GET, entity,
+                        new ParameterizedTypeReference<Map<String, Object>>() {});
+                String userId = (String) userResponse.getBody().get("id");
+
+                // -- OBTENER ETIQUETAS DE CLOCKIFY --
+                String tagsUrl = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/tags";
+                ResponseEntity<List<Map<String, Object>>> tagsResponse = restTemplate.exchange(
+                        tagsUrl, HttpMethod.GET, entity,
+                        new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+                
+                Map<String, String> mapaEtiquetas = new HashMap<>();
+                if (tagsResponse.getBody() != null) {
+                for (Map<String, Object> tag : tagsResponse.getBody()) {
+                        mapaEtiquetas.put((String) tag.get("id"), (String) tag.get("name"));
+                }
+                }
+
+                // Obtener listas de BD local
+                List<Departamento> departamentosBD = departamentoRepository.findAll();
+                List<com.example.demo.entity.Fase> todasLasFasesBD = faseRepository.findAll();
+
+                // 2. Obtener TODAS las entradas de tiempo mediante PAGINACIÓN DINÁMICA
+                List<Map<String, Object>> entradasClockify = new ArrayList<>();
+                int paginaActual = 1;
+                int tamanoPagina = 100;
+                boolean hayMasPaginas = true;
+
+                while (hayMasPaginas) {
+                String url = clockify.getUrlReal() + "/workspaces/" + workspaceId + 
+                                "/user/" + userId + "/time-entries?page=" + paginaActual + "&page-size=" + tamanoPagina;
+
+                ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                        url, HttpMethod.GET, entity,
+                        new ParameterizedTypeReference<List<Map<String, Object>>>() {});
+
+                List<Map<String, Object>> paginaResultados = response.getBody();
+
+                if (paginaResultados != null && !paginaResultados.isEmpty()) {
+                        entradasClockify.addAll(paginaResultados);
+                        
+                        if (paginaResultados.size() < tamanoPagina) {
+                        hayMasPaginas = false;
+                        } else {
+                        paginaActual++;
+                        }
                 } else {
-                    paginaActual++;
+                        hayMasPaginas = false;
                 }
-            } else {
-                hayMasPaginas = false;
-            }
-        }
-
-        List<ImputacionClockify> nuevasImputaciones = new ArrayList<>();
-
-        // 3. Procesar cada entrada
-        for (Map<String, Object> entry : entradasClockify) {
-            
-            if (!clockifyId.equals(entry.get("projectId"))) { 
-                continue; 
-            }
-            
-            String idEntrada = (String) entry.get("id");
-            String description = (String) entry.get("description");
-            
-            if (description == null || description.isEmpty()) { 
-                continue; 
-            }
-
-            Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
-            double horasClockify = convertirDuracionAHoras((String) timeInterval.get("duration"));
-
-            ImputacionClockify imputacionExistente = imputacionService.obtenerPorIdClockify(idEntrada);
-            
-            if (imputacionExistente != null) {
-                if (Math.abs(imputacionExistente.getHorasTrabajadas() - horasClockify) > 0.01) {
-                    imputacionExistente.setHorasTrabajadas(horasClockify);
-                    imputacionService.actualizarImputacion(imputacionExistente);
                 }
-                continue;
-            }
 
-            ImputacionClockify imputacion = new ImputacionClockify();
-            imputacion.setIdClockifyOriginal(idEntrada);
-            imputacion.setIdProyecto(projectId);
-            imputacion.setDescripcionOriginal(description);
-            imputacion.setHorasTrabajadas(horasClockify);
+                List<ImputacionClockify> nuevasImputaciones = new ArrayList<>();
 
-            String subfase = null;
-            if (description.contains("[") && description.contains("]")) {
-                subfase = description.substring(description.indexOf("[") + 1, description.indexOf("]"));
-                imputacion.setSubfaseExtraida(detalleEstimacionService.normalizarTexto(subfase));
-            }
+                // 3. Procesar cada entrada
+                for (Map<String, Object> entry : entradasClockify) {
+                
+                if (!clockifyId.equals(entry.get("projectId"))) { 
+                        continue; 
+                }
+                
+                String idEntrada = (String) entry.get("id");
+                String description = (String) entry.get("description");
+                
+                if (description == null || description.isEmpty()) { 
+                        continue; 
+                }
 
-            long idGit = -1;
-            if (description.contains("#")) {
+                Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
+                double horasClockify = convertirDuracionAHoras((String) timeInterval.get("duration"));
+
+                ImputacionClockify imputacionExistente = imputacionService.obtenerPorIdClockify(idEntrada);
+                
+                if (imputacionExistente != null) {
+                        if (Math.abs(imputacionExistente.getHorasTrabajadas() - horasClockify) > 0.01) {
+                        imputacionExistente.setHorasTrabajadas(horasClockify);
+                        imputacionService.actualizarImputacion(imputacionExistente);
+                        }
+                        continue;
+                }
+
+                ImputacionClockify imputacion = new ImputacionClockify();
+                imputacion.setIdClockifyOriginal(idEntrada);
+                imputacion.setIdProyecto(projectId);
+                imputacion.setDescripcionOriginal(description);
+                imputacion.setHorasTrabajadas(horasClockify);
+
+                String subfase = null;
+                if (description.contains("[") && description.contains("]")) {
+                        subfase = description.substring(description.indexOf("[") + 1, description.indexOf("]"));
+                        imputacion.setSubfaseExtraida(detalleEstimacionService.normalizarTexto(subfase));
+                }
+
+                if (description.contains("#")) {
+                        int start = description.indexOf("#");
+                        int firstSpace = description.indexOf(" ", start);
+                        if (firstSpace != -1) {
+                        String titulo = description.substring(firstSpace + 1).trim();
+                        imputacion.setTareaExtraida(detalleEstimacionService.normalizarTexto(titulo));
+                        }
+                }
+
+                // -- MAPEO DE DEPARTAMENTO (TAG) --
+                List<String> tagIds = (List<String>) entry.get("tagIds");
+                if (tagIds != null && !tagIds.isEmpty()) {
+                        String idEtiqueta = tagIds.get(0); 
+                        String nombreEtiquetaClockify = mapaEtiquetas.get(idEtiqueta);
+                        
+                        if (nombreEtiquetaClockify != null) {
+                        String etiquetaLimpia = detalleEstimacionService.normalizarTexto(nombreEtiquetaClockify);
+                        
+                        for (Departamento depto : departamentosBD) {
+                                if (detalleEstimacionService.normalizarTexto(depto.getNombre()).equals(etiquetaLimpia)) {
+                                imputacion.setIdDepartamento(depto.getId()); 
+                                break;
+                                }
+                        }
+                        }
+                }
+
+                // -- FECHAS --
                 try {
-                    int start = description.indexOf("#") + 1;
-                    int end = description.indexOf(" ", start);
-                    if (end == -1) { end = description.length(); }
-                    idGit = Long.parseLong(description.substring(start, end));
-                    // Eliminamos imputacion.setIdGitlab() para aplicar la separación de responsabilidades
-                } catch (Exception e) {}
-            }
-
-            if (description.contains("#")) {
-                int start = description.indexOf("#");
-                int firstSpace = description.indexOf(" ", start);
-                if (firstSpace != -1) {
-                    String titulo = description.substring(firstSpace + 1).trim();
-                    imputacion.setTareaExtraida(detalleEstimacionService.normalizarTexto(titulo));
-                }
-            }
-
-            // -- MAPEO DE DEPARTAMENTO (TAG) --
-            List<String> tagIds = (List<String>) entry.get("tagIds");
-            if (tagIds != null && !tagIds.isEmpty()) {
-                String idEtiqueta = tagIds.get(0); 
-                String nombreEtiquetaClockify = mapaEtiquetas.get(idEtiqueta);
-                
-                if (nombreEtiquetaClockify != null) {
-                    String etiquetaLimpia = detalleEstimacionService.normalizarTexto(nombreEtiquetaClockify);
-                    
-                    for (Departamento depto : departamentosBD) {
-                        if (detalleEstimacionService.normalizarTexto(depto.getNombre()).equals(etiquetaLimpia)) {
-                            imputacion.setIdDepartamento(depto.getId()); 
-                            break;
+                        String startStr = (String) timeInterval.get("start");
+                        if (startStr != null) {
+                        java.time.Instant start = java.time.Instant.parse(startStr);
+                        java.time.ZonedDateTime zdtStart = start.atZone(java.time.ZoneId.systemDefault());
+                        imputacion.setFecha(zdtStart.toLocalDate());
+                        imputacion.setHoraInicio(zdtStart.toLocalTime());
                         }
-                    }
-                }
-            }
-
-            // -- FECHAS --
-            try {
-                String startStr = (String) timeInterval.get("start");
-                if (startStr != null) {
-                    java.time.Instant start = java.time.Instant.parse(startStr);
-                    java.time.ZonedDateTime zdtStart = start.atZone(java.time.ZoneId.systemDefault());
-                    imputacion.setFecha(zdtStart.toLocalDate());
-                    imputacion.setHoraInicio(zdtStart.toLocalTime());
-                }
-                String endStr = (String) timeInterval.get("end");
-                if (endStr != null) {
-                    java.time.Instant end = java.time.Instant.parse(endStr);
-                    java.time.ZonedDateTime zdtEnd = end.atZone(java.time.ZoneId.systemDefault());
-                    imputacion.setHoraFin(zdtEnd.toLocalTime());
-                }
-            } catch (Exception e) {
-                imputacion.setFecha(java.time.LocalDate.now());
-            }
-
-            // -- CRUCE POR TEXTO Y APRENDIZAJE DE ID --
-            boolean esValida = false;
-            String subfaseLimpia = imputacion.getSubfaseExtraida(); 
-            String tareaLimpia = imputacion.getTareaExtraida();     
-
-            if (subfaseLimpia != null && !subfaseLimpia.isEmpty() && tareaLimpia != null && !tareaLimpia.isEmpty() && excelVigente != null) {
-                
-                Integer idFaseEncontrada = todasLasFasesBD.stream()
-                    .filter(f -> f.getFasePadre() != null && detalleEstimacionService.normalizarTexto(f.getNombre()).equals(subfaseLimpia))
-                    .map(com.example.demo.entity.Fase::getId)
-                    .findFirst()
-                    .orElse(null);
-
-                if (idFaseEncontrada != null && imputacion.getIdDepartamento() != null) {
-                    DetalleEstimacion estimacion = detalleEstimacionRepository.findFirstByIdExcelAndIdFaseAndTareaIgnoreCaseAndIdDepartamento(
-                            excelVigente.getIdExcel(),
-                            idFaseEncontrada,
-                            tareaLimpia,
-                            imputacion.getIdDepartamento()
-                    );
-
-                    if (estimacion != null) {
-                        imputacion.setIdDetalleEstimacion(estimacion.getId()); 
-                        esValida = true;
-
-                        if ((estimacion.getNumeroGitlab() == null || estimacion.getNumeroGitlab().trim().isEmpty()) && idGit != -1) {
-                            estimacion.setNumeroGitlab(String.valueOf(idGit));
-                            detalleEstimacionRepository.save(estimacion);
+                        String endStr = (String) timeInterval.get("end");
+                        if (endStr != null) {
+                        java.time.Instant end = java.time.Instant.parse(endStr);
+                        java.time.ZonedDateTime zdtEnd = end.atZone(java.time.ZoneId.systemDefault());
+                        imputacion.setHoraFin(zdtEnd.toLocalTime());
                         }
-                    }
+                } catch (Exception e) {
+                        imputacion.setFecha(java.time.LocalDate.now());
                 }
-            }
 
-            imputacion.setValida(esValida);
-            nuevasImputaciones.add(imputacion);
+                // -- CRUCE POR TEXTO Y APRENDIZAJE DE ID --
+                boolean esValida = false;
+                String subfaseLimpia = imputacion.getSubfaseExtraida(); 
+                String tareaLimpia = imputacion.getTareaExtraida();     
+
+                if (subfaseLimpia != null && !subfaseLimpia.isEmpty() && tareaLimpia != null && !tareaLimpia.isEmpty()) {
+                        
+                        Integer idFaseEncontrada = todasLasFasesBD.stream()
+                        .filter(f -> f.getFasePadre() != null && detalleEstimacionService.normalizarTexto(f.getNombre()).equals(subfaseLimpia))
+                        .map(com.example.demo.entity.Fase::getId)
+                        .findFirst()
+                        .orElse(null);
+
+                        if (idFaseEncontrada != null && imputacion.getIdDepartamento() != null) {
+                                // Buscamos en la tabla central en lugar de en el detalle
+                                java.util.Optional<com.example.demo.entity.TareaProyecto> tareaOpt = tareaProyectoRepository.findByIdProyectoAndIdFaseAndIdDepartamentoAndTarea(
+                                        projectId,
+                                        idFaseEncontrada,
+                                        imputacion.getIdDepartamento(),
+                                        tareaLimpia
+                                );
+
+                                if (tareaOpt.isPresent()) {
+                                        imputacion.setIdTareaProyecto(tareaOpt.get().getId()); 
+                                        esValida = true;
+                                }
+                        }
+                }
+
+                imputacion.setValida(esValida);
+                nuevasImputaciones.add(imputacion);
+                }
+
+                if (!nuevasImputaciones.isEmpty()) {
+                        imputacionService.guardarImputaciones(nuevasImputaciones);
+                }
+
+                return nuevasImputaciones.size();
         }
-
-        if (!nuevasImputaciones.isEmpty()) {
-                imputacionService.guardarImputaciones(nuevasImputaciones);
-        }
-
-        return nuevasImputaciones.size();
-    }
 }

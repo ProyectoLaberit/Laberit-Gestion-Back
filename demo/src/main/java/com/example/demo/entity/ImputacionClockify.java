@@ -19,10 +19,6 @@ public class ImputacionClockify {
     @Column(name = "id_proyecto", nullable = false)
     private Long idProyecto;
 
-    @Column(name = "id_detalle_estimacion")
-    private Long idDetalleEstimacion;
-
-
     @Column(name = "subfase_extraida")
     private String subfaseExtraida;
 
@@ -37,7 +33,6 @@ public class ImputacionClockify {
 
     @Column(name = "horas_trabajadas", nullable = false)
     private Double horasTrabajadas;
-
     
     @Column(name = "fecha", nullable = false)
     private LocalDate fecha;
@@ -51,8 +46,8 @@ public class ImputacionClockify {
     @Column(name = "valida", nullable = false)
     private Boolean valida = false;
 
-    @Column(name = "id_gitlab")
-    private Long idGitlab;
+    @Column(name = "id_tarea_proyecto")
+    private Long idTareaProyecto;
 
     public ImputacionClockify() {
     }
@@ -65,9 +60,6 @@ public class ImputacionClockify {
 
     public Long getIdProyecto() { return idProyecto; }
     public void setIdProyecto(Long idProyecto) { this.idProyecto = idProyecto; }
-
-    public Long getIdDetalleEstimacion() { return idDetalleEstimacion; }
-    public void setIdDetalleEstimacion(Long idDetalleEstimacion) { this.idDetalleEstimacion = idDetalleEstimacion; }
 
     public String getSubfaseExtraida() { return subfaseExtraida; }
     public void setSubfaseExtraida(String subfaseExtraida) { this.subfaseExtraida = subfaseExtraida; }
@@ -96,6 +88,7 @@ public class ImputacionClockify {
     public Boolean getValida() { return valida; }
     public void setValida(Boolean valida) { this.valida = valida; }
 
-    public Long getIdGitlab() { return idGitlab; }
-    public void setIdGitlab(Long idGitlab) { this.idGitlab = idGitlab; }
+    public Long getIdTareaProyecto() { return idTareaProyecto; }
+    public void setIdTareaProyecto(Long idTareaProyecto) { this.idTareaProyecto = idTareaProyecto; }
+
 }

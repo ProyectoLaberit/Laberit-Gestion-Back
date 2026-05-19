@@ -8,7 +8,6 @@ import java.util.Date;
 public class ClockifyTareaDTO {
     private String titulo;
     private double horasTrabajadas;
-    private int idGit;
     private String departamento;
     private String descripcion;
     private Date fecha;
@@ -19,10 +18,9 @@ public class ClockifyTareaDTO {
     public ClockifyTareaDTO() {
     }
 
-    public ClockifyTareaDTO( String titulo, double horasTrabajadas, int idGit, String departamento, String descripcion, Date fecha, double inicio, double fin) {
+    public ClockifyTareaDTO( String titulo, double horasTrabajadas, String departamento, String descripcion, Date fecha, double inicio, double fin) {
         this.titulo = titulo;
         this.horasTrabajadas = horasTrabajadas;
-        this.idGit = idGit;
         this.departamento = departamento;
         this.descripcion = descripcion;
         this.fecha = fecha;
@@ -44,14 +42,6 @@ public class ClockifyTareaDTO {
 
     public void setHorasTrabajadas(double horasTrabajadas) {
         this.horasTrabajadas = horasTrabajadas;
-    }
-
-    public int getIdGit() {
-        return idGit;
-    }
-
-    public void setIdGit(int idGit) {
-        this.idGit = idGit;
     }
 
     public String getDepartamento() {

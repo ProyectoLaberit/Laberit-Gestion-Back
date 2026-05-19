@@ -1,7 +1,6 @@
 package com.example.demo.dto;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 /**
  * Clase enviada y/o recibida del front para mostrar o recibir datos 
@@ -12,7 +11,7 @@ public class HistorialExcelDTO {
     private String usuarioNombre;
     private Boolean vigente;
     // Constructor
-   public HistorialExcelDTO(Integer idExcel, LocalDate fechaSubida, String usuarioNombre, Boolean vigente) {
+    public HistorialExcelDTO(Integer idExcel, LocalDate fechaSubida, String usuarioNombre, Boolean vigente) {
         this.idExcel = idExcel;
         this.fechaSubida = fechaSubida;
         this.usuarioNombre = usuarioNombre;

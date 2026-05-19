@@ -56,14 +56,14 @@ public class ImputacionClockifyController {
     // }
 
     // GET: Obtener imputaciones por proyecto, tarea y departamento
-    @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}")
+    @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}")
     public ResponseEntity<ApiResponse> obtenerPorDepartamento(
             @PathVariable Long idProyecto, 
-            @PathVariable Long idDetalleEstimacion, 
+            @PathVariable Long idTareaProyecto, 
             @PathVariable Integer idDepartamento,
             @RequestParam(required = false, defaultValue = "") String subfase) {
         try {
-            List<ImputacionClockify> lista = service.obtenerPorDepartamentoYDetalle(idProyecto, idDetalleEstimacion, idDepartamento, subfase);
+            List<ImputacionClockify> lista = service.obtenerPorDepartamentoYTarea(idProyecto, idTareaProyecto, idDepartamento, subfase);
             return ResponseEntity.ok(new ApiResponse("Imputaciones obtenidas", true, lista));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener imputaciones", false, null));
@@ -71,13 +71,13 @@ public class ImputacionClockifyController {
     }
 
     // GET: Obtener cantidad de válidas por departamento
-    @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}/validas/count")
+    @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}/validas/count")
     public ResponseEntity<ApiResponse> contarValidasDepartamento(
             @PathVariable Long idProyecto, 
-            @PathVariable Long idDetalleEstimacion, 
+            @PathVariable Long idTareaProyecto, 
             @PathVariable Integer idDepartamento) {
         try {
-            Integer total = service.contarValidasPorDepartamento(idProyecto, idDetalleEstimacion, idDepartamento);
+            Integer total = service.contarValidasPorDepartamento(idProyecto, idTareaProyecto, idDepartamento);
             return ResponseEntity.ok(new ApiResponse("Recuento de válidas", true, total));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al contar válidas", false, 0));
@@ -85,13 +85,13 @@ public class ImputacionClockifyController {
     }
 
     // GET: Obtener cantidad de inválidas por departamento
-    @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}/invalidas/count")
+    @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}/invalidas/count")
     public ResponseEntity<ApiResponse> contarInvalidasDepartamento(
             @PathVariable Long idProyecto, 
-            @PathVariable Long idDetalleEstimacion, 
+            @PathVariable Long idTareaProyecto, 
             @PathVariable Integer idDepartamento) {
         try {
-            Integer total = service.contarInvalidasPorDepartamento(idProyecto, idDetalleEstimacion, idDepartamento);
+            Integer total = service.contarInvalidasPorDepartamento(idProyecto, idTareaProyecto, idDepartamento);
             return ResponseEntity.ok(new ApiResponse("Recuento de inválidas", true, total));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al contar inválidas", false, 0));
@@ -99,12 +99,12 @@ public class ImputacionClockifyController {
     }
 
     // PUT: Alternar validación enviando el ID de la tarea para cuando pase a true
-    @PutMapping("/alternar-validacion/{idImputacion}/{idDetalleEstimacion}")
+    @PutMapping("/alternar-validacion/{idImputacion}/{idTareaProyecto}")
     public ResponseEntity<ApiResponse> alternarValidacion(
             @PathVariable Long idImputacion, 
-            @PathVariable Long idDetalleEstimacion) {
+            @PathVariable Long idTareaProyecto) {
         try {
-            ImputacionClockify actualizada = service.alternarEstadoValidacion(idImputacion, idDetalleEstimacion);
+            ImputacionClockify actualizada = service.alternarEstadoValidacion(idImputacion, idTareaProyecto);
             if (actualizada != null) {
                 return ResponseEntity.ok(new ApiResponse("Estado e ID actualizados correctamente", true, actualizada));
             } else {
@@ -150,10 +150,10 @@ public class ImputacionClockifyController {
     }
 
     // GET: Filtrar imputaciones por rango de fechas
-    @GetMapping("/departamento/{idProyecto}/{idDetalleEstimacion}/{idDepartamento}/fechas")
+    @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}/fechas")
     public ResponseEntity<ApiResponse> obtenerPorFechas(
             @PathVariable Long idProyecto, 
-            @PathVariable Long idDetalleEstimacion, 
+            @PathVariable Long idTareaProyecto, 
             @PathVariable Integer idDepartamento,
             @RequestParam(required = false, defaultValue = "") String subfase,
             @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate desde,
@@ -162,7 +162,7 @@ public class ImputacionClockifyController {
             if (desde.isAfter(hasta)) {
                 return ResponseEntity.badRequest().body(new ApiResponse("La fecha 'desde' no puede ser posterior a 'hasta'", false, null));
             }
-            List<ImputacionClockify> lista = service.filtrarPorFechas(idProyecto, idDetalleEstimacion, idDepartamento, subfase, desde, hasta);
+            List<ImputacionClockify> lista = service.filtrarPorFechas(idProyecto, idTareaProyecto, idDepartamento, subfase, desde, hasta);
             return ResponseEntity.ok(new ApiResponse("Imputaciones filtradas por fecha", true, lista));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al filtrar por fechas", false, null));

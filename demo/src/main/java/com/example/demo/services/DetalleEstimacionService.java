@@ -15,7 +15,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.annotation.Auditable;
 import com.example.demo.dto.DetalleEstimacionDTO;
-import com.example.demo.dto.HistorialExcelDTO;
 import com.example.demo.dto.ResumenTiemposDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
 import com.example.demo.entity.Departamento;
@@ -401,7 +400,7 @@ public class DetalleEstimacionService {
                         dto.setNombreDepartamento(nombreDepto);
                     }
 
-                    Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(entidad.getId());
+                    Double horasReales = imputacionClockifyRepository.sumarHorasPorTarea(entidad.getIdTareaProyecto());
                     dto.setTiempoReal(horasReales != null ? Math.round(horasReales * 10.0) / 10.0 : 0.0);
 
                     return dto;
@@ -453,7 +452,7 @@ public class DetalleEstimacionService {
 
             double sumaReal = 0.0;
             for (DetalleEstimacion det : entry.getValue()) {
-                Double horasReales = imputacionClockifyRepository.sumarHorasPorDetalle(det.getId());
+                Double horasReales = imputacionClockifyRepository.sumarHorasPorTarea(det.getIdTareaProyecto());
                 if (horasReales != null) {
                     sumaReal += horasReales;
                 }
@@ -509,7 +508,7 @@ public class DetalleEstimacionService {
         }
 
         List<DetalleEstimacion> todasLasTareas = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
-        List<Object[]> sumasBD = imputacionClockifyRepository.sumarHorasValidasAgrupadasPorDetalle(idProyecto);
+        List<Object[]> sumasBD = imputacionClockifyRepository.sumarHorasValidasAgrupadasPorTarea(idProyecto);
         
         Map<Long, Double> mapaHorasReales = new HashMap<>();
         for (Object[] fila : sumasBD) {
@@ -544,7 +543,7 @@ public class DetalleEstimacionService {
             double sumaMaxTotal = 0.0;
 
             for (DetalleEstimacion det : tareas) {
-                Double realValido = mapaHorasReales.getOrDefault(det.getId(), 0.0);
+                Double realValido = mapaHorasReales.getOrDefault(det.getIdTareaProyecto(), 0.0);
                 
                 sumaRealTotal += realValido;
                 sumaMinTotal += (det.getTiempoMin() != null ? det.getTiempoMin() : 0.0);
@@ -759,11 +758,11 @@ public class DetalleEstimacionService {
      * @param id ID único de la estimación numérico a remover.
      * @return La entidad DetalleEstimacion eliminada.
      */
-   @Auditable(
+    @Auditable(
         accion = "BORRAR_ESTIMACION", 
         tabla = "detalle_estimacion", 
         entidad = DetalleEstimacion.class,
-        descripcion = "Se eliminó la estimación de la tarea '#{#resultado.tarea}'"
+        descripcion = "Se eliminó la estimación asociada a la tarea con ID '#{#resultado.idTareaProyecto}'"
     )
     public DetalleEstimacion eliminarTarea(Long id) {
         DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
