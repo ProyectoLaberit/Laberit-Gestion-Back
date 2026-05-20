@@ -276,22 +276,26 @@ public class DetalleEstimacionService {
         return cellA != null && normalizarTexto(cellA.toString()).contains("total");
     }
 
-    /**
+   /**
      * Recupera y enriquece los detalles de estimación de un Excel cruzando los datos numéricos con el pivote TareaProyecto.
      * @param idExcel ID del libro Excel.
      * @return Lista de DTOs mapeados con los nombres de fases y departamentos.
      */
     public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
         List<DetalleEstimacion> detalles = detalleEstimacionRepository.findByIdExcel(idExcel);
+        System.out.println("[LOG LECTURA] Tareas numéricas encontradas en detalle_estimacion: " + detalles.size() + " para el Excel ID: " + idExcel);
+
         List<Fase> todasLasFases = faseRepository.findAll();
         List<Departamento> todosLosDeptos = departamentoRepository.findAll();
 
         Excel excel = excelRepository.findById(idExcel).orElse(null);
         Long idProyecto = (excel != null) ? excel.getIdProyecto() : null;
+        System.out.println("[LOG LECTURA] Proyecto ID asociado al Excel: " + idProyecto);
         
         List<TareaProyecto> todasTareasProyecto = (idProyecto != null) 
             ? tareaProyectoRepository.findAll().stream().filter(t -> { return t.getIdProyecto().equals(idProyecto); }).collect(Collectors.toList())
             : new ArrayList<>();
+        System.out.println("[LOG LECTURA] Tareas totales encontradas en el pivote tarea_proyecto para este proyecto: " + todasTareasProyecto.size());
             
         Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
             .collect(Collectors.toMap(TareaProyecto::getId, t -> { return t; }, (a, b) -> { return a; }));
@@ -341,11 +345,12 @@ public class DetalleEstimacionService {
                     dto.setNombreFase("Desconocido");
                     dto.setNombreSubfase("Desconocido");
                 }
+            } else {
+                System.out.println("[ALERTA] No se encontró el pivote TareaProyecto para el id_tarea_proyecto: " + entidad.getIdTareaProyecto());
             }
             return dto;
         }).collect(Collectors.toList());
     }
-
     /**
      * Recupera las entidades de estimación puras (numéricas) asociadas a un Excel.
      * @param idExcel ID del Excel.
@@ -415,16 +420,18 @@ public class DetalleEstimacionService {
                 .collect(Collectors.toList());
     }
 
-    /**
+  /**
      * Obtiene e integra los totales estimativos y reales de las tareas de una subfase del proyecto actual.
      * @param idProyecto ID del proyecto.
      * @param idSubfase ID de la subfase.
      * @param idExcelElegido ID opcional del Excel.
-     * @return Lista de DTOs agregados por nombre de tarea.
+     * @return Lista de DTOs de las tareas agregadas de la subfase.
      */
     public List<TareaSubfaseDTO> obtenerTareasSubfase(long idProyecto, Integer idSubfase, Integer idExcelElegido){
+        System.out.println("[LOG SUBFASE] Solicitando tareas de Subfase ID: " + idSubfase + " para Proyecto ID: " + idProyecto);
         Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
         if (idExcelBase == null) {
+            System.out.println("[LOG SUBFASE] No se localizó ningún Excel base activo.");
             return new ArrayList<>();
         }
 
@@ -447,6 +454,8 @@ public class DetalleEstimacionService {
                     return tp != null ? tp.getTarea() : "Desconocido";
                 }));
 
+        System.out.println("[LOG SUBFASE] Cantidad de tareas agrupadas listas para enviar al Front: " + tareasAgrupadas.size());
+
         List<TareaSubfaseDTO> resultado = new ArrayList<>();
         
         for (Map.Entry<String, List<DetalleEstimacion>> entry : tareasAgrupadas.entrySet()) {
@@ -459,7 +468,7 @@ public class DetalleEstimacionService {
 
             double sumaReal = 0.0;
             for (DetalleEstimacion det : entry.getValue()) {
-                Double horasReales = imputacionClockifyRepository.sumarHorasPorTarea(det.getIdTareaProyecto());
+                Double horasReales = imputacionClockifyRepository.sumarHorasValidas(det.getId());
                 if (horasReales != null) {
                     sumaReal += horasReales;
                 }
@@ -500,7 +509,6 @@ public class DetalleEstimacionService {
 
         return resultado;
     }
-
     /**
      * Calcula masivamente los resúmenes y medias de tiempos de todas las subfases indexándolos por el ID de subfase.
      * @param idProyecto ID del proyecto.
