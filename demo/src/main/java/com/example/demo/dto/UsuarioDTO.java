@@ -8,7 +8,6 @@ public class UsuarioDTO {
     private Integer id;
     private String nombre;
     private String email;
-    private Boolean excels;
 
     // Para el Endpoint 2 (Crear Usuario)
     private String password;
@@ -52,14 +51,6 @@ public class UsuarioDTO {
 
     public void setEmail(String email) {
         this.email = email;
-    }
-
-    public Boolean getExcels() {
-        return excels;
-    }
-
-    public void setExcels(Boolean excels) {
-        this.excels = excels;
     }
 
     public String getPassword() {

@@ -27,9 +27,6 @@ public class Usuario {
     @Column(name = "foto")
     private String foto;
 
-    @Column(name = "excels")
-    private Boolean excels;
-
     @Column(name = "password_reset_token_hash", length = 64)
     private String passwordResetTokenHash;
 
@@ -37,9 +34,9 @@ public class Usuario {
     private LocalDateTime passwordResetExpiresAt;
 
     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "usuario_x_rol", // El nombre de la tabla intermedia
-            joinColumns = @JoinColumn(name = "id_usuario"), // La columna que apunta al usuario
-            inverseJoinColumns = @JoinColumn(name = "id_rol") // La columna que apunta al rol
+    @JoinTable(name = "usuario_x_rol", 
+            joinColumns = @JoinColumn(name = "id_usuario"), 
+            inverseJoinColumns = @JoinColumn(name = "id_rol") 
     )
     private List<Rol> roles = new ArrayList<>();
 
@@ -48,7 +45,6 @@ public class Usuario {
 
     // --- GETTERS Y SETTERS ---
 
-     
     public Integer getId() {
         return id;
     }
@@ -87,14 +83,6 @@ public class Usuario {
 
     public void setFoto(String foto) {
         this.foto = foto;
-    }
-
-    public Boolean getExcels() {
-        return excels;
-    }
-
-    public void setExcels(Boolean excels) {
-        this.excels = excels;
     }
 
     public String getPasswordResetTokenHash() {
