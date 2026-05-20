@@ -12,6 +12,6 @@ import com.example.demo.entity.Fase;
 @Repository
 public interface FaseRepository extends JpaRepository<Fase, Integer> {
     
-    @Query("SELECT f FROM Fase f WHERE f.id IN (SELECT DISTINCT d.idFase FROM DetalleEstimacion d WHERE d.idExcel = :idExcel)")
+    @Query("SELECT f FROM Fase f WHERE f.id IN (SELECT DISTINCT tp.idFase FROM DetalleEstimacion d, TareaProyecto tp WHERE d.idTareaProyecto = tp.id AND d.idExcel = :idExcel)")
     List<Fase> findSubfasesConTareasPorExcel(@Param("idExcel") Integer idExcel);
 }
