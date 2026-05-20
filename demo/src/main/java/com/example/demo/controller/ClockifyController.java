@@ -63,7 +63,11 @@ public class ClockifyController {
     }
     
 
-    
+    /**
+     * Metodo que sincroniza los proyectos de clockify y sube los proyectos de clockify que no estan en la base de datos a la base de datos
+     * @param idProyecto id del proyecto del que se suben las imputaciones de clockify
+     * @return ApiResopnse con un boolean a true si no hubo fallos en la sincronizacion y false si hubo problemas
+     */
     @PostMapping("/sincronizar/{idProyecto}")
     public ApiResponse sincronizarConClockify(@PathVariable Long idProyecto) {
         try {

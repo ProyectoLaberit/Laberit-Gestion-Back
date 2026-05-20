@@ -103,6 +103,12 @@ public class ProyectoController {
     /**
      * Alias de compatibilidad para clientes que aun envian POST al editar.
      */
+    /**
+     * Metodo que actualiza un proyecto
+     * @param id id del proyecto a actualizar
+     * @param proyectoDTO objeto tipo ProyectoDTO con la nueva informacion del proyecto
+     * @return ApiResponse bolean true si el cambio se realiza correctamente y un json con el proyecto actualizado o un boolean false si hubo algun fallo en la actualizacion
+     */
     @PostMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('SuperAdministrador', 'Administrador')")
     public ResponseEntity<ApiResponse> actualizarProyectoCompat(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {

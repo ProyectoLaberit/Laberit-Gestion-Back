@@ -48,9 +48,9 @@ public class FaseController {
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(a -> a.equals("ROLE_ADMINISTRADOR") || a.equals("ROLE_SUPERADMINISTRADOR"));
     }
-
     /**
-     * Devuelve todas las fases raíz (sin fase padre) para poblar el select del paso 2.
+     * Metodo que devuelve todas las fases existentes
+     * @return ApiResponse json que contiene una lista de todas las fases existentes
      */
     @GetMapping("/todas")
     public ApiResponse obtenerTodasLasFases() {
@@ -65,8 +65,10 @@ public class FaseController {
     }
 
     /**
-     * Crea una nueva fase raíz (sin fase padre).
-     */
+     * Metodo que crea una nueva fase 
+     * @param dto Objeto tipo FaseDTO que contiene la informacion de la fase a crear
+     * @return ApiResponse con un boolean a true si la creacion a tenido exito o false si no
+    */
     @PostMapping
     public ApiResponse crearFase(@RequestBody FaseDTO dto) {
         if (!esAdmin()) {
@@ -89,7 +91,9 @@ public class FaseController {
     }
 
     /**
-     * Crea una nueva subfase asignada a una fase padre.
+     * Metodo para crear una nueva subfase para una fase padre
+     * @param dto Objeto FaseDTO con la informacion de la nueva subfase a crear (incluye el id de la fase padre)
+     * @return ApiResponse con un boolean a true si la creacion a tenido exito o false si no 
      */
     @PostMapping("/subfase")
     public ApiResponse crearSubfase(@RequestBody FaseDTO dto) {

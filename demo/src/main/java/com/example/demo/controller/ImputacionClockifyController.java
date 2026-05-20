@@ -55,7 +55,14 @@ public class ImputacionClockifyController {
     //     }
     // }
 
-    // GET: Obtener imputaciones por proyecto, tarea y departamento
+    /**
+     * Metodo que devuelve las imputaciones de una tarea de cierta subfase de cierto proyecto
+     * @param idProyecto id del proyecto
+     * @param idTareaProyecto id de la tarea a buscar
+     * @param idDepartamento id del departamento a buscar 
+     * @param subfase nombre de la subfase donde buscar, opcional
+     * @return ApiResponse json que contiene la lista de las imputaciones del departamento en la tarea
+     */
     @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}")
     public ResponseEntity<ApiResponse> obtenerPorDepartamento(
             @PathVariable Long idProyecto, 
@@ -69,8 +76,13 @@ public class ImputacionClockifyController {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener imputaciones", false, null));
         }
     }
-
-    // GET: Obtener cantidad de válidas por departamento
+    /**
+     * Metodo para obtener las imputaciones de clockify de un departamento correctamente escritas
+     * @param idProyecto id del proyecto donde buscar
+     * @param idTareaProyecto id de la tarea que comprobar
+     * @param idDepartamento id del departamento al que pertenecen las imputaciones
+     * @return ApiResponse json que contiene el numero de imputaciones escritas correctamente
+     */
     @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}/validas/count")
     public ResponseEntity<ApiResponse> contarValidasDepartamento(
             @PathVariable Long idProyecto, 
@@ -84,7 +96,13 @@ public class ImputacionClockifyController {
         }
     }
 
-    // GET: Obtener cantidad de inválidas por departamento
+    /**
+     * Metodo para obtener las imputaciones de clockify de un departamento mal escritas
+     * @param idProyecto id del proyecto donde buscar
+     * @param idTareaProyecto id de la tarea que comprobar
+     * @param idDepartamento id del departamento al que pertenecen las imputaciones
+     * @return ApiResponse json que contiene el numero de imputaciones escritas incorrectamente
+     */
     @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}/invalidas/count")
     public ResponseEntity<ApiResponse> contarInvalidasDepartamento(
             @PathVariable Long idProyecto, 
@@ -97,8 +115,12 @@ public class ImputacionClockifyController {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al contar inválidas", false, 0));
         }
     }
-
-    // PUT: Alternar validación enviando el ID de la tarea para cuando pase a true
+    /**
+     * Metodo que convierte una imputacion incorrecta en una correcta y viceversa
+     * @param idImputacion id de la imputacion
+     * @param idTareaProyecto id de la tarea a la que pertenece
+     * @return ApiResponse con un boolean a true si el cambio se realiza correctamente y a false si no
+     */
     @PutMapping("/alternar-validacion/{idImputacion}/{idTareaProyecto}")
     public ResponseEntity<ApiResponse> alternarValidacion(
             @PathVariable Long idImputacion, 
@@ -114,8 +136,12 @@ public class ImputacionClockifyController {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al procesar el cambio", false, null));
         }
     }
-
-    // PUT: Editar el campo tarea_extraida de una imputación
+    /**
+     * metodo para editar el campo tarea_extraida de una imputacion
+     * @param idImputacion id de la imputacion a cambiar
+     * @param body json que contiene el nuevo contenido del campo tarea_extraida
+     * @return ApiResponse con un boolean a true si el cambio se realiza correctamente y false si no
+     */
     @PutMapping("/editar-tarea/{idImputacion}")
     public ResponseEntity<ApiResponse> editarTarea(
             @PathVariable Long idImputacion, 
@@ -133,8 +159,11 @@ public class ImputacionClockifyController {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al editar la tarea", false, null));
         }
     }
-
-    // DELETE: Borrar una imputación por completo de la base de datos
+    /**
+     * Meotod para borrar una imputacion de la base de datos
+     * @param idImputacion id de la imputacion a borrar
+     * @return ApiResponse con un boolean a true si el cambio se elimina correctamente y false si no
+     */
     @DeleteMapping("/borrar/{idImputacion}")
     public ResponseEntity<ApiResponse> borrarImputacion(@PathVariable Long idImputacion) {
         try {
@@ -148,8 +177,16 @@ public class ImputacionClockifyController {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al borrar la imputación", false, null));
         }
     }
-
-    // GET: Filtrar imputaciones por rango de fechas
+    /**
+     * metodo para filtrar las imputaciones obtenida por rango de fechas
+     * @param idProyecto id del proyecto al que pertenecen
+     * @param idTareaProyecto id de la tarea a la que pertenecen
+     * @param idDepartamento id del departamento al que pertenecen
+     * @param subfase nombre de la subfase a la que pertenecen
+     * @param desde fecha desde la cual se quiere filtrar, opcional
+     * @param hasta fecha hasta la cual se quiere buscar, opcional
+     * @return ApiResponse json que contiene la lista de imputaciones obtenidas
+     */
     @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}/fechas")
     public ResponseEntity<ApiResponse> obtenerPorFechas(
             @PathVariable Long idProyecto, 

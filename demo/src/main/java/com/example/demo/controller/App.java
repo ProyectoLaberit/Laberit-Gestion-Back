@@ -12,7 +12,10 @@ import com.example.demo.dto.ApiResponse;
 @RestController
 @RequestMapping("/api")
 
-public class HolaController {
+/**
+ * NO TOCAR!!!!!!
+ */
+public class App {
    @GetMapping("/conectar")
     public ApiResponse conectar() {
         // Aquí es donde el Back-end genera su respuesta

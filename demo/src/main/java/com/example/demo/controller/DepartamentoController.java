@@ -46,7 +46,11 @@ public class DepartamentoController {
             return new ApiResponse("Error al recuperar: " + e.getMessage(), false, null);
         }
     }
-    // 2. CREAR
+    /**
+     * Metodo para crear un departamento
+     * @param dto objeto departamentoDTO con los datos del departamento a crear
+     * @return ApiResponse con un boolean true si el departamento de crea sin problemas y false si hubo algun problema a la hora de crearlo
+     */
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')") // <--- Seguridad
     public ApiResponse crearDepartamento(@RequestBody DepartamentoDTO dto) {
@@ -58,6 +62,12 @@ public class DepartamentoController {
         }
     }
     // 3. ACTUALIZAR
+    /**
+     * Metodo para actualizar la informacion de un departamento
+     * @param id id del departamento a actualizar
+     * @param dto objeto DepartamentoDTO con la nueva informacion del departamento
+     * @return ApiResponse con un booleano true si la actuaizacion ha tenido exito y false si hubo algun problema
+     */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ApiResponse actualizarDepartamento(@PathVariable int id, @RequestBody DepartamentoDTO dto) {
@@ -68,7 +78,11 @@ public class DepartamentoController {
             return new ApiResponse("Error al actualizar: " + e.getMessage(), false, null);
         }
     }
-    // 4. ELIMINAR
+    /**
+     * Metodo para eliminar un departamento
+     * @param id id del departamento a eliminar
+     * @return ApiResponse con booleano a true si el borrado ha tenido exito y false si hubo algun problema
+     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ApiResponse eliminarDepartamento(@PathVariable int id) {

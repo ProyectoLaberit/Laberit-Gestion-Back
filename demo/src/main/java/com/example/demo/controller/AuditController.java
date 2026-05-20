@@ -19,6 +19,10 @@ public class AuditController {
     @Autowired
     private AuditService auditService;
 
+    /**
+     * Metodo que comprueba si el usuario que envia la pregunta tiene el rol de superadministrador
+     * @return Boolean true si es un superadmin, false si no lo es
+     */
     private boolean esSuperAdmin() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) return false;
@@ -27,6 +31,10 @@ public class AuditController {
                 .anyMatch(a -> a.equals("ROLE_SUPERADMINISTRADOR"));
     }
 
+    /**
+     * metodo para obtener todos las operaciones realizadas guardadas en la base de datos
+     * @return ApiResponse json que contiene los logs almacenados en la base de datos
+     */
     @GetMapping
     public ApiResponse obtenerTodos() {
         if (!esSuperAdmin()) {

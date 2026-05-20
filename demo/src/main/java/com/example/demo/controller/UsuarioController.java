@@ -66,6 +66,11 @@ public class UsuarioController {
 
     // ── Endpoints ─────────────────────────────────────────────────────────────
 
+    /**
+     * Metodo para iniciar sesion en la aplicacion
+     * @param login objeto tipo LoginRequest con los datos de login
+     * @return Apiresponse con un boolean a true si se verifica el inicio de sesion y un json con los datos del usuario y el token de autenticacion o un boolean false si no se pasa la verificacion
+     */
     @PostMapping("/login")
     public ApiResponse verificar(@RequestBody LoginRequest login) {
         Usuario usuario = usuarioService.validarUsuario(login);
@@ -89,6 +94,11 @@ public class UsuarioController {
         }
     }
 
+    /**
+     * metodo para recuperacion de contraseña
+     * @param dto Objeto tipo usuarioDTO que contiene la informacion necesaria para el cambio de contraseña
+     * @return Apiresponse con boolean true si eiste un ususario con ese correo y el mensaje de que vas a recibir un correo electronico para el cambio de contraseña o false si no existe el usuario con ese correo o oçhubo algun fallo en la recuperacion
+     */
     @PostMapping("/forgot-password")
     public ApiResponse forgotPassword(@RequestBody UsuarioDTO dto) {
         try {
@@ -101,6 +111,11 @@ public class UsuarioController {
         }
     }
 
+    /**
+     * Metodo para cambiar la contraseña de un usuario 
+     * @param dto objeto tipo UsuarioDTO que contiene la informacoon del usuario a cambiar la contraseña y la contraseña nueva
+     * @return ApiResponse con boolean true si el cambio se realiza correctamente o false si no
+     */
     @PostMapping("/reset-password")
     public ApiResponse resetPassword(@RequestBody UsuarioDTO dto) {
         try {
@@ -114,7 +129,8 @@ public class UsuarioController {
     }
 
     /**
-     * Listar todos los usuarios: solo SuperAdministrador.
+     * Metodo que devuelve todos los usuarios existentes en la base de datos, solo para admin o superadmin
+     * @return ApiResponse json que contiene la lista de usuarios y su informacion
      */
     @GetMapping
     public ApiResponse listarUsuarios() {
@@ -132,6 +148,12 @@ public class UsuarioController {
     /**
      * Obtener un usuario por ID: SuperAdministrador o el propio usuario.
      */
+
+    /**
+     * Metodo para obtener la informacion de un usuario (solo admin o superadmin) o del propio usuario actual
+     * @param id id del usuario a consultar la informacion  
+     * @return ApiResponse json que contiene la informacion del usuario consultado
+     */
     @GetMapping("/{id}")
     public ApiResponse obtenerUsuarioPorId(@PathVariable Integer id) {
         String emailAuth = getEmailAutenticado();
@@ -148,6 +170,11 @@ public class UsuarioController {
     }
 
 
+    /**
+     * Metodo para crear un usuario
+     * @param usuarioDTO objeto tipo usuarioDTO con la informacion del nuevo usuario a crear
+     * @return ApiResponse con boleano true si el usuario se creo correctamente y un json con la informacion del nuevo usuario o false si no se creao correctamente
+     */
     @PostMapping
     public ApiResponse crearUsuario(@RequestBody UsuarioDTO usuarioDTO) {
         if (!esAdmin()) {
@@ -167,6 +194,11 @@ public class UsuarioController {
     /**
      * Eliminar usuario: solo ADMIN (garantizado por SecurityConfig).
      * ADMIN no puede eliminarse a sí mismo.
+     */
+    /**
+     * Metodo para eliminar un usuario
+     * @param id id del usuario a eliminar
+     * @return ApiResponse con boleano true si el usuario se elimina correctamente o false si no
      */
     @DeleteMapping("/{id}")
     public ApiResponse eliminarUsuario(@PathVariable Integer id) {
@@ -212,10 +244,14 @@ public class UsuarioController {
             return new ApiResponse("Error inesperado al cambiar la contraseña: " + e.getMessage(), false, null);
         }
     }
-
     /**
-     * Cambiar foto:
-     * Mismas reglas que cambiar contraseña.
+     * metodo para cambiar el icono del perfil del usuario
+     * Admin puede cambiar todos los iconos
+     * Manager solo los usuarios con rol User
+     * Usuarios solo la suya propia
+     * @param id id del usuario del que se quiere cambiar el icono
+     * @param archivo nuevo icono
+     * @return ApiResponse con boleano true si el icono se cambia correctamente o false si no
      */
     @PutMapping(value = "/{id}/foto", consumes = "multipart/form-data")
     public ApiResponse cambiarFoto(
@@ -238,6 +274,12 @@ public class UsuarioController {
 
     /**
      * Cambiar rol: solo ADMIN.
+     */
+    /**
+     * Metodo para cambiar el rol de un usuario (solo administradores)
+     * @param id id del usuario a cambiar
+     * @param dto objeto tipo usuarioDTO con el nuevo rol
+     * @return ApiResponse con boleano true si el rol se cambia correctamente o false si no
      */
     @PutMapping("/{id}/rol")
     public ApiResponse cambiarRol(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
@@ -269,6 +311,15 @@ public class UsuarioController {
      * Actualizar nombre/email/foto del perfil:
      * Mismas reglas que cambiar contraseña.
      */
+    /**
+     * metodo para cambiar el nombre correo o foto de perfil
+     * Admin puede cambiar todos los usuarios
+     * Manager solo los usuarios con rol User
+     * Usuarios solo a si mismos
+     * @param id id del usuario a cambiar
+     * @param dto objeto tipo usuarioDTO con la nueva informacion del usuario
+     * @return ApiResponse con boleano true si el usuario se actualiza correctamente y un json con la informacion nueva del usuario o false si no
+     */
     @PutMapping("/{id}")
     public ApiResponse actualizarUsuario(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
         try {
@@ -291,6 +342,15 @@ public class UsuarioController {
      * - ADMIN: puede editar a cualquiera.
      * - MANAGER: solo puede editar a usuarios con rol USER.
      * - USER: solo puede editarse a sí mismo.
+     */
+    /**
+     * metodo que determina si el usuario actual puede editar al usuario que se consulta
+     * - ADMIN: puede editar a cualquiera.
+     * - MANAGER: solo puede editar a usuarios con rol USER.
+     * - USER: solo puede editarse a sí mismo.
+     * @param idObjetivo id del usuario a cambiar
+     * @param emailAuth mail del usuario
+     * @return boolean true si puede editar o false si no
      */
     private boolean puedeEditarUsuario(Integer idObjetivo, String emailAuth) {
         if (esAdmin()) return true;
