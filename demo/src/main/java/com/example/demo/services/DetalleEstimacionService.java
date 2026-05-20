@@ -178,7 +178,7 @@ public class DetalleEstimacionService {
 
                             DetalleEstimacion detalle = new DetalleEstimacion();
                             detalle.setIdExcel(idExcelGenerado);
-                            detalle.setIdTareaProyecto(tareaProyecto.getId());
+                            detalle.setIdTareaProyecto(tareaProyecto.getIdTareaProyecto());
                             detalle.setTiempoMin(min != null ? min : 0.0);
                             detalle.setTiempoMax(max != null ? max : 0.0);
                             
@@ -298,7 +298,7 @@ public class DetalleEstimacionService {
         System.out.println("[LOG LECTURA] Tareas totales encontradas en el pivote tarea_proyecto para este proyecto: " + todasTareasProyecto.size());
             
         Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
-            .collect(Collectors.toMap(TareaProyecto::getId, t -> { return t; }, (a, b) -> { return a; }));
+            .collect(Collectors.toMap(TareaProyecto::getIdTareaProyecto, t -> { return t; }, (a, b) -> { return a; }));
 
         return detalles.stream().map(entidad -> {
             DetalleEstimacionDTO dto = new DetalleEstimacionDTO();
@@ -382,7 +382,7 @@ public class DetalleEstimacionService {
                 .collect(Collectors.toList());
                 
         Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
-                .collect(Collectors.toMap(TareaProyecto::getId, t -> { return t; }, (a, b) -> { return a; }));
+                .collect(Collectors.toMap(TareaProyecto::getIdTareaProyecto, t -> { return t; }, (a, b) -> { return a; }));
 
         return todasLasEstimaciones.stream()
                 .filter(d -> {
@@ -442,7 +442,7 @@ public class DetalleEstimacionService {
                 .collect(Collectors.toList());
                 
         Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
-                .collect(Collectors.toMap(TareaProyecto::getId, t -> { return t; }, (a, b) -> { return a; }));
+                .collect(Collectors.toMap(TareaProyecto::getIdTareaProyecto, t -> { return t; }, (a, b) -> { return a; }));
 
         Map<String, List<DetalleEstimacion>> tareasAgrupadas = todasLasEstimaciones.stream()
                 .filter(d -> {
@@ -537,7 +537,7 @@ public class DetalleEstimacionService {
                 .collect(Collectors.toList());
                 
         Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
-                .collect(Collectors.toMap(TareaProyecto::getId, t -> { return t; }, (a, b) -> { return a; }));
+                .collect(Collectors.toMap(TareaProyecto::getIdTareaProyecto, t -> { return t; }, (a, b) -> { return a; }));
 
         Map<Integer, List<DetalleEstimacion>> tareasPorSubfase = todasLasTareas.stream()
             .filter(d -> { return mapaTareasProyecto.containsKey(d.getIdTareaProyecto()); })
@@ -761,7 +761,7 @@ public class DetalleEstimacionService {
 
         DetalleEstimacion nueva = new DetalleEstimacion();
         nueva.setIdExcel(dto.getIdExcel());
-        nueva.setIdTareaProyecto(tareaProyecto.getId());
+        nueva.setIdTareaProyecto(tareaProyecto.getIdTareaProyecto());
         nueva.setTiempoMin(dto.getTiempoMin());
         nueva.setTiempoMax(dto.getTiempoMax());
 

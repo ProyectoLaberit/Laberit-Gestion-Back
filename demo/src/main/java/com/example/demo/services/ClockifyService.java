@@ -646,7 +646,7 @@ public class ClockifyService {
                                                 .findFirst();
 
                                         if (tareaOpt.isPresent()) {
-                                                imputacion.setIdTareaProyecto(tareaOpt.get().getId()); 
+                                                imputacion.setIdTareaProyecto(tareaOpt.get().getIdTareaProyecto()); 
                                                 esValida = true;
                                         }
                                 }
