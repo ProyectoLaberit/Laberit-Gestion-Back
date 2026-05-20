@@ -540,119 +540,120 @@ public class ClockifyService {
                 // 3. Procesar cada entrada
                 for (Map<String, Object> entry : entradasClockify) {
                 
-                if (!clockifyId.equals(entry.get("projectId"))) { 
-                        continue; 
-                }
-                
-                String idEntrada = (String) entry.get("id");
-                String description = (String) entry.get("description");
-                
-                if (description == null || description.isEmpty()) { 
-                        continue; 
-                }
-
-                Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
-                double horasClockify = convertirDuracionAHoras((String) timeInterval.get("duration"));
-
-                ImputacionClockify imputacionExistente = imputacionService.obtenerPorIdClockify(idEntrada);
-                
-                if (imputacionExistente != null) {
-                        if (Math.abs(imputacionExistente.getHorasTrabajadas() - horasClockify) > 0.01) {
-                        imputacionExistente.setHorasTrabajadas(horasClockify);
-                        imputacionService.actualizarImputacion(imputacionExistente);
+                        if (!clockifyId.equals(entry.get("projectId"))) { 
+                                continue; 
                         }
-                        continue;
-                }
-
-                ImputacionClockify imputacion = new ImputacionClockify();
-                imputacion.setIdClockifyOriginal(idEntrada);
-                imputacion.setIdProyecto(projectId);
-                imputacion.setDescripcionOriginal(description);
-                imputacion.setHorasTrabajadas(horasClockify);
-
-                String subfase = null;
-                if (description.contains("[") && description.contains("]")) {
-                        subfase = description.substring(description.indexOf("[") + 1, description.indexOf("]"));
-                        imputacion.setSubfaseExtraida(detalleEstimacionService.normalizarTexto(subfase));
-                }
-
-                if (description.contains("#")) {
-                        int start = description.indexOf("#");
-                        int firstSpace = description.indexOf(" ", start);
-                        if (firstSpace != -1) {
-                        String titulo = description.substring(firstSpace + 1).trim();
-                        imputacion.setTareaExtraida(detalleEstimacionService.normalizarTexto(titulo));
+                        
+                        String idEntrada = (String) entry.get("id");
+                        String description = (String) entry.get("description");
+                        
+                        if (description == null || description.isEmpty()) { 
+                                continue; 
                         }
-                }
 
-                // -- MAPEO DE DEPARTAMENTO (TAG) --
-                List<String> tagIds = (List<String>) entry.get("tagIds");
-                if (tagIds != null && !tagIds.isEmpty()) {
-                        String idEtiqueta = tagIds.get(0); 
-                        String nombreEtiquetaClockify = mapaEtiquetas.get(idEtiqueta);
+                        Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
+                        double horasClockify = convertirDuracionAHoras((String) timeInterval.get("duration"));
+
+                        ImputacionClockify imputacionExistente = imputacionService.obtenerPorIdClockify(idEntrada);
                         
-                        if (nombreEtiquetaClockify != null) {
-                        String etiquetaLimpia = detalleEstimacionService.normalizarTexto(nombreEtiquetaClockify);
-                        
-                        for (Departamento depto : departamentosBD) {
-                                if (detalleEstimacionService.normalizarTexto(depto.getNombre()).equals(etiquetaLimpia)) {
-                                imputacion.setIdDepartamento(depto.getId()); 
-                                break;
+                        if (imputacionExistente != null) {
+                                if (Math.abs(imputacionExistente.getHorasTrabajadas() - horasClockify) > 0.01) {
+                                imputacionExistente.setHorasTrabajadas(horasClockify);
+                                imputacionService.actualizarImputacion(imputacionExistente);
+                                }
+                                continue;
+                        }
+
+                        ImputacionClockify imputacion = new ImputacionClockify();
+                        imputacion.setIdClockifyOriginal(idEntrada);
+                        imputacion.setIdProyecto(projectId);
+                        imputacion.setDescripcionOriginal(description);
+                        imputacion.setHorasTrabajadas(horasClockify);
+
+                        String subfase = null;
+                        if (description.contains("[") && description.contains("]")) {
+                                subfase = description.substring(description.indexOf("[") + 1, description.indexOf("]"));
+                                imputacion.setSubfaseExtraida(detalleEstimacionService.normalizarTexto(subfase));
+                        }
+
+                        if (description.contains("#")) {
+                                int start = description.indexOf("#");
+                                int firstSpace = description.indexOf(" ", start);
+                                if (firstSpace != -1) {
+                                String titulo = description.substring(firstSpace + 1).trim();
+                                imputacion.setTareaExtraida(detalleEstimacionService.normalizarTexto(titulo));
                                 }
                         }
-                        }
-                }
 
-                // -- FECHAS --
-                try {
-                        String startStr = (String) timeInterval.get("start");
-                        if (startStr != null) {
-                        java.time.Instant start = java.time.Instant.parse(startStr);
-                        java.time.ZonedDateTime zdtStart = start.atZone(java.time.ZoneId.systemDefault());
-                        imputacion.setFecha(zdtStart.toLocalDate());
-                        imputacion.setHoraInicio(zdtStart.toLocalTime());
-                        }
-                        String endStr = (String) timeInterval.get("end");
-                        if (endStr != null) {
-                        java.time.Instant end = java.time.Instant.parse(endStr);
-                        java.time.ZonedDateTime zdtEnd = end.atZone(java.time.ZoneId.systemDefault());
-                        imputacion.setHoraFin(zdtEnd.toLocalTime());
-                        }
-                } catch (Exception e) {
-                        imputacion.setFecha(java.time.LocalDate.now());
-                }
-
-                // -- CRUCE POR TEXTO Y APRENDIZAJE DE ID --
-                boolean esValida = false;
-                String subfaseLimpia = imputacion.getSubfaseExtraida(); 
-                String tareaLimpia = imputacion.getTareaExtraida();     
-
-                if (subfaseLimpia != null && !subfaseLimpia.isEmpty() && tareaLimpia != null && !tareaLimpia.isEmpty()) {
-                        
-                        Integer idFaseEncontrada = todasLasFasesBD.stream()
-                        .filter(f -> f.getFasePadre() != null && detalleEstimacionService.normalizarTexto(f.getNombre()).equals(subfaseLimpia))
-                        .map(com.example.demo.entity.Fase::getId)
-                        .findFirst()
-                        .orElse(null);
-
-                        if (idFaseEncontrada != null && imputacion.getIdDepartamento() != null) {
-                                // Buscamos en la tabla central en lugar de en el detalle
-                                java.util.Optional<com.example.demo.entity.TareaProyecto> tareaOpt = tareaProyectoRepository.findByIdProyectoAndIdFaseAndIdDepartamentoAndTarea(
-                                        projectId,
-                                        idFaseEncontrada,
-                                        imputacion.getIdDepartamento(),
-                                        tareaLimpia
-                                );
-
-                                if (tareaOpt.isPresent()) {
-                                        imputacion.setIdTareaProyecto(tareaOpt.get().getId()); 
-                                        esValida = true;
+                        // -- MAPEO DE DEPARTAMENTO (TAG) --
+                        List<String> tagIds = (List<String>) entry.get("tagIds");
+                        if (tagIds != null && !tagIds.isEmpty()) {
+                                String idEtiqueta = tagIds.get(0); 
+                                String nombreEtiquetaClockify = mapaEtiquetas.get(idEtiqueta);
+                                
+                                if (nombreEtiquetaClockify != null) {
+                                String etiquetaLimpia = detalleEstimacionService.normalizarTexto(nombreEtiquetaClockify);
+                                
+                                for (Departamento depto : departamentosBD) {
+                                        if (detalleEstimacionService.normalizarTexto(depto.getNombre()).equals(etiquetaLimpia)) {
+                                        imputacion.setIdDepartamento(depto.getId()); 
+                                        break;
+                                        }
+                                }
                                 }
                         }
-                }
 
-                imputacion.setValida(esValida);
-                nuevasImputaciones.add(imputacion);
+                        // -- FECHAS --
+                        try {
+                                String startStr = (String) timeInterval.get("start");
+                                if (startStr != null) {
+                                java.time.Instant start = java.time.Instant.parse(startStr);
+                                java.time.ZonedDateTime zdtStart = start.atZone(java.time.ZoneId.systemDefault());
+                                imputacion.setFecha(zdtStart.toLocalDate());
+                                imputacion.setHoraInicio(zdtStart.toLocalTime());
+                                }
+                                String endStr = (String) timeInterval.get("end");
+                                if (endStr != null) {
+                                java.time.Instant end = java.time.Instant.parse(endStr);
+                                java.time.ZonedDateTime zdtEnd = end.atZone(java.time.ZoneId.systemDefault());
+                                imputacion.setHoraFin(zdtEnd.toLocalTime());
+                                }
+                        } catch (Exception e) {
+                                imputacion.setFecha(java.time.LocalDate.now());
+                        }
+
+                        // -- CRUCE POR TEXTO Y APRENDIZAJE DE ID --
+                        boolean esValida = false;
+                        String subfaseLimpia = imputacion.getSubfaseExtraida(); 
+                        String tareaLimpia = imputacion.getTareaExtraida(); 
+
+                        if (subfaseLimpia != null && !subfaseLimpia.isEmpty() && tareaLimpia != null && !tareaLimpia.isEmpty()) {
+                                
+                                Integer idFaseEncontrada = todasLasFasesBD.stream()
+                                .filter(f -> f.getFasePadre() != null && detalleEstimacionService.normalizarTexto(f.getNombre()).equals(subfaseLimpia))
+                                .map(com.example.demo.entity.Fase::getId)
+                                .findFirst()
+                                .orElse(null);
+
+                                if (idFaseEncontrada != null && imputacion.getIdDepartamento() != null) {
+                                        // Cargamos las tareas del proyecto y aplicamos normalización estricta en el filtrado de memoria
+                                        List<com.example.demo.entity.TareaProyecto> tareasDelDepto = tareaProyectoRepository.findByIdProyecto(projectId);
+                                        
+                                        java.util.Optional<com.example.demo.entity.TareaProyecto> tareaOpt = tareasDelDepto.stream()
+                                                .filter(t -> t.getIdFase() != null && t.getIdFase().equals(idFaseEncontrada))
+                                                .filter(t -> t.getIdDepartamento() != null && t.getIdDepartamento().equals(imputacion.getIdDepartamento()))
+                                                .filter(t -> t.getTarea() != null && detalleEstimacionService.normalizarTexto(t.getTarea()).equals(tareaLimpia))
+                                                .findFirst();
+
+                                        if (tareaOpt.isPresent()) {
+                                                imputacion.setIdTareaProyecto(tareaOpt.get().getId()); 
+                                                esValida = true;
+                                        }
+                                }
+                        }
+
+                        imputacion.setValida(esValida);
+                        nuevasImputaciones.add(imputacion);
                 }
 
                 if (!nuevasImputaciones.isEmpty()) {

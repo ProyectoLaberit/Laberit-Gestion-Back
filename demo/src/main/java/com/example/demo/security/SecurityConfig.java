@@ -35,6 +35,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/usuarios/forgot-password").permitAll()
                 .requestMatchers("/api/usuarios/reset-password").permitAll()
 
+                // SOLUCIÓN CORS: Permitir peticiones preflight (OPTIONS) sin token
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                 // Solo DELETE está bloqueado a nivel de Spring para no-Administrador/SuperAdministrador.
                 // El resto de la lógica de permisos (crear, editar, cambiar rol)
                 // se controla en el controller para evitar falsos 401/403.
