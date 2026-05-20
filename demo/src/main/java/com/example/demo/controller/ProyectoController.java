@@ -57,7 +57,7 @@ public class ProyectoController {
      */
     @PostMapping
     // @RequestBody: Recibe el JSON del formulario y lo convierte en el ProyectoDTO
-    @PreAuthorize("hasAnyAuthority('SuperAdministrador', 'Administrador')")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> crearProyecto(@RequestBody ProyectoDTO proyectoDTO) {
         try {
             ProyectoDTO proyectoGuardado = proyectoService.crearProyecto(proyectoDTO);
@@ -73,7 +73,7 @@ public class ProyectoController {
      * @return ApiResponse json que contiene true si se ha eliminado o false si no
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('SuperAdministrador')")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR')")
     public ResponseEntity<ApiResponse> eliminarProyecto(@PathVariable Long id) {
         try {
             ProyectoDTO proyectoEliminado = proyectoService.eliminarProyecto(id);
@@ -90,7 +90,7 @@ public class ProyectoController {
      * @return ApiResponse json que contiene el proyecto actualizado
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('SuperAdministrador', 'Administrador')")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> actualizarProyecto(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
         try {
             ProyectoDTO actualizado = proyectoService.actualizarProyecto(id, proyectoDTO);
@@ -110,7 +110,7 @@ public class ProyectoController {
      * @return ApiResponse bolean true si el cambio se realiza correctamente y un json con el proyecto actualizado o un boolean false si hubo algun fallo en la actualizacion
      */
     @PostMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('SuperAdministrador', 'Administrador')")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> actualizarProyectoCompat(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
         try {
             ProyectoDTO actualizado = proyectoService.actualizarProyecto(id, proyectoDTO);

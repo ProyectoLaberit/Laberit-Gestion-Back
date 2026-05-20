@@ -96,7 +96,9 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElse(null);
 
-        if (usuario == null) return null;
+        if (usuario == null){
+            return null;
+        } 
         return mapearADTO(usuario);
     }
 
@@ -105,7 +107,7 @@ public class UsuarioService {
         dto.setId(usuario.getId());
         dto.setNombre(usuario.getNombre());
         dto.setEmail(usuario.getEmail());
-        dto.setExcels(usuario.getExcels());
+        
         dto.setFoto(usuario.getFoto());
 
         if (usuario.getRoles() != null && !usuario.getRoles().isEmpty()) {
@@ -130,7 +132,7 @@ public class UsuarioService {
         nuevoUsuario.setNombre(dto.getNombre());
         nuevoUsuario.setEmail(dto.getEmail());
         nuevoUsuario.setFoto("default1.png");
-        nuevoUsuario.setExcels(dto.getExcels() != null ? dto.getExcels() : false);
+        
 
         // Determinar rol a asignar
         Rol rolAsignado;
@@ -161,7 +163,7 @@ public class UsuarioService {
         respuesta.setId(guardado.getId());
         respuesta.setNombre(guardado.getNombre());
         respuesta.setEmail(guardado.getEmail());
-        respuesta.setExcels(guardado.getExcels());
+       
         return respuesta;
     }
   @Auditable(

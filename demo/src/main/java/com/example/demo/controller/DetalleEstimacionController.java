@@ -11,7 +11,6 @@ import com.example.demo.services.DetalleEstimacionService;
 import com.example.demo.services.ExcelService;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -40,9 +39,9 @@ public class DetalleEstimacionController {
 
         return auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
-                .anyMatch(a -> a.equals("ROLE_ADMINISTRADOR") || a.equals("ROLE_SUPERADMINISTRADOR"));
+                .anyMatch(a -> { return a.equals("ROLE_ADMINISTRADOR") || a.equals("ROLE_SUPERADMINISTRADOR"); });
     }
-
+    
     /**
      * Recupera la tabla de estimaciones del Excel VIGENTE (el más reciente o
      * activo) de un proyecto.
@@ -65,22 +64,19 @@ public class DetalleEstimacionController {
 
     /**
      * Procesa y guarda la matriz de estimaciones desde un archivo Excel.
-     * 
-     * @param archivo    El archivo .xlsx cargado desde el cliente.
+     * @param archivo El archivo .xlsx cargado desde el cliente.
      * @param proyectoId ID del proyecto al que se asocia el Excel.
-     * @param usuarioId  ID del usuario que realiza la subida.
+     * @param usuarioId ID del usuario que realiza la subida.
      * @return ApiResponse con el número total de registros importados.
      */
     @PostMapping("/importar")
-    public ApiResponse importarExcel(@RequestParam("archivo") MultipartFile archivo,
-            @RequestParam("proyectoId") long proyectoId, @RequestParam("usuarioId") Integer usuarioId) {
+    public ApiResponse importarExcel(@RequestParam("archivo") MultipartFile archivo, @RequestParam("proyectoId") long proyectoId, @RequestParam("usuarioId") Integer usuarioId) {
         if (archivo.isEmpty()) {
             return new ApiResponse("El archivo está vacío.", false, null);
         }
 
         try {
             int filasGuardadas = detalleEstimacionService.procesarExcel(archivo, proyectoId, usuarioId);
-
             return new ApiResponse("Éxito: se importaron " + filasGuardadas + " registros.", true, filasGuardadas);
         } catch (Exception e) {
             return new ApiResponse("Error al procesar el Excel: " + e.getMessage(), false, null);
@@ -107,7 +103,6 @@ public class DetalleEstimacionController {
 
     /**
      * Genera un nuevo archivo Excel basado en las estimaciones guardadas en la BD.
-     * 
      * @param idProyecto ID del proyecto cuyas estimaciones se quieren exportar.
      * @return ApiResponse indicando si el archivo se generó correctamente.
      */
@@ -136,24 +131,21 @@ public class DetalleEstimacionController {
     }
 
     /**
-     * Busca una estimación puntual filtrando por proyecto, subfase y nombre de
-     * tarea.
-     * 
+     * Busca una estimación puntual filtrando por proyecto, subfase y nombre de tarea.
      * @param idProyecto ID del proyecto.
-     * @param subfase    Nombre de la subfase (ej. "investigacion").
-     * @param tarea      Nombre de la tarea (ej. "Benchmark").
+     * @param idSubfase ID de la subfase.
+     * @param tarea Nombre de la tarea (ej. "Benchmark").
+     * @param idExcelElegido ID opcional del Excel si se mira el historial.
      * @return ApiResponse con el DTO de la estimación encontrada.
      */
     @PostMapping("/proyecto/{idProyecto}/especifica")
     public ApiResponse obtenerEstimacionEspecifica(
-            @PathVariable Long idProyecto,
-            @RequestParam Integer idSubfase,
-            @RequestParam String tarea,
-            @RequestParam(required = false) Integer idExcelElegido) {
-
-        // Ahora recibimos una lista de DTOs con cada departamento y sus tiempos
-        List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallePorCriteriosHistorico(idProyecto,
-                idSubfase, tarea, idExcelElegido);
+        @PathVariable Long idProyecto,
+        @RequestParam Integer idSubfase,
+        @RequestParam String tarea,
+        @RequestParam(required = false) Integer idExcelElegido) {
+    
+        List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallePorCriteriosHistorico(idProyecto, idSubfase, tarea, idExcelElegido);
 
         if (detalles.isEmpty()) {
             return new ApiResponse("No se encontraron registros para esta tarea y subfase", false, detalles);
@@ -204,10 +196,8 @@ public class DetalleEstimacionController {
             @RequestParam(required = false) Integer idExcelElegido) {
 
         try {
-            // Llamamos directamente a tu lógica pasándole los dos IDs
-            List<TareaSubfaseDTO> tareas = detalleEstimacionService.obtenerTareasSubfaseHistorico(idProyecto, idSubfase,
-                    idExcelElegido);
-
+            List<TareaSubfaseDTO> tareas = detalleEstimacionService.obtenerTareasSubfaseHistorico(idProyecto, idSubfase, idExcelElegido);
+            
             if (tareas.isEmpty()) {
                 return new ApiResponse("No hay tareas para esta subfase o el proyecto no tiene Excel activo", true,
                         tareas);
@@ -231,9 +221,7 @@ public class DetalleEstimacionController {
      */
     @GetMapping("/{id}/historial-excels")
     public ApiResponse obtenerHistorialExcels(@PathVariable("id") Long id) {
-        // Llamamos al servicio que ya usa la query del repositorio
         List<HistorialExcelDTO> historial = excelService.obtenerHistorialExcels(id);
-
         return new ApiResponse("Historial recuperado con éxito", true, historial);
     }
 
@@ -244,7 +232,7 @@ public class DetalleEstimacionController {
      * @return ApiResponse con un booleano a true si la creacion a tenido exito y
      *         false si hubo algun problema
      */
-    @PostMapping
+    @PostMapping("/tarea")
     public ApiResponse crearTarea(@RequestBody DetalleEstimacionDTO dto) {
         if (!esAdmin()) {
             return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
@@ -259,7 +247,7 @@ public class DetalleEstimacionController {
     }
 
     /**
-     * Crea una nueva estimacion manual para el Excel vigente del proyecto.
+     * Crea una nueva estimacion manual inyectándola directamente en el Excel vigente del proyecto.
      * Este es el endpoint que usa crearfases.html.
      */
     /**
@@ -335,13 +323,16 @@ public class DetalleEstimacionController {
         }
     }
 
+    /**
+     * Elimina una estimación por su ID. Estandarizado a ApiResponse.
+     */
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> eliminarEstimacion(@PathVariable Long id) {
+    public ApiResponse eliminarEstimacion(@PathVariable Long id) {
         try {
             detalleEstimacionService.eliminarTarea(id);
-            return ResponseEntity.ok().body("{\"mensaje\": \"Estimación eliminada correctamente\", \"success\": true}");
+            return new ApiResponse("Estimación eliminada correctamente", true, null);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("{\"mensaje\": \"" + e.getMessage() + "\", \"success\": false}");
+            return new ApiResponse(e.getMessage(), false, null);
         }
     }
-} // <-- fin del controlador -->
+}

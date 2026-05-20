@@ -62,136 +62,143 @@ public class DetalleEstimacionService {
      * @param usuarioId ID del usuario que sube el archivo.
      * @return El número total de presupuestos de tareas insertadas en la base de datos.
      */
-    @Auditable(
+   @Auditable(
         accion = "IMPORTAR_EXCEL", 
         tabla = "excel", 
         entidad = Excel.class,
         descripcion = "Se importó un nuevo documento Excel para el proyecto con ID: #{#proyectoId}"
     )
     public int procesarExcel(MultipartFile archivo, long proyectoId, Integer usuarioId) throws Exception {
-        Excel registroExcel = new Excel();
-        registroExcel.setIdProyecto(proyectoId);
-        registroExcel.setIdUsuario(usuarioId);
-        registroExcel.setFechaSubida(LocalDate.now());
-        registroExcel.setRutaArchivo("uploads/" + archivo.getOriginalFilename());
-        registroExcel.setVigente(true);
-        
-        Excel excelGuardado = excelService.guardarDatosExcel(registroExcel);
-        Integer idExcelGenerado = excelGuardado.getIdExcel();
-
-        List<DetalleEstimacion> listaParaGuardar = new ArrayList<>();
-        Workbook workbook = WorkbookFactory.create(archivo.getInputStream());
-        FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
-        DataFormatter formatter = new DataFormatter();
-
-        List<Fase> todasLasFasesBD = faseRepository.findAll();
-
-        List<RangoDepartamento> mapaColumnas = Arrays.asList(
-            new RangoDepartamento(3, 4, "Comercial"), new RangoDepartamento(5, 6, "Direccion"),
-            new RangoDepartamento(7, 8, "back"), new RangoDepartamento(9, 10, "front"),
-            new RangoDepartamento(11, 12, "soporte"), new RangoDepartamento(13, 14, "mk"),
-            new RangoDepartamento(15, 16, "ux"), new RangoDepartamento(17, 18, "ui"),
-            new RangoDepartamento(19, 20, "wp-maq")
-        );
-
-        for (RangoDepartamento rango : mapaColumnas) {
-            rango.setIdBD(determinarDepartamento(rango.getNombreExcel()));
-        }
-
-        Sheet hoja = workbook.getSheetAt(0);
-        
-        Integer idFasePadreActual = null;
-        Integer idSubfaseActual = null;
-        String nombreTareaActual = null; 
-
-        for (Row fila : hoja) {
-            if (fila.getRowNum() < 4) { 
-                continue; 
-            }
-            if (esFilaFinal(fila)) { 
-                break; 
-            }
-
-            String valFase = formatter.formatCellValue(fila.getCell(0));
-            String faseLimpia = normalizarTexto(valFase);
+        System.out.println("--- DIAGNÓSTICO PROFUNDO DE EXCEL ---");
+        try {
+            Excel registroExcel = new Excel();
+            registroExcel.setIdProyecto(proyectoId);
+            registroExcel.setIdUsuario(usuarioId);
+            registroExcel.setFechaSubida(LocalDate.now());
+            registroExcel.setRutaArchivo("uploads/" + archivo.getOriginalFilename());
+            registroExcel.setVigente(true);
             
-            if (!faseLimpia.isEmpty()) {
-                idFasePadreActual = todasLasFasesBD.stream()
-                    .filter(f -> { return f.getFasePadre() == null && normalizarTexto(f.getNombre()).equals(faseLimpia); })
-                    .map(Fase::getId)
-                    .findFirst()
-                    .orElse(null);
-                
-                idSubfaseActual = null; 
-                nombreTareaActual = null; 
+            Excel excelGuardado = excelService.guardarDatosExcel(registroExcel);
+            Integer idExcelGenerado = excelGuardado.getIdExcel();
+
+            List<DetalleEstimacion> listaParaGuardar = new ArrayList<>();
+            Workbook workbook = WorkbookFactory.create(archivo.getInputStream());
+            FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+            DataFormatter formatter = new DataFormatter();
+
+            List<Fase> todasLasFasesBD = faseRepository.findAll();
+            System.out.println("Fases encontradas en BD: " + todasLasFasesBD.size());
+
+            List<RangoDepartamento> mapaColumnas = Arrays.asList(
+                new RangoDepartamento(3, 4, "Comercial"), new RangoDepartamento(5, 6, "Direccion"),
+                new RangoDepartamento(7, 8, "back"), new RangoDepartamento(9, 10, "front"),
+                new RangoDepartamento(11, 12, "soporte"), new RangoDepartamento(13, 14, "mk"),
+                new RangoDepartamento(15, 16, "ux"), new RangoDepartamento(17, 18, "ui"),
+                new RangoDepartamento(19, 20, "wp-maq")
+            );
+
+            for (RangoDepartamento rango : mapaColumnas) {
+                rango.setIdBD(determinarDepartamento(rango.getNombreExcel()));
+                System.out.println("Depto Excel: " + rango.getNombreExcel() + " -> ID BD: " + rango.getIdBD());
             }
 
-            String valSubfase = formatter.formatCellValue(fila.getCell(1));
-            String subfaseLimpia = normalizarTexto(valSubfase);
-            
-            if (!subfaseLimpia.isEmpty() && idFasePadreActual != null) {
-                final Integer idPadre = idFasePadreActual;
-                idSubfaseActual = todasLasFasesBD.stream()
-                    .filter(f -> { return f.getFasePadre() != null && f.getFasePadre().equals(idPadre) && normalizarTexto(f.getNombre()).equals(subfaseLimpia); })
-                    .map(Fase::getId)
-                    .findFirst()
-                    .orElse(null);
-                
-                nombreTareaActual = null; 
-            }
+            Sheet hoja = workbook.getSheetAt(0);
+            Integer idFasePadreActual = null;
+            Integer idSubfaseActual = null;
+            String nombreTareaActual = null; 
 
-            String valTarea = formatter.formatCellValue(fila.getCell(2)).trim();
-            
-            if (!valTarea.isEmpty() && !normalizarTexto(valTarea).equals("analisis")) {
-                nombreTareaActual = valTarea;
-            } else {
-                nombreTareaActual = null;
-            }
+            for (Row fila : hoja) {
+                if (fila.getRowNum() < 4) { 
+                    continue; 
+                }
+                if (esFilaFinal(fila)) { 
+                    break; 
+                }
 
-            if (idSubfaseActual != null && nombreTareaActual != null) {
-                for (RangoDepartamento depto : mapaColumnas) {
-                    if (depto.getIdBD() == null || depto.getIdBD() == -1) {
-                        continue;
-                    }
+                String valFase = formatter.formatCellValue(fila.getCell(0));
+                String faseLimpia = normalizarTexto(valFase);
+                if (!faseLimpia.isEmpty()) {
+                    idFasePadreActual = todasLasFasesBD.stream()
+                        .filter(f -> { return f.getFasePadre() == null && normalizarTexto(f.getNombre()).equals(faseLimpia); })
+                        .map(Fase::getId)
+                        .findFirst()
+                        .orElse(null);
+                    idSubfaseActual = null; 
+                    nombreTareaActual = null; 
+                }
 
-                    Double min = extraerNumeroDeCelda(fila.getCell(depto.getColMin()), evaluator);
-                    Double max = extraerNumeroDeCelda(fila.getCell(depto.getColMax()), evaluator);
+                String valSubfase = formatter.formatCellValue(fila.getCell(1));
+                String subfaseLimpia = normalizarTexto(valSubfase);
+                if (!subfaseLimpia.isEmpty() && idFasePadreActual != null) {
+                    final Integer idPadre = idFasePadreActual;
+                    idSubfaseActual = todasLasFasesBD.stream()
+                        .filter(f -> { return f.getFasePadre() != null && f.getFasePadre().equals(idPadre) && normalizarTexto(f.getNombre()).equals(subfaseLimpia); })
+                        .map(Fase::getId)
+                        .findFirst()
+                        .orElse(null);
+                    nombreTareaActual = null; 
+                }
 
-                    if ((min != null && min > 0) || (max != null && max > 0)) {
-                        final Integer idDepto = depto.getIdBD();
-                        final Integer idSubfase = idSubfaseActual;
-                        final String nomTarea = nombreTareaActual;
+                String valTarea = formatter.formatCellValue(fila.getCell(2)).trim();
+                if (!valTarea.isEmpty() && !normalizarTexto(valTarea).equals("analisis")) {
+                    nombreTareaActual = valTarea;
+                } else {
+                    nombreTareaActual = null;
+                }
 
-                        // Estrategia Find-or-Create en el pivote global TareaProyecto
-                        TareaProyecto tareaProyecto = tareaProyectoRepository
-                            .findByIdProyectoAndIdFaseAndIdDepartamentoAndTarea(proyectoId, idSubfase, idDepto, nomTarea)
-                            .orElseGet(() -> {
-                                TareaProyecto tp = new TareaProyecto();
-                                tp.setIdProyecto(proyectoId);
-                                tp.setIdFase(idSubfase);
-                                tp.setIdDepartamento(idDepto);
-                                tp.setTarea(nomTarea);
-                                tp.setCompletada(false);
-                                return tareaProyectoRepository.save(tp);
-                            });
+                if (fila.getRowNum() >= 4 && fila.getRowNum() <= 8) {
+                    System.out.println("Fila " + fila.getRowNum() + " -> Padre ID: " + idFasePadreActual + " | Subfase ID: " + idSubfaseActual + " | Tarea: " + nombreTareaActual);
+                }
 
-                        DetalleEstimacion detalle = new DetalleEstimacion();
-                        detalle.setIdExcel(idExcelGenerado);
-                        detalle.setIdTareaProyecto(tareaProyecto.getId());
-                        detalle.setTiempoMin(min != null ? min : 0.0);
-                        detalle.setTiempoMax(max != null ? max : 0.0);
-                        
-                        listaParaGuardar.add(detalle);
+                if (idSubfaseActual != null && nombreTareaActual != null) {
+                    for (RangoDepartamento depto : mapaColumnas) {
+                        if (depto.getIdBD() == null || depto.getIdBD() == -1) {
+                            continue;
+                        }
+
+                        Double min = extraerNumeroDeCelda(fila.getCell(depto.getColMin()), evaluator);
+                        Double max = extraerNumeroDeCelda(fila.getCell(depto.getColMax()), evaluator);
+
+                        if ((min != null && min > 0) || (max != null && max > 0)) {
+                            final Integer idDepto = depto.getIdBD();
+                            final Integer idSubfase = idSubfaseActual;
+                            final String nomTarea = nombreTareaActual;
+
+                            TareaProyecto tareaProyecto = tareaProyectoRepository
+                                .findByIdProyectoAndIdFaseAndIdDepartamentoAndTarea(proyectoId, idSubfase, idDepto, nomTarea)
+                                .orElseGet(() -> {
+                                    TareaProyecto tp = new TareaProyecto();
+                                    tp.setIdProyecto(proyectoId);
+                                    tp.setIdFase(idSubfase);
+                                    tp.setIdDepartamento(idDepto);
+                                    tp.setTarea(nomTarea);
+                                    tp.setCompletada(false);
+                                    return tareaProyectoRepository.save(tp);
+                                });
+
+                            DetalleEstimacion detalle = new DetalleEstimacion();
+                            detalle.setIdExcel(idExcelGenerado);
+                            detalle.setIdTareaProyecto(tareaProyecto.getId());
+                            detalle.setTiempoMin(min != null ? min : 0.0);
+                            detalle.setTiempoMax(max != null ? max : 0.0);
+                            
+                            listaParaGuardar.add(detalle);
+                        }
                     }
                 }
             }
-        }
 
-        workbook.close();
-        if (!listaParaGuardar.isEmpty()) {
-            detalleEstimacionRepository.saveAll(listaParaGuardar);
+            workbook.close();
+            System.out.println("Total a guardar: " + listaParaGuardar.size());
+            if (!listaParaGuardar.isEmpty()) {
+                detalleEstimacionRepository.saveAll(listaParaGuardar);
+            }
+            return listaParaGuardar.size();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw e;
         }
-        return listaParaGuardar.size();
     }
 
     /**
@@ -269,22 +276,26 @@ public class DetalleEstimacionService {
         return cellA != null && normalizarTexto(cellA.toString()).contains("total");
     }
 
-    /**
+   /**
      * Recupera y enriquece los detalles de estimación de un Excel cruzando los datos numéricos con el pivote TareaProyecto.
      * @param idExcel ID del libro Excel.
      * @return Lista de DTOs mapeados con los nombres de fases y departamentos.
      */
     public List<DetalleEstimacionDTO> obtenerDetallesPorExcel(Integer idExcel) {
         List<DetalleEstimacion> detalles = detalleEstimacionRepository.findByIdExcel(idExcel);
+        System.out.println("[LOG LECTURA] Tareas numéricas encontradas en detalle_estimacion: " + detalles.size() + " para el Excel ID: " + idExcel);
+
         List<Fase> todasLasFases = faseRepository.findAll();
         List<Departamento> todosLosDeptos = departamentoRepository.findAll();
 
         Excel excel = excelRepository.findById(idExcel).orElse(null);
         Long idProyecto = (excel != null) ? excel.getIdProyecto() : null;
+        System.out.println("[LOG LECTURA] Proyecto ID asociado al Excel: " + idProyecto);
         
         List<TareaProyecto> todasTareasProyecto = (idProyecto != null) 
             ? tareaProyectoRepository.findAll().stream().filter(t -> { return t.getIdProyecto().equals(idProyecto); }).collect(Collectors.toList())
             : new ArrayList<>();
+        System.out.println("[LOG LECTURA] Tareas totales encontradas en el pivote tarea_proyecto para este proyecto: " + todasTareasProyecto.size());
             
         Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
             .collect(Collectors.toMap(TareaProyecto::getId, t -> { return t; }, (a, b) -> { return a; }));
@@ -334,11 +345,12 @@ public class DetalleEstimacionService {
                     dto.setNombreFase("Desconocido");
                     dto.setNombreSubfase("Desconocido");
                 }
+            } else {
+                System.out.println("[ALERTA] No se encontró el pivote TareaProyecto para el id_tarea_proyecto: " + entidad.getIdTareaProyecto());
             }
             return dto;
         }).collect(Collectors.toList());
     }
-
     /**
      * Recupera las entidades de estimación puras (numéricas) asociadas a un Excel.
      * @param idExcel ID del Excel.
@@ -408,16 +420,18 @@ public class DetalleEstimacionService {
                 .collect(Collectors.toList());
     }
 
-    /**
+  /**
      * Obtiene e integra los totales estimativos y reales de las tareas de una subfase del proyecto actual.
      * @param idProyecto ID del proyecto.
      * @param idSubfase ID de la subfase.
      * @param idExcelElegido ID opcional del Excel.
-     * @return Lista de DTOs agregados por nombre de tarea.
+     * @return Lista de DTOs de las tareas agregadas de la subfase.
      */
     public List<TareaSubfaseDTO> obtenerTareasSubfase(long idProyecto, Integer idSubfase, Integer idExcelElegido){
+        System.out.println("[LOG SUBFASE] Solicitando tareas de Subfase ID: " + idSubfase + " para Proyecto ID: " + idProyecto);
         Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
         if (idExcelBase == null) {
+            System.out.println("[LOG SUBFASE] No se localizó ningún Excel base activo.");
             return new ArrayList<>();
         }
 
@@ -440,6 +454,8 @@ public class DetalleEstimacionService {
                     return tp != null ? tp.getTarea() : "Desconocido";
                 }));
 
+        System.out.println("[LOG SUBFASE] Cantidad de tareas agrupadas listas para enviar al Front: " + tareasAgrupadas.size());
+
         List<TareaSubfaseDTO> resultado = new ArrayList<>();
         
         for (Map.Entry<String, List<DetalleEstimacion>> entry : tareasAgrupadas.entrySet()) {
@@ -452,7 +468,7 @@ public class DetalleEstimacionService {
 
             double sumaReal = 0.0;
             for (DetalleEstimacion det : entry.getValue()) {
-                Double horasReales = imputacionClockifyRepository.sumarHorasPorTarea(det.getIdTareaProyecto());
+                Double horasReales = imputacionClockifyRepository.sumarHorasValidas(det.getId());
                 if (horasReales != null) {
                     sumaReal += horasReales;
                 }
@@ -493,7 +509,6 @@ public class DetalleEstimacionService {
 
         return resultado;
     }
-
     /**
      * Calcula masivamente los resúmenes y medias de tiempos de todas las subfases indexándolos por el ID de subfase.
      * @param idProyecto ID del proyecto.
