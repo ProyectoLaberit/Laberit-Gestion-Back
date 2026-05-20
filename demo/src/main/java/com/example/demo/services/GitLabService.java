@@ -3,9 +3,16 @@ package com.example.demo.services;
 import com.example.demo.dto.GitLabProyectoDTO;
 import com.example.demo.dto.GitLabTareaDTO;
 import com.example.demo.entity.ApiConfig;
+import com.example.demo.entity.DetalleEstimacion;
+import com.example.demo.entity.GitLabTarea;
 import com.example.demo.entity.Proyecto;
+import com.example.demo.entity.TareaProyecto;
 import com.example.demo.repository.ApiConfigRepository;
+import com.example.demo.repository.DetalleEstimacionRepository;
+import com.example.demo.repository.GitLabTareaRepository;
 import com.example.demo.repository.ProyectoRepository;
+import com.example.demo.repository.TareaProyectoRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -26,6 +33,12 @@ public class GitLabService {
 
     @Autowired
     private ProyectoRepository proyectoRepository;
+
+    @Autowired
+    private GitLabTareaRepository gitLabTareaRepository;
+
+    @Autowired
+    private TareaProyectoRepository tareaProyectoRepository;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -208,4 +221,100 @@ public class GitLabService {
                         String.valueOf(proy.get("name")).trim()))
                 .collect(Collectors.toList());
     }
+
+    // =========================================================================
+    // [NUEVOS MÉTODOS] Lógica para interactuar con la nueva tabla de Neon
+    // "tareas_gitlab"
+    // =========================================================================
+
+    /**
+     * Vincula de forma persistente una issue de GitLab con una tarea de
+     * planificación local.
+     * <p>
+     * Aplica una estrategia de "Upsert" (Update/Insert): si la issue ya se
+     * encuentra
+     * registrada localmente, actualiza sus metadatos y su asignación; en caso
+     * contrario,
+     * inicializa un nuevo registro.
+     * </p>
+     *
+     * @param dto             Objeto de transferencia de datos con la información
+     *                        origen de GitLab.
+     * @param idTareaProyecto Identificador único de la tarea de proyecto destino en
+     *                        el sistema local.
+     * @param urlProyecto     Dirección web de acceso directo a la issue en la
+     *                        plataforma externa.
+     * @return La entidad {@link GitLabTarea} gestionada y persistida en el
+     *         repositorio.
+     * @throws RuntimeException Si el identificador de la tarea de proyecto no se
+     *                          localiza en la base de datos.
+     */
+    public GitLabTarea vincularTareaAProyecto(GitLabTareaDTO dto, Long idTareaProyecto, String urlProyecto) {
+
+        // 1. Validar la existencia de la tarea de destino en la planificación local
+        TareaProyecto tareaProy = tareaProyectoRepository.findById(idTareaProyecto)
+                .orElseThrow(() -> new RuntimeException(
+                        "La tarea de proyecto con ID " + idTareaProyecto + " no existe en el sistema."));
+
+        // 2. Recuperar registro existente por ID global de GitLab para aplicar Upsert,
+        // o instanciar uno nuevo
+        GitLabTarea tarea = gitLabTareaRepository.findByIssueId(dto.getId())
+                .orElse(new GitLabTarea());
+
+        // 3. Sincronizar estado y mapear el grafo de dependencias
+        tarea.setIssueId(dto.getId());
+        tarea.setIidGitlab(dto.getIid());
+        tarea.setTitulo(dto.getTitle());
+        tarea.setEstado(dto.getEstado());
+        tarea.setUrl(urlProyecto);
+        tarea.setTareaProyecto(tareaProy); // Establece la relación de clave foránea (FK)
+
+        // 4. Persistir los cambios en el motor de base de datos relacional
+        return gitLabTareaRepository.save(tarea);
+    }
+
+    /**
+     * [NUEVO] Recupera todas las tareas que ya han sido registradas y vinculadas
+     * localmente.
+     * * @return Lista de entidades GitLabTarea.
+     */
+    public List<GitLabTarea> obtenerTareasVinculadasLocal() {
+        return gitLabTareaRepository.findAll();
+    }
+
+    /**
+     * [NUEVO] Modifica una vinculación existente asociándola a un nuevo
+     * idDetalleEstimacion.
+     *
+     * @param idGitlab                 ID único global de la issue en GitLab.
+     * @param nuevoIdDetalleEstimacion El nuevo ID del Excel/Clockify.
+     * @return La entidad GitLabTarea modificada.
+     */
+    public GitLabTarea modificarVinculacion(String issueId, Long nuevoIdTareaProyecto) {
+        GitLabTarea tarea = gitLabTareaRepository.findByIssueId(issueId)
+                .orElseThrow(() -> new RuntimeException(
+                        "La tarea de GitLab con issue_id " + issueId + " no está registrada."));
+
+        TareaProyecto nuevaTareaProyecto = tareaProyectoRepository.findById(nuevoIdTareaProyecto)
+                .orElseThrow(() -> new RuntimeException(
+                        "El nuevo id_tarea_proyecto " + nuevoIdTareaProyecto + " no existe."));
+
+        tarea.setTareaProyecto(nuevaTareaProyecto);
+        return gitLabTareaRepository.save(tarea);
+    }
+
+    /**
+     * [NUEVO] Elimina de la base de datos la relación de una tarea de GitLab
+     * (Desvincular).
+     *
+     * @param idGitlab ID único global de la issue a eliminar.
+     */
+    public void eliminarVinculacion(String issueId) {
+        GitLabTarea tarea = gitLabTareaRepository.findByIssueId(issueId)
+                .orElseThrow(
+                        () -> new RuntimeException("No se encontró ninguna vinculación para la issue: " + issueId));
+
+        gitLabTareaRepository.delete(tarea);
+    }
+
 }
