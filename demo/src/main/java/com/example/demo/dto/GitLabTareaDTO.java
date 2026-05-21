@@ -8,18 +8,19 @@ import java.util.List;
  * Clase para extraer las tareas de GitLab de la API de GitLab y adaptarla a nuestro sistema de datos
  */
 public class GitLabTareaDTO {
-    private String id;
-    private Long iid;
-    private String title;
-    private List<String> labels;
-    private String estado;
+    private String id;     // ID global de GitLab (ej: 12345678)
+    private Long numeroGitLab;      // ID interno del proyecto (el que ve el usuario, ej: #42)
+    private String title;  // Título de la tarea
+    private List<String> labels; // Etiquetas asociadas a la tarea
+    private String estado; // Estado de la tarea (ej: "opened", "closed", "in_progress")
 
     public GitLabTareaDTO() {
     }
 
-    public GitLabTareaDTO(String id, Long iid, String title, List<String> labels, String estado) {
+    // Constructor para mapear fácilmente desde el Map de GitLab
+    public GitLabTareaDTO(String id, Long numeroGitLab, String title, List<String> labels, String estado) {
         this.id = id;
-        this.iid = iid;
+        this.numeroGitLab = numeroGitLab;
         this.title = title;
         this.labels = labels;
         this.estado = estado;
@@ -28,8 +29,8 @@ public class GitLabTareaDTO {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
-    public Long getIid() { return iid; }
-    public void setIid(Long iid) { this.iid = iid; }
+    public Long getnumeroGitLab() { return numeroGitLab; }
+    public void setnumeroGitLab(Long numeroGitLab) { this.numeroGitLab = numeroGitLab; }
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
     public List<String> getLabels() { return labels; }

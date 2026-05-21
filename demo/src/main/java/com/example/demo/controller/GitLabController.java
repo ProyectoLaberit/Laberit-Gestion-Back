@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.GitLabProyectoDTO;
 import com.example.demo.dto.GitLabTareaDTO; // [NUEVO] Importamos el nuevo DTO
+import com.example.demo.entity.GitLabTarea;
 import com.example.demo.services.GitLabService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -65,6 +66,71 @@ public class GitLabController {
             return ResponseEntity.ok(new ApiResponse("Proyectos externos recuperados", true, proyectosExternos));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ApiResponse(e.getMessage(), false, null));
+        }
+    }
+
+    // =========================================================================
+    // [NUEVOS ENDPOINTS] Mantenimiento de vinculaciones locales en Neon
+    // =========================================================================
+
+    /**
+     * Vincula una issue de GitLab a una tarea del proyecto real.
+     */
+    @PostMapping("/vincular")
+    public ResponseEntity<ApiResponse> vincularTarea(
+            @RequestBody GitLabTareaDTO tareaDTO,
+            @RequestParam Long idTareaProyecto,
+            @RequestParam(required = false) String urlProyecto) {
+        try {
+            GitLabTarea vinculada = gitLabService.vincularTareaAProyecto(tareaDTO, idTareaProyecto, urlProyecto);
+            return ResponseEntity.ok(new ApiResponse("Tarea vinculada con éxito", true, vinculada));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse("Error al vincular tarea: " + e.getMessage(), false, null));
+        }
+    }
+
+    /**
+     * Obtiene todas las issues asociadas localmente en Neon.
+     */
+    @GetMapping("/vinculadas")
+    public ResponseEntity<ApiResponse> getTareasVinculadas() {
+        try {
+            List<GitLabTarea> vinculadas = gitLabService.obtenerTareasVinculadasLocal();
+            return ResponseEntity.ok(new ApiResponse("Listado de vinculaciones locales obtenido", true, vinculadas));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse("Error al recuperar vinculaciones: " + e.getMessage(), false, null));
+        }
+    }
+
+    /**
+     * Cambia la vinculación de una issue a otra tarea del proyecto.
+     */
+    @PutMapping("/vincular/{issueId}")
+    public ResponseEntity<ApiResponse> modificarVinculacion(
+            @PathVariable String issueId,
+            @RequestParam Long nuevoIdTareaProyecto) {
+        try {
+            GitLabTarea modificada = gitLabService.modificarVinculacion(issueId, nuevoIdTareaProyecto);
+            return ResponseEntity.ok(new ApiResponse("Vinculación modificada correctamente", true, modificada));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse("Error al modificar vinculación: " + e.getMessage(), false, null));
+        }
+    }
+
+    /**
+     * Desvincula y borra el registro local de la issue de GitLab.
+     */
+    @DeleteMapping("/vincular/{issueId}")
+    public ResponseEntity<ApiResponse> eliminarVinculacion(@PathVariable String issueId) {
+        try {
+            gitLabService.eliminarVinculacion(issueId);
+            return ResponseEntity.ok(new ApiResponse("Vinculación eliminada correctamente", true, null));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse("Error al eliminar vinculación: " + e.getMessage(), false, null));
         }
     }
 }

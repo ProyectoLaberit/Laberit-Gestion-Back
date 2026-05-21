@@ -116,7 +116,7 @@ public class ExcelService {
         
         // Creamos un diccionario en memoria para cruzar rápido los datos sin saturar la BD
         Map<Long, TareaProyecto> mapaTareas = tareasPivot.stream()
-                .collect(Collectors.toMap(TareaProyecto::getId, t -> t, (a, b) -> a));
+                .collect(Collectors.toMap(TareaProyecto::getIdTareaProyecto, t -> t, (a, b) -> a));
         
         Sheet hoja = workbook.getSheet("Propuesta actualizada");
         
