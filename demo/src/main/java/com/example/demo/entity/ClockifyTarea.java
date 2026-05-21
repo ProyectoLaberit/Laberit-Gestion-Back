@@ -1,5 +1,9 @@
 package com.example.demo.entity;
 
+/**
+ * Entidad que representa las tareas de Clockify
+ */
+
 public class ClockifyTarea {
     private String id;
     private String name;

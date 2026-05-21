@@ -5,7 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.persistence.*;
-
+/**
+ * Entidad que representa los usuarios en la base de datos
+ * tiene relacion many to many con la tabla rol mediante la tabla intermedia usuario_x_rol
+ */
 @Entity
 @Table(name = "usuario")
 public class Usuario {
@@ -43,7 +46,6 @@ public class Usuario {
     public Usuario() {
     }
 
-    // --- GETTERS Y SETTERS ---
 
     public Integer getId() {
         return id;

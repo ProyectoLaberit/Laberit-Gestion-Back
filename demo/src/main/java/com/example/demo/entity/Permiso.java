@@ -1,7 +1,9 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
-
+/**
+ * Entidad que representa los permisos en la base de datos
+ */
 @Entity
 @Table(name = "permiso")
 public class Permiso {

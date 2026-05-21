@@ -3,7 +3,10 @@ package com.example.demo.entity;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * Entidad que representa los roles de la base de datos
+ * tiene relacion many to many con la tabla permisos mediante la tabla intermedia rol_x_permisos
+ */
 @Entity
 @Table(name = "rol")
 public class Rol {
@@ -18,15 +21,13 @@ public class Rol {
     @ManyToMany
     @JoinTable(
         name = "rol_x_permiso",
-        joinColumns = @JoinColumn(name = "id_rol"), // La columna que apunta a la clase rol
-        inverseJoinColumns = @JoinColumn(name = "id_permiso") // La columna que apunta a la clase permiso
+        joinColumns = @JoinColumn(name = "id_rol"),
+        inverseJoinColumns = @JoinColumn(name = "id_permiso")
     )
     private List<Permiso> permisos = new ArrayList<>();
 
     public Rol() {
     }
-
-    // --- GETTERS Y SETTERS ---
 
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }

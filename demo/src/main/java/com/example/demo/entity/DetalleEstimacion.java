@@ -1,6 +1,9 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
+/**
+ * Entidad que representa las estimaciones de la base de datos
+ */
 
 @Entity
 @Table(name = "detalle_estimacion")

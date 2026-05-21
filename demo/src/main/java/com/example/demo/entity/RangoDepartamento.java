@@ -19,7 +19,6 @@ public class RangoDepartamento {
         this.nombreExcel = nombreExcel;
     }
 
-    // Getters y Setters necesarios para el acceso desde el Service
     public int getColMin() { return colMin; }
     public void setColMin(int colMin) { this.colMin = colMin; }
 

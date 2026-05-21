@@ -1,38 +1,38 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
-
+/**
+ * Entidad que representa las tareas de gitlab de la base de datos
+ * tiene una relacion recursiva con "tarea_proyecto"
+ */
 @Entity
-@Table(name = "tarea_gitlab") // Mapea directamente con tu tabla real en Neon
+@Table(name = "tarea_gitlab")
 public class GitLabTarea {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id") // Tu clave primaria autoincremental (BIGSERIAL)
+    @Column(name = "id")
     private Long id;
 
-    @Column(name = "issue_id", nullable = false, length = 100) // El ID global de GitLab que viene en tu DTO (String)
+    @Column(name = "issue_id", nullable = false, length = 100)
     private String issueId;
 
-    @Column(name = "numeroGitLab", nullable = false) // El número visible con almohadilla (#14) que guardamos como número
-                                                   // (Long)
+    @Column(name = "numeroGitLab", nullable = false)
     private Long numeroGitLab;
 
-    @Column(name = "titulo", nullable = false) // Título de la issue
+    @Column(name = "titulo", nullable = false)
     private String titulo;
 
-    @Column(name = "estado", nullable = false, length = 50) // Estado de la issue ('opened', 'closed'...)
+    @Column(name = "estado", nullable = false, length = 50)
     private String estado;
 
-    @Column(name = "url", length = 500) // La columna 'url' que tienes en tu captura de pantalla
+    @Column(name = "url", length = 500)
     private String url;
 
     // Relación ManyToOne con la tabla central real de tu base de datos
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_tarea_proyecto", nullable = false) // Tu columna FK real de la captura
+    @JoinColumn(name = "id_tarea_proyecto", nullable = false)
     private TareaProyecto tareaProyecto;
-
-    // --- CONSTRUCTORES ---
 
     public GitLabTarea() {
     }
@@ -47,8 +47,6 @@ public class GitLabTarea {
         this.url = url;
         this.tareaProyecto = tareaProyecto;
     }
-
-    // --- GETTERS Y SETTERS ---
 
     public Long getId() {
         return id;

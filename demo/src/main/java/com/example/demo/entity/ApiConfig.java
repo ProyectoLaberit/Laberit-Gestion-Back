@@ -2,6 +2,9 @@ package com.example.demo.entity;
 
 import jakarta.persistence.*;
 
+/**
+ * Entidad que representa las api de la base de datos
+ */
 @Entity
 @Table(name = "api")
 public class ApiConfig {

@@ -2,6 +2,9 @@ package com.example.demo.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+/**
+ * Entidad que representa los excel almacenados en la base de datos
+ */
 
 @Entity
 @Table(name = "excel")

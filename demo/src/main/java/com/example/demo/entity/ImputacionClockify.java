@@ -3,7 +3,9 @@ package com.example.demo.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
-
+/**
+ * Entidad que representa las imputaciones de clockify en la base de datos
+ */
 @Entity
 @Table(name = "imputacion_clockify")
 public class ImputacionClockify {

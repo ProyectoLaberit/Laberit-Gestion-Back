@@ -8,6 +8,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Entidad que representa las fases de la base de datos
+ */
+
 @Entity
 @Table(name = "fase", schema = "public")
 public class Fase {

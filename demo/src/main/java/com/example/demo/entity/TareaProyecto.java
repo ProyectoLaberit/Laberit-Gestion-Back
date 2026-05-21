@@ -1,7 +1,9 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
-
+/**
+ * Entidad que representa las tareas de un proyecto en la base de datos
+ */
 @Entity
 @Table(name = "tarea_proyecto", schema = "public")
 public class TareaProyecto {

@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+/**
+ * Entidad que representa los log de auditoria de la base de datos
+ */
 @Entity
 @Table(name = "audit_log")
 public class AuditLog {
