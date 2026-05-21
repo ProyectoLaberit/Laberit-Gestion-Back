@@ -255,7 +255,9 @@ public class GitLabService {
             List<TareaProyecto> coincidenciaPlanificacion = List.of();
 
             if (tieneTexto) {
-                coincidenciaPlanificacion = tareaProyectoRepository.findByTarea(tarea.getTitle().trim());
+                coincidenciaPlanificacion = tareaProyectoRepository.findByTareaAndNumeroGitLab(
+                        tarea.getTitle().trim(),
+                        tarea.getNumeroGitLab());
             }
 
             // REGLA DE NEGOCIO: Es válida y se autoguarda SOLO si la lista tiene alguna
