@@ -9,14 +9,14 @@ public class GitLabTarea {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_tarea_gitlab") // Tu clave primaria autoincremental (BIGSERIAL)
-    private Long idTareaGitlab;
+    private Long id;
 
     @Column(name = "issue_id", nullable = false, length = 100) // El ID global de GitLab que viene en tu DTO (String)
     private String issueId;
 
     @Column(name = "iid_gitlab", nullable = false) // El número visible con almohadilla (#14) que guardamos como número
                                                    // (Long)
-    private Long iidGitlab;
+    private Long numeroGitLab;
 
     @Column(name = "titulo", nullable = false) // Título de la issue
     private String titulo;
@@ -37,11 +37,11 @@ public class GitLabTarea {
     public GitLabTarea() {
     }
 
-    public GitLabTarea(Long idTareaGitlab, String issueId, Long iidGitlab, String titulo, String estado, String url,
+    public GitLabTarea(Long id, String issueId, Long numeroGitLab, String titulo, String estado, String url,
             TareaProyecto tareaProyecto) {
-        this.idTareaGitlab = idTareaGitlab;
+        this.id = id;
         this.issueId = issueId;
-        this.iidGitlab = iidGitlab;
+        this.numeroGitLab = numeroGitLab;
         this.titulo = titulo;
         this.estado = estado;
         this.url = url;
@@ -51,11 +51,11 @@ public class GitLabTarea {
     // --- GETTERS Y SETTERS ---
 
     public Long getIdTareaGitlab() {
-        return idTareaGitlab;
+        return id;
     }
 
-    public void setIdTareaGitlab(Long idTareaGitlab) {
-        this.idTareaGitlab = idTareaGitlab;
+    public void setIdTareaGitlab(Long id) {
+        this.id = id;
     }
 
     public String getIssueId() {
@@ -67,11 +67,11 @@ public class GitLabTarea {
     }
 
     public Long getIidGitlab() {
-        return iidGitlab;
+        return numeroGitLab;
     }
 
-    public void setIidGitlab(Long iidGitlab) {
-        this.iidGitlab = iidGitlab;
+    public void setIidGitlab(Long numeroGitLab) {
+        this.numeroGitLab = numeroGitLab;
     }
 
     public String getTitulo() {
