@@ -17,7 +17,7 @@ public class GitLabTarea {
     @Column(name = "issue_id", nullable = false, length = 100)
     private String issueId;
 
-    @Column(name = "numeroGitLab", nullable = false)
+    @Column(name = "numero_git_lab", nullable = false)
     private Long numeroGitLab;
 
     @Column(name = "titulo", nullable = false)
@@ -64,11 +64,11 @@ public class GitLabTarea {
         this.issueId = issueId;
     }
 
-    public Long getnumeroGitLab() {
+    public Long getNumeroGitLab() {
         return numeroGitLab;
     }
 
-    public void setnumeroGitLab(Long numeroGitLab) {
+    public void setNumeroGitLab(Long numeroGitLab) {
         this.numeroGitLab = numeroGitLab;
     }
 

@@ -36,12 +36,10 @@ public class GitLabController {
     @GetMapping("/tareas/{proyectoId}")
     public ResponseEntity<ApiResponse> getTareas(@PathVariable Long proyectoId) {
         try {
-            // Ahora 'tareas' es una lista de objetos tipo GitLabTareaDTO
-            List<GitLabTareaDTO> tareas = gitLabService.obtenerTareasPorProyecto(proyectoId);
+            List<GitLabTareaDTO> tareas = gitLabService.obtenerTareasConEstadoVinculacion(proyectoId);
 
             return ResponseEntity.ok(new ApiResponse("Tareas recuperadas de GitLab", true, tareas));
         } catch (Exception e) {
-            // Capturamos cualquier error (como proyecto no encontrado o fallo de API)
             return ResponseEntity.status(500).body(new ApiResponse(e.getMessage(), false, null));
         }
     }
