@@ -11,17 +11,9 @@ import java.util.Optional;
 @Repository
 public interface DetalleEstimacionRepository extends JpaRepository<DetalleEstimacion, Long> {
     
-    List<DetalleEstimacion> findByIdExcel(Integer idExcel);
+List<DetalleEstimacion> findByIdExcel(Integer idExcel);
 
     List<DetalleEstimacion> findByIdTareaProyecto(Long idTareaProyecto);
     
-    // Añadir dentro de DetalleEstimacionRepository
-    DetalleEstimacion findFirstByIdExcelAndIdFaseAndTareaIgnoreCaseAndIdDepartamento(
-        Integer idExcel, 
-        Integer idFase, 
-        String tarea, 
-        Integer idDepartamento
-    );
-
-    Optional<Proyecto> findById(Integer nuevoIdDetalleEstimacion);
+    DetalleEstimacion findFirstByIdExcelAndIdTareaProyecto(Integer idExcel, Long idTareaProyecto);
 }
