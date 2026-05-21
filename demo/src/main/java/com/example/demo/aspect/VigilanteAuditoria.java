@@ -4,13 +4,22 @@ import com.example.demo.annotation.Auditable;
 import com.example.demo.entity.AuditLog;
 import com.example.demo.repository.AuditLogRepository;
 import com.example.demo.services.AuditService;
+import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationConfig;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.ser.BeanPropertyWriter;
+import com.fasterxml.jackson.databind.ser.BeanSerializerModifier;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.*;
+
+import java.util.List;
+
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.hibernate.mapping.ManyToOne;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -130,20 +139,49 @@ public class VigilanteAuditoria {
      */
   
     private String convertirAJson(Object objeto) {
-        if (objeto == null) {
-            return null;
-        }
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            mapper.registerModule(new JavaTimeModule());
-            mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-            mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-            
-            return mapper.writeValueAsString(objeto);
-        } catch (Exception e) {
-            return "{\"error\": \"No se pudo serializar el objeto: " + e.getMessage() + "\"}";
-        }
+    if (objeto == null) {
+        return null;
     }
+
+    try {
+        ObjectMapper mapper = new ObjectMapper();
+
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+
+        // Ignorar relaciones JPA automáticamente
+        mapper.setSerializerFactory(
+            mapper.getSerializerFactory().withSerializerModifier(
+                new BeanSerializerModifier() {
+                    @Override
+                    public List<BeanPropertyWriter> changeProperties(
+                            SerializationConfig config,
+                            BeanDescription beanDesc,
+                            List<BeanPropertyWriter> beanProperties) {
+
+                        beanProperties.removeIf(writer -> {
+                            var member = writer.getMember();
+                            if (member == null) return false;
+
+                            return member.hasAnnotation(ManyToOne.class)
+                                    || member.hasAnnotation(OneToMany.class)
+                                    || member.hasAnnotation(OneToOne.class)
+                                    || member.hasAnnotation(ManyToMany.class);
+                        });
+
+                        return beanProperties;
+                    }
+                }
+            )
+        );
+
+        return mapper.writeValueAsString(objeto);
+
+    } catch (Exception e) {
+        return "{\"error\": \"No se pudo serializar el objeto: " + e.getMessage() + "\"}";
+    }
+}
 
   
 }

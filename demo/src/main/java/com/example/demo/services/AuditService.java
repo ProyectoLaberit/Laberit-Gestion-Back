@@ -65,6 +65,8 @@ public class AuditService {
             dto.setIdUsuarioObjetivo(objetivo.id());
             dto.setUsuarioObjetivoNombre(objetivo.nombre());
             dto.setUsuarioObjetivoEmail(objetivo.email());
+        }else{
+            dto.setIdUsuarioObjetivo(log.getIdAfectado().intValue());
         }
 
         return dto;
