@@ -6,6 +6,7 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,7 +34,8 @@ import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.ExcelRepository;
 import com.example.demo.repository.FaseRepository;
 import com.example.demo.repository.TareaProyectoRepository;
-
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 @Service
 public class ExcelService {
 
@@ -122,7 +124,7 @@ public class ExcelService {
         
         Map<Integer, Integer[]> columnasPorDepto = obtenerMapeoColumnas(departamentos);
         Map<String, Integer> mapaFases = obtenerMapeoFases(fases);
-        Map<Integer, Map<String, List<DetalleEstimacion>>> recamaraTareas = agruparTareasPorSubfase(detalles, mapaTareas);
+        Map<Integer, Map<String, List<DetalleEstimacion>>> recamaraTareas = agruparTareasPorSubfase(detalles);
 
         // Primera Pasada: Coincidencias Exactas (Francotirador)
         procesarNombresExactos(hoja, mapaFases, columnasPorDepto, recamaraTareas, mapaTareas);
@@ -174,32 +176,34 @@ public class ExcelService {
         return mapaFases;
     }
 
-    /**
+   /**
      * Organiza y agrupa la lista de estimaciones en una estructura indexada en memoria (3D).
      * Agrupa por ID de subfase y asocia todas las filas de departamentos correspondientes a una tarea única.
      * @param detalles Lista de estimaciones obtenidas del idExcel específico.
-     * @param mapaTareas Diccionario de resolución del pivote central.
      * @return Un mapa anidado estructurado por ID de Subfase y Nombre de Tarea normalizado.
      */
-    private Map<Integer, Map<String, List<DetalleEstimacion>>> agruparTareasPorSubfase(List<DetalleEstimacion> detalles, Map<Long, TareaProyecto> mapaTareas) {
+    private Map<Integer, Map<String, List<DetalleEstimacion>>> agruparTareasPorSubfase(List<DetalleEstimacion> detalles) {
+        // 1. ORDENAR CRONOLÓGICAMENTE: Forzamos que los IDs más bajos (tareas originales) vayan primero.
+        detalles.sort(Comparator.comparing(DetalleEstimacion::getId));
+
         Map<Integer, Map<String, List<DetalleEstimacion>>> recamara = new HashMap<>();
+        
         for (DetalleEstimacion det : detalles) {
-            TareaProyecto tp = mapaTareas.get(det.getIdTareaProyecto());
-            
-            if (tp == null || tp.getIdFase() == null || tp.getTarea() == null) {
+            if (det.getId() == null || det.getTarea() == null) {
                 continue;
             }
             
-            if (!recamara.containsKey(tp.getIdFase())) {
-                recamara.put(tp.getIdFase(), new HashMap<>());
+            if (!recamara.containsKey(det.getId())) {
+                // 2. USAR LINKEDHASHMAP: A diferencia del HashMap normal, este respeta el orden de entrada.
+                recamara.put(det.getId(), new LinkedHashMap<>());
             }
             
-            String claveTarea = normalizarTextoAuxiliar(tp.getTarea());
-            if (!recamara.get(tp.getIdFase()).containsKey(claveTarea)) {
-                recamara.get(tp.getIdFase()).put(claveTarea, new ArrayList<>());
+            String claveTarea = normalizarTextoAuxiliar(det.getTarea());
+            if (!recamara.get(det.getId()).containsKey(claveTarea)) {
+                recamara.get(det.getId()).put(claveTarea, new ArrayList<>());
             }
             
-            recamara.get(tp.getIdFase()).get(claveTarea).add(det);
+            recamara.get(det.getId()).get(claveTarea).add(det);
         }
         return recamara;
     }
