@@ -8,13 +8,13 @@ public class GitLabTarea {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_tarea_gitlab") // Tu clave primaria autoincremental (BIGSERIAL)
+    @Column(name = "id") // Tu clave primaria autoincremental (BIGSERIAL)
     private Long id;
 
     @Column(name = "issue_id", nullable = false, length = 100) // El ID global de GitLab que viene en tu DTO (String)
     private String issueId;
 
-    @Column(name = "iid_gitlab", nullable = false) // El número visible con almohadilla (#14) que guardamos como número
+    @Column(name = "numeroGitLab", nullable = false) // El número visible con almohadilla (#14) que guardamos como número
                                                    // (Long)
     private Long numeroGitLab;
 
@@ -50,7 +50,7 @@ public class GitLabTarea {
 
     // --- GETTERS Y SETTERS ---
 
-    public Long getIdTareaGitlab() {
+    public Long getId() {
         return id;
     }
 
@@ -66,11 +66,11 @@ public class GitLabTarea {
         this.issueId = issueId;
     }
 
-    public Long getIidGitlab() {
+    public Long getnumeroGitLab() {
         return numeroGitLab;
     }
 
-    public void setIidGitlab(Long numeroGitLab) {
+    public void setnumeroGitLab(Long numeroGitLab) {
         this.numeroGitLab = numeroGitLab;
     }
 

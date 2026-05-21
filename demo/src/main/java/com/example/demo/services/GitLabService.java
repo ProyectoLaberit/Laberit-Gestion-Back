@@ -3,12 +3,10 @@ package com.example.demo.services;
 import com.example.demo.dto.GitLabProyectoDTO;
 import com.example.demo.dto.GitLabTareaDTO;
 import com.example.demo.entity.ApiConfig;
-import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.GitLabTarea;
 import com.example.demo.entity.Proyecto;
 import com.example.demo.entity.TareaProyecto;
 import com.example.demo.repository.ApiConfigRepository;
-import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.GitLabTareaRepository;
 import com.example.demo.repository.ProyectoRepository;
 import com.example.demo.repository.TareaProyectoRepository;
@@ -129,7 +127,7 @@ public class GitLabService {
         return rawIssues.stream()
                 .map(issue -> new GitLabTareaDTO(
                         String.valueOf(issue.get("id")), // ID global de GitLab
-                        Long.valueOf(String.valueOf(issue.get("iid"))), // ID interno del proyecto
+                        Long.valueOf(String.valueOf(issue.get("numeroGitLab"))), // ID interno del proyecto
                         String.valueOf(issue.get("title")), // Título de la tarea
                         (List<String>) issue.get("labels"), // Etiquetas
                         String.valueOf(issue.get("state")) // <--- GitLab trae "state", tu DTO lo guarda como "estado"
@@ -263,7 +261,7 @@ public class GitLabService {
 
         // 3. Sincronizar estado y mapear el grafo de dependencias
         tarea.setIssueId(dto.getId());
-        tarea.setIidGitlab(dto.getIid());
+        tarea.setnumeroGitLab(dto.getnumeroGitLab());
         tarea.setTitulo(dto.getTitle());
         tarea.setEstado(dto.getEstado());
         tarea.setUrl(urlProyecto);
