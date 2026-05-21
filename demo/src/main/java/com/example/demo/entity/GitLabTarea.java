@@ -11,11 +11,10 @@ public class GitLabTarea {
     @Column(name = "id") // Tu clave primaria autoincremental (BIGSERIAL)
     private Long id;
 
-    @Column(name = "issue_id", nullable = false, length = 100) // El ID global de GitLab que viene en tu DTO (String)
+    @Column(name = "issue_id", nullable = false, length = 100)
     private String issueId;
 
-    @Column(name = "numeroGitLab", nullable = false) // El número visible con almohadilla (#14) que guardamos como número
-                                                   // (Long)
+    @Column(name = "numero_git_lab", nullable = false)
     private Long numeroGitLab;
 
     @Column(name = "titulo", nullable = false) // Título de la issue
@@ -66,11 +65,11 @@ public class GitLabTarea {
         this.issueId = issueId;
     }
 
-    public Long getnumeroGitLab() {
+    public Long getNumeroGitLab() {
         return numeroGitLab;
     }
 
-    public void setnumeroGitLab(Long numeroGitLab) {
+    public void setNumeroGitLab(Long numeroGitLab) {
         this.numeroGitLab = numeroGitLab;
     }
 

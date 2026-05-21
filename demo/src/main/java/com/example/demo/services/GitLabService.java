@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -124,15 +125,35 @@ public class GitLabService {
         List<Map<String, Object>> rawIssues = ejecutarConsultaLista(urlIssues, config.getClave());
 
         // 5. Transformación de modelo externo a DTO interno
+        // 5. Transformación de modelo externo a DTO interno (Versión ultra-segura)
         return rawIssues.stream()
-                .map(issue -> new GitLabTareaDTO(
-                        String.valueOf(issue.get("id")), // ID global de GitLab
-                        Long.valueOf(String.valueOf(issue.get("numeroGitLab"))), // ID interno del proyecto
-                        String.valueOf(issue.get("title")), // Título de la tarea
-                        (List<String>) issue.get("labels"), // Etiquetas
-                        String.valueOf(issue.get("state")) // <--- GitLab trae "state", tu DTO lo guarda como "estado"
-                ))
-                .collect(Collectors.toList());// Etiquetas asociadas a la tarea
+                .map(issue -> {
+                    // 🛡️ CONTROL DE SEGURIDAD PARA EL ID GLOBAL
+                    String idStr = issue.get("id") != null ? String.valueOf(issue.get("id")) : "0";
+
+                    // 🛡️ CONTROL DE SEGURIDAD PARA EL NUMERO INTERNO (Evita el "For input string:
+                    // null")
+                    Object iidObj = issue.get("iid");
+                    Long numeroGitLabVal = 0L; // Valor por defecto si viene roto o vacío
+                    if (iidObj != null && !String.valueOf(iidObj).equals("null")
+                            && !String.valueOf(iidObj).trim().isEmpty()) {
+                        numeroGitLabVal = Long.valueOf(String.valueOf(iidObj).trim());
+                    }
+
+                    // 🛡️ CONTROL DE SEGURIDAD PARA TEXTOS
+                    String titleStr = issue.get("title") != null ? String.valueOf(issue.get("title")) : "Sin título";
+                    String stateStr = issue.get("state") != null ? String.valueOf(issue.get("state")) : "unknown";
+                    List<String> labelsList = (List<String>) issue.get("labels");
+
+                    // Construimos el DTO con los datos limpios y seguros
+                    return new GitLabTareaDTO(
+                            idStr,
+                            numeroGitLabVal,
+                            titleStr,
+                            labelsList,
+                            stateStr);
+                })
+                .collect(Collectors.toList());
 
     }
 
@@ -177,6 +198,78 @@ public class GitLabService {
             System.err.println("ERROR SISTEMA: " + e.getMessage());
             return List.of();
         }
+    }
+
+    /**
+     * [NUEVO] Recupera todas las tareas de GitLab y calcula su estado de
+     * vinculación.
+     * Si la tarea es nueva y tiene el nombre correcto, la guarda automáticamente en
+     * Neon.
+     * Si está mal escrita, la marca como no vinculada para que el front la
+     * gestione.
+     * * @param proyectoIdLocal ID del proyecto local.
+     * 
+     * @return Lista unificada de DTOs con el campo vinculada actualizado.
+     */
+    public List<GitLabTareaDTO> obtenerTareasConEstadoVinculacion(Long proyectoIdLocal) {
+        // 1. Nos descargamos todo el material bruto desde internet usando el método que
+        // ya tienes
+        List<GitLabTareaDTO> tareasGitLab = obtenerTareasPorProyecto(proyectoIdLocal);
+
+        // 2. Extraemos todos los issueId que ya existen en Neon para comprobar
+        // duplicados eficientemente
+        List<String> idsEnBD = gitLabTareaRepository.findAll().stream()
+                .map(GitLabTarea::getIssueId)
+                .collect(Collectors.toList());
+
+        // 3. Procesamos la lista una a una
+        for (GitLabTareaDTO tarea : tareasGitLab) {
+
+            // ESCENARIO A: La tarea ya existe en Neon
+            if (idsEnBD.contains(tarea.getId())) {
+                tarea.setVinculada(true);
+                continue;
+            }
+
+            // ESCENARIO B: Es una tarea nueva.
+            // 1. Primero miramos si el título no es nulo
+            boolean tieneTexto = tarea.getTitle() != null && !tarea.getTitle().trim().isEmpty();
+
+            // 2. Buscamos en la tabla tareas_proyecto si hay alguna que se llame IGUAL
+            List<TareaProyecto> coincidenciaPlanificacion = List.of();
+
+            if (tieneTexto) {
+                coincidenciaPlanificacion = tareaProyectoRepository.findByTarea(tarea.getTitle().trim());
+            }
+
+            // REGLA DE NEGOCIO: Es válida y se autoguarda SOLO si la lista tiene alguna
+            // coincidencia
+            if (!coincidenciaPlanificacion.isEmpty()) {
+
+                // ¡AUTOGUARDADO! Como coincide, la metemos en Neon vinculada a su TareaProyecto
+                GitLabTarea nueva = new GitLabTarea();
+                nueva.setIssueId(tarea.getId());
+                nueva.setNumeroGitLab(tarea.getNumeroGitLab()); // (Asegúrate de que en el DTO esté con la N mayúscula)
+                nueva.setTitulo(tarea.getTitle());
+                nueva.setEstado(tarea.getEstado());
+
+                // ¡Aquí está la magia! Nos quedamos con el primer elemento de la lista (índice
+                // 0)
+                nueva.setTareaProyecto(coincidenciaPlanificacion.get(0)); // 🛠️ Corregido: Cambiado .get() por .get(0)
+
+                gitLabTareaRepository.save(nueva); // Guarda en Neon
+
+                tarea.setVinculada(true);
+            } else {
+                // ESCENARIO C: No hay ninguna tarea en la planificación que se llame igual.
+                // No se guarda automáticamente y el front mostrará el botón "Vincular y
+                // Corregir"
+                tarea.setVinculada(false);
+            }
+        }
+
+        // 4. Devolvemos la lista única que consumirá tu controlador
+        return tareasGitLab;
     }
 
     /**
@@ -261,7 +354,7 @@ public class GitLabService {
 
         // 3. Sincronizar estado y mapear el grafo de dependencias
         tarea.setIssueId(dto.getId());
-        tarea.setnumeroGitLab(dto.getnumeroGitLab());
+        tarea.setNumeroGitLab(dto.getNumeroGitLab());
         tarea.setTitulo(dto.getTitle());
         tarea.setEstado(dto.getEstado());
         tarea.setUrl(urlProyecto);

@@ -17,4 +17,6 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
 
     // método para sacar todas las tareas de un proyecto
     List<TareaProyecto> findByIdProyecto(Long idProyecto);
+
+    List<TareaProyecto> findByTarea(String tarea);
 }
