@@ -4,9 +4,11 @@ import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 /**
- * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ *  DTO (Data Transfer Object) para representar un proyecto en las respuestas de la API.
+*/
+/**
+ * Clase enviada y/o recibida del front con la informacion de un proyecto de la base de datos
  */
 public class ProyectoDTO {
     private Long id;
@@ -51,7 +53,6 @@ public class ProyectoDTO {
         this.activo = activo;
     }
 
-    // Getters and Setters
     public Long getId() { return id; }
     public String getNombre() { return nombre; }
     public String getDescripcion() { return descripcion; }

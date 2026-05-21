@@ -1,5 +1,10 @@
 package com.example.demo.dto;
-
+/**
+ *  DTO (Data Transfer Object) para representar los tiempos de un proyecto en las respuestas de la API.
+*/
+/**
+ * Clase que contiene un resumen los tiempos de un proyecto para su envio a front
+ */
 public class ResumenTiemposDTO {
     private Double tiempoRealTotal;
     private Double tiempoEstimadoMedia;
@@ -9,7 +14,6 @@ public class ResumenTiemposDTO {
         this.tiempoEstimadoMedia = tiempoEstimadoMedia;
     }
 
-    // Getters y Setters
     public Double getTiempoRealTotal() { return tiempoRealTotal; }
     public void setTiempoRealTotal(Double tiempoRealTotal) { this.tiempoRealTotal = tiempoRealTotal; }
 

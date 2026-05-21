@@ -1,16 +1,15 @@
 package com.example.demo.dto;
 
 import java.time.LocalDate;
-
 /**
- * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ * Clase enviada al front para mostrar los cambios realizados por los usuarios registrados en la base de datos
  */
 public class HistorialExcelDTO {
     private Integer idExcel;
     private LocalDate fechaSubida;
     private String usuarioNombre;
     private Boolean vigente;
-    // Constructor
+
     public HistorialExcelDTO(Integer idExcel, LocalDate fechaSubida, String usuarioNombre, Boolean vigente) {
         this.idExcel = idExcel;
         this.fechaSubida = fechaSubida;
@@ -18,7 +17,6 @@ public class HistorialExcelDTO {
         this.vigente = vigente;
     }
 
-    // Getters y Setters
     public Integer getIdExcel() { return idExcel; }
     public void setIdExcel(Integer idExcel) { this.idExcel = idExcel; }
     public LocalDate getFechaSubida() { return fechaSubida; }

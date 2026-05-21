@@ -1,5 +1,7 @@
 package com.example.demo.dto;
-
+/**
+ *  DTO (Data Transfer Object) para representar una estimacion en las respuestas de la API.
+*/
 /**
  * Clase enviada y/o recibida del front para mostrar o recibir datos de las estimaciones de los excel
  */
@@ -7,31 +9,27 @@ public class DetalleEstimacionDTO {
     
     private Long id;
     private Integer idExcel;
-    private Long idTareaProyecto; // NUEVO CAMPO PIVOTE
+    private Long idTareaProyecto;
     
-    // IDs originales por si el front necesita hacer updates
     private Integer idDepartamento;
     private Integer idFasePadre;
     
     private Integer idSubFase;
-    // Textos legibles para pintar la tabla directamente
     private String nombreDepartamento;
-    private String nombreFase;     // Padre (ej: Análisis, Desarrollo)
-    private String nombreSubfase;  // Hijo (ej: Investigación, Frontend)
+    private String nombreFase;
+    private String nombreSubfase;
     
     private String tarea;
-    private Double tiempoMin; // Tiempo mínimo del excel actual
-    private Double tiempoMax; // Tiempo máximo del excel actual
-    private Double tiempoMinElegido; // Tiempo mínimo del excel elegido
-    private Double tiempoMaxElegido; // Tiempo máximo del excel elegido
+    private Double tiempoMin;
+    private Double tiempoMax;
+    private Double tiempoMinElegido;
+    private Double tiempoMaxElegido;
     private Double tiempoReal;
     private String numeroGitlab;
     private Boolean completada;
 
-    // Constructor vacío
     public DetalleEstimacionDTO() {}
 
-    // Constructor completo original (se mantiene para compatibilidad)
     public DetalleEstimacionDTO(Long id, Integer idExcel, Integer idDepartamento, Integer idFase,
                                 String nombreDepartamento, String nombreFase, String nombreSubfase,
                                 String tarea, Double tiempoMin, Double tiempoMax) {
@@ -48,9 +46,6 @@ public class DetalleEstimacionDTO {
         this.completada = false;
     }
 
-    // ==========================================
-    // GETTERS Y SETTERS
-    // ==========================================
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     

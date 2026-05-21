@@ -1,6 +1,9 @@
 package com.example.demo.dto;
 
 import java.time.LocalDateTime;
+/**
+ * Clase que contiene las acciones de un usuario sobre otro y la informacion de ambos
+ */
 
 public class AuditLogDTO {
 

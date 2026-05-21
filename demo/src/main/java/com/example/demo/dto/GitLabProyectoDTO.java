@@ -1,9 +1,10 @@
 package com.example.demo.dto;
 
-// DTO para representar un proyecto de GitLab que aún no ha sido registrado en nuestra base de datos
-
 /**
- * Clase enviada y/o recibida del front para mostrar o recibir datos de los proyectos de gitlab
+ *  DTO (Data Transfer Object) para representar un proyecto de GitLab en las respuestas de la API.
+*/
+/**
+ * Clase que contiene los datos de los proyectos de gitlab que aun no ha sido registrado en base de datos
  */
 public class GitLabProyectoDTO {
     private String id;

@@ -1,7 +1,9 @@
 package com.example.demo.dto;
 
 import java.util.Date;
-
+/**
+ *  DTO (Data Transfer Object) para representar una tarea de clockify en las respuestas de la API.
+*/
 /**
  * Clase enviada y/o recibida del front para mostrar o recibir datos de las tareas de clockify
  */
@@ -14,7 +16,6 @@ public class ClockifyTareaDTO {
     private double inicio;
     private double fin;
 
-    //nombre tiempos
     public ClockifyTareaDTO() {
     }
 

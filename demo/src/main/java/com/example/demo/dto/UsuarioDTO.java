@@ -1,33 +1,25 @@
 package com.example.demo.dto;
 
 /**
- * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ *  DTO (Data Transfer Object) para representar un usuario en las respuestas de la API.
+*/
+/**
+ * Clase que contiene la informacion de un usuario
  */
 public class UsuarioDTO {
 
     private Integer id;
     private String nombre;
     private String email;
-
-    // Para el Endpoint 2 (Crear Usuario)
     private String password;
-
-    // Para el Endpoint 4 (Cambiar Contraseña)
     private String passwordVieja;
     private String passwordNueva;
-
     private String resetToken;
-
-    // Para el Endpoint 5 (Cambiar Foto)
     private String foto;
-
-    // Para el Endpoint 6 (Cambiar Rol)
     private String rol;
 
     public UsuarioDTO() {
     }
-
-    // --- GETTERS Y SETTERS ---
 
     public Integer getId() {
         return id;

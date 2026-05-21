@@ -1,7 +1,6 @@
 package com.example.demo.dto;
-
 /**
- * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ * Clase que contiene informacion de los permisos de un rol
  */
 public class PermisoDTO {
     private Integer id;
@@ -15,7 +14,6 @@ public class PermisoDTO {
         this.nombre = nombre;
     }
 
-    // Getters y Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 

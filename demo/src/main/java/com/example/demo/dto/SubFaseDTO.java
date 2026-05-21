@@ -1,7 +1,9 @@
 package com.example.demo.dto;
-
 /**
- * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ *  DTO (Data Transfer Object) para representar una subfase en las respuestas de la API.
+*/
+/**
+ * Clase que contiene la informacion de las subfases
  */
 public class SubFaseDTO {
     private Integer id;
@@ -12,7 +14,6 @@ public class SubFaseDTO {
         this.nombre = nombre;
     }
 
-    // Getters y Setters
     public Integer getId() {
         return id;
     }

@@ -1,9 +1,8 @@
 package com.example.demo.dto;
 
 import java.util.List;
-
 /**
- * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ * Clase enviada y/o recibida del front que contiene la iformacion de un rol, asi como los permisos
  */
 public class RolDTO {
     private Integer id;
@@ -19,7 +18,6 @@ public class RolDTO {
         this.permisos = permisos;
     }
 
-    // Getters y Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 

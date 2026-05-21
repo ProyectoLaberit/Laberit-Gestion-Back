@@ -1,7 +1,7 @@
 package com.example.demo.dto;
 
 /**
- * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ * Clase recibida del front para recibir informacion de un inicio de sesion
  */
 public class LoginRequest {
     private String email;
@@ -15,7 +15,6 @@ public class LoginRequest {
         this.password = password;
     }
 
-    // Getters and Setters
     public String getEmail() { return email; }
     public String getPassword() { return password; }
     public void setEmail(String email) { this.email = email; }

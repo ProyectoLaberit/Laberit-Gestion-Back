@@ -1,7 +1,9 @@
 package com.example.demo.dto;
-
 /**
- * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ *  DTO (Data Transfer Object) para representar una tarea de una subfase en las respuestas de la API.
+*/
+/**
+ * Clase que contiene los datos de una tarea de una subfase
  */
 public class TareaSubfaseDTO {
 

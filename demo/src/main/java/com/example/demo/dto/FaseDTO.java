@@ -1,7 +1,9 @@
 package com.example.demo.dto;
 
 import java.util.List;
-
+/**
+ *  DTO (Data Transfer Object) para representar una fase en las respuestas de la API.
+*/
 /**
  * Clase enviada y/o recibida del front para mostrar o recibir datos de las fases 
  */
@@ -18,7 +20,6 @@ public class FaseDTO {
 
     public FaseDTO() {}
 
-    // Getters y Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
     public String getNombre() { return nombre; }

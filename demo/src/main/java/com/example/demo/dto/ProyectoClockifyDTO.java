@@ -1,7 +1,9 @@
 package com.example.demo.dto;
-
 /**
- * Clase enviada y/o recibida del front para mostrar o recibir datos 
+ *  DTO (Data Transfer Object) para representar un proyecto de Clockify en las respuestas de la API.
+*/
+/**
+ * Clase que contiene informacion de un proyecto de clockify
  */
 public class ProyectoClockifyDTO {
     private String id;
@@ -30,9 +32,5 @@ public class ProyectoClockifyDTO {
     public void setNombre(String nombre) {
         this.nombre = nombre;
     }
-
-
-    
-
     
 }
