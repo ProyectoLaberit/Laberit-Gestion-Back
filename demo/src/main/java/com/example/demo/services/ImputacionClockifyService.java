@@ -3,6 +3,8 @@ package com.example.demo.services;
 import com.example.demo.annotation.Auditable;
 import com.example.demo.entity.ImputacionClockify;
 import com.example.demo.repository.ImputacionClockifyRepository;
+import com.example.demo.repository.TareaProyectoRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +15,9 @@ public class ImputacionClockifyService {
 
     @Autowired
     private ImputacionClockifyRepository repository;
+
+    @Autowired
+    private TareaProyectoRepository tareaProyectoRepository;
 
     /**
      * Calcula y devuelve la suma total de horas trabajadas que están marcadas como válidas 
@@ -167,14 +172,44 @@ public class ImputacionClockifyService {
         entidad = ImputacionClockify.class,
         descripcion = "Se editó la descripción extraída a '#{#nuevaTarea}' en la imputación '#{#idImputacion}'"
     )
-    public ImputacionClockify editarTareaExtraida(Long idImputacion, String nuevaTarea) {
+    public ImputacionClockify editarTareaExtraida(Long idImputacion, String nuevaTarea, String nuevaSubfase, Integer idNuevaFase) {
         ImputacionClockify imputacion = repository.findById(idImputacion).orElse(null);
         
-        if (imputacion != null) {
-            imputacion.setTareaExtraida(nuevaTarea);
-            return repository.save(imputacion);
+        if (imputacion == null) return null;
+
+        // 1. Actualizamos los textos (la parte visual)
+        if (nuevaTarea != null && !nuevaTarea.trim().isEmpty()) {
+            imputacion.setTareaExtraida(nuevaTarea.trim());
         }
-        return null;
+        
+        if (nuevaSubfase != null && !nuevaSubfase.trim().isEmpty() && !nuevaSubfase.contains("Selecciona")) {
+            imputacion.setSubfaseExtraida(nuevaSubfase.trim());
+        }
+
+        // 2. Si el usuario cambió la subfase, 
+        // buscamos el nuevo ID de tarea_proyecto que corresponde a esta nueva subfase
+        if (idNuevaFase != null) {
+            // Buscamos la tarea que encaje con el proyecto, la nueva fase y el departamento de esta imputación
+            // Usamos el ID del proyecto y departamento que ya tiene la imputación actual
+            var tareaProyecto = tareaProyectoRepository.findByIdProyectoAndIdFaseAndIdDepartamentoAndTarea(
+                    imputacion.getIdProyecto(), 
+                    idNuevaFase, 
+                    imputacion.getIdDepartamento(), 
+                    imputacion.getTareaExtraida()
+            ).orElse(null);
+
+            if (tareaProyecto != null) {
+                // Si encontramos la tarea destino, movemos la imputación hacia ella
+                imputacion.setIdTareaProyecto(tareaProyecto.getIdTareaProyecto());
+                imputacion.setValida(true); // Al moverla a una tarea existente, asumimos que es correcta
+            } else {
+                // Si no existe la tarea en el pivote para esa nueva fase, la dejamos como huérfana
+                imputacion.setIdTareaProyecto(null);
+                imputacion.setValida(false);
+            }
+        }
+
+        return repository.save(imputacion);
     }
 
     /**
