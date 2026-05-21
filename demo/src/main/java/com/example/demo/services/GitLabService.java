@@ -19,6 +19,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -120,11 +122,26 @@ public class GitLabService {
                 ? config.getUrlReal().substring(0, config.getUrlReal().length() - 1)
                 : config.getUrlReal();
 
-        // 4. Petición a la API externa (Aquí es donde se produce la latencia de red)
-        String urlIssues = baseUrl + "/projects/" + gitlabId.trim() + "/issues";
-        List<Map<String, Object>> rawIssues = ejecutarConsultaLista(urlIssues, config.getClave());
+        // 4. Petición paginada a la API externa (Evita el límite de las 20 tareas)
+        List<Map<String, Object>> rawIssues = new ArrayList<>();
+        int paginaActual = 1;
+        boolean tieneMasPaginas = true;
 
-        // 5. Transformación de modelo externo a DTO interno
+        while (tieneMasPaginas) {
+            // Construimos la URL inyectando los parámetros de paginación de GitLab
+            String urlIssues = baseUrl + "/projects/" + gitlabId.trim() + "/issues?per_page=100&page=" + paginaActual;
+
+            // Reutilizamos tu método para lanzar la consulta de la página actual
+            List<Map<String, Object>> resultadoPagina = ejecutarConsultaLista(urlIssues, config.getClave());
+
+            if (resultadoPagina != null && !resultadoPagina.isEmpty()) {
+                rawIssues.addAll(resultadoPagina);
+                paginaActual++; // Avanzamos a la siguiente página
+            } else {
+                tieneMasPaginas = false; // Paramos el bucle si la página viene vacía
+            }
+        }
+
         // 5. Transformación de modelo externo a DTO interno (Versión ultra-segura)
         return rawIssues.stream()
                 .map(issue -> {
@@ -154,7 +171,6 @@ public class GitLabService {
                             stateStr);
                 })
                 .collect(Collectors.toList());
-
     }
 
     /**
