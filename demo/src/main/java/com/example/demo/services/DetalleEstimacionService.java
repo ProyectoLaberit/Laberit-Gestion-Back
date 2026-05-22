@@ -478,7 +478,7 @@ public class DetalleEstimacionService {
 
             double sumaReal = 0.0;
             for (DetalleEstimacion det : entry.getValue()) {
-                Double horasReales = imputacionClockifyRepository.sumarHorasValidas(det.getId());
+                Double horasReales = imputacionClockifyRepository.sumarHorasValidas(det.getIdTareaProyecto());
                 if (horasReales != null) {
                     sumaReal += horasReales;
                 }
