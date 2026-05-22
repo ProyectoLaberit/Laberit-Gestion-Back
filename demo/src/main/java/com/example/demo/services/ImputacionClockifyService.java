@@ -101,10 +101,13 @@ public class ImputacionClockifyService {
      * una tarea y un departamento específicos.
      */
     public List<ImputacionClockify> obtenerPorDepartamentoYTarea(Long idProyecto, Long idTareaProyecto, Integer idDepartamento, String subfase) {
+        System.out.println("DEBUG: Buscando imputaciones -> Proyecto: " + idProyecto + ", Tarea: " + idTareaProyecto + ", Depto: " + idDepartamento);
         // Obtenemos los datos brutos del repo
         List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamento(idProyecto, idTareaProyecto, idDepartamento);
         
         String subfaseLimpia = normalizar(subfase);
+
+        System.out.println("DEBUG: El repositorio devolvió " + listaBruta.size() + " registros.");
         
         // Filtramos en memoria (ultra rápido y a prueba de tildes)
         return listaBruta.stream().filter(imp -> {
