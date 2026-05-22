@@ -1,9 +1,9 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
+
 /**
  * Entidad que representa las tareas de gitlab de la base de datos
- * tiene una relacion recursiva con "tarea_proyecto"
  */
 @Entity
 @Table(name = "tarea_gitlab")
@@ -26,33 +26,36 @@ public class GitLabTarea {
     @Column(name = "estado", nullable = false, length = 50)
     private String estado;
 
-    @Column(name = "url", length = 500)
-    private String url;
 
-    // Relación ManyToOne con la tabla central real de tu base de datos
+    @Column(name = "valida")
+    private Boolean valida = false;
+
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_tarea_proyecto", nullable = false)
+    @JoinColumn(name = "id_tarea_proyecto", nullable = true)
     private TareaProyecto tareaProyecto;
 
+    // --- CONSTRUCTORES ---
     public GitLabTarea() {
     }
 
-    public GitLabTarea(Long id, String issueId, Long numeroGitLab, String titulo, String estado, String url,
+    public GitLabTarea(Long id, String issueId, Long numeroGitLab, String titulo, String estado, Boolean valida,
             TareaProyecto tareaProyecto) {
         this.id = id;
         this.issueId = issueId;
         this.numeroGitLab = numeroGitLab;
         this.titulo = titulo;
         this.estado = estado;
-        this.url = url;
+        this.valida = valida;
         this.tareaProyecto = tareaProyecto;
     }
 
+    // --- GETTERS Y SETTERS ---
     public Long getId() {
         return id;
     }
 
-    public void setIdTareaGitlab(Long id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -88,12 +91,12 @@ public class GitLabTarea {
         this.estado = estado;
     }
 
-    public String getUrl() {
-        return url;
+    public Boolean getValida() {
+        return valida;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
+    public void setValida(Boolean valida) {
+        this.valida = valida;
     }
 
     public TareaProyecto getTareaProyecto() {
