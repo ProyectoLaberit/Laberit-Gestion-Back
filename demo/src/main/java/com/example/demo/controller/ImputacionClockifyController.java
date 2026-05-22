@@ -137,9 +137,9 @@ public class ImputacionClockifyController {
         }
     }
     /**
-     * metodo para editar el campo tarea_extraida de una imputacion
+     * Metodo para editar la tarea_extraida, la subfase_extraida y reasignar la tarea estructuralmente
      * @param idImputacion id de la imputacion a cambiar
-     * @param body json que contiene el nuevo contenido del campo tarea_extraida
+     * @param body json que contiene nueva tarea, subfase (texto) y el idFase (número)
      * @return ApiResponse con un boolean a true si el cambio se realiza correctamente y false si no
      */
     @PutMapping("/editar-tarea/{idImputacion}")
@@ -147,8 +147,19 @@ public class ImputacionClockifyController {
             @PathVariable Long idImputacion, 
             @RequestBody java.util.Map<String, String> body) {
         try {
+            // 1. Recogemos los datos del JSON
             String nuevaTarea = body.get("tareaExtraida");
-            ImputacionClockify actualizada = service.editarTareaExtraida(idImputacion, nuevaTarea);
+            String nuevaSubfase = body.get("subfaseExtraida");
+            String idFaseStr = body.get("idFase");
+
+            // 2. Convertimos el ID de la fase a Integer (si nos lo han enviado)
+            Integer idFase = null;
+            if (idFaseStr != null && !idFaseStr.trim().isEmpty()) {
+                idFase = Integer.parseInt(idFaseStr);
+            }
+
+            // 3. Se lo pasamos todo al Service
+            ImputacionClockify actualizada = service.editarTareaExtraida(idImputacion, nuevaTarea, nuevaSubfase, idFase);
             
             if (actualizada != null) {
                 return ResponseEntity.ok(new ApiResponse("Tarea editada correctamente", true, actualizada));
