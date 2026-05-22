@@ -22,6 +22,8 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
     List<ImputacionClockify> findByIdProyectoAndValidaFalse(Long idProyecto);
 
     List<ImputacionClockify> findByIdProyecto(Long idProyecto);
+
+    List<ImputacionClockify> findByIdTareaProyectoIn(List<Long> idsTareaProyecto);
     
     List<ImputacionClockify> findByIdProyectoAndValida(Long idProyecto, Boolean valida);
     

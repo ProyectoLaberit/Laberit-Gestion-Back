@@ -12,6 +12,10 @@ public interface DetalleEstimacionRepository extends JpaRepository<DetalleEstima
 List<DetalleEstimacion> findByIdExcel(Integer idExcel);
 
     List<DetalleEstimacion> findByIdTareaProyecto(Long idTareaProyecto);
+
+    List<DetalleEstimacion> findByIdExcelAndIdTareaProyectoIn(Integer idExcel, List<Long> idTareaProyecto);
     
     DetalleEstimacion findFirstByIdExcelAndIdTareaProyecto(Integer idExcel, Long idTareaProyecto);
+
+    long countByIdTareaProyecto(Long idTareaProyecto);
 }
