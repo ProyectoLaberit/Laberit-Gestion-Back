@@ -795,7 +795,15 @@ public class DetalleEstimacionService {
             .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
 
         Long idTareaProyecto = detalle.getIdTareaProyecto();
-        detalleEstimacionRepository.delete(detalle);
+        List<DetalleEstimacion> detallesAEliminar = idTareaProyecto == null
+            ? java.util.List.of(detalle)
+            : detalleEstimacionRepository.findByIdTareaProyecto(idTareaProyecto);
+
+        if (detallesAEliminar == null || detallesAEliminar.isEmpty()) {
+            detallesAEliminar = java.util.List.of(detalle);
+        }
+
+        detalleEstimacionRepository.deleteAll(detallesAEliminar);
         limpiarReferenciasHuerfanasTareaProyecto(
             java.util.Collections.singletonList(idTareaProyecto),
             idTareaProyecto == null
