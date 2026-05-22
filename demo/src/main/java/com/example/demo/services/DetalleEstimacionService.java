@@ -789,11 +789,19 @@ public class DetalleEstimacionService {
         entidad = DetalleEstimacion.class,
         descripcion = "Se eliminó la estimación asociada a la tarea con ID '#{#resultado.idTareaProyecto}'"
     )
+    @Transactional
     public DetalleEstimacion eliminarTarea(Long id) {
         DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
 
+        Long idTareaProyecto = detalle.getIdTareaProyecto();
         detalleEstimacionRepository.delete(detalle);
+        limpiarReferenciasHuerfanasTareaProyecto(
+            java.util.Collections.singletonList(idTareaProyecto),
+            idTareaProyecto == null
+                ? java.util.List.of()
+                : tareaProyectoRepository.findAllById(java.util.Collections.singletonList(idTareaProyecto))
+        );
         return detalle;
     }
     @Transactional
@@ -834,39 +842,50 @@ public class DetalleEstimacionService {
 
         detalleEstimacionRepository.deleteAll(detallesAEliminar);
 
+        limpiarReferenciasHuerfanasTareaProyecto(idsTareaProyecto, tareasProyecto);
+
+        return detallesAEliminar.size();
+    }
+
+    private void limpiarReferenciasHuerfanasTareaProyecto(List<Long> idsTareaProyecto, List<TareaProyecto> tareasProyectoCandidatas) {
+        if (idsTareaProyecto == null || idsTareaProyecto.isEmpty()) {
+            return;
+        }
+
         Set<Long> idsTareaSinReferencias = new LinkedHashSet<>();
         for (Long idTareaProyecto : idsTareaProyecto) {
-            if (detalleEstimacionRepository.countByIdTareaProyecto(idTareaProyecto) == 0) {
+            if (idTareaProyecto != null && detalleEstimacionRepository.countByIdTareaProyecto(idTareaProyecto) == 0) {
                 idsTareaSinReferencias.add(idTareaProyecto);
             }
         }
 
-        if (!idsTareaSinReferencias.isEmpty()) {
-            List<Long> idsLibres = new ArrayList<>(idsTareaSinReferencias);
-
-            List<GitLabTarea> vinculacionesGitLab = gitLabTareaRepository.findByTareaProyecto_IdTareaProyectoIn(idsLibres);
-            if (vinculacionesGitLab != null && !vinculacionesGitLab.isEmpty()) {
-                gitLabTareaRepository.deleteAll(vinculacionesGitLab);
-            }
-
-            var imputacionesRelacionadas = imputacionClockifyRepository.findByIdTareaProyectoIn(idsLibres);
-            if (imputacionesRelacionadas != null && !imputacionesRelacionadas.isEmpty()) {
-                imputacionesRelacionadas.forEach(imputacion -> {
-                    imputacion.setIdTareaProyecto(null);
-                    imputacion.setValida(false);
-                });
-                imputacionClockifyRepository.saveAll(imputacionesRelacionadas);
-            }
-
-            List<TareaProyecto> tareasProyectoAEliminar = tareasProyecto.stream()
-                .filter(tarea -> idsTareaSinReferencias.contains(tarea.getIdTareaProyecto()))
-                .collect(Collectors.toList());
-
-            if (!tareasProyectoAEliminar.isEmpty()) {
-                tareaProyectoRepository.deleteAll(tareasProyectoAEliminar);
-            }
+        if (idsTareaSinReferencias.isEmpty()) {
+            return;
         }
 
-        return detallesAEliminar.size();
+        List<Long> idsLibres = new ArrayList<>(idsTareaSinReferencias);
+
+        List<GitLabTarea> vinculacionesGitLab = gitLabTareaRepository.findByTareaProyecto_IdTareaProyectoIn(idsLibres);
+        if (vinculacionesGitLab != null && !vinculacionesGitLab.isEmpty()) {
+            gitLabTareaRepository.deleteAll(vinculacionesGitLab);
+        }
+
+        var imputacionesRelacionadas = imputacionClockifyRepository.findByIdTareaProyectoIn(idsLibres);
+        if (imputacionesRelacionadas != null && !imputacionesRelacionadas.isEmpty()) {
+            imputacionesRelacionadas.forEach(imputacion -> {
+                imputacion.setIdTareaProyecto(null);
+                imputacion.setValida(false);
+            });
+            imputacionClockifyRepository.saveAll(imputacionesRelacionadas);
+        }
+
+        List<TareaProyecto> tareasProyectoAEliminar = (tareasProyectoCandidatas == null ? java.util.List.<TareaProyecto>of() : tareasProyectoCandidatas)
+            .stream()
+            .filter(tarea -> tarea != null && idsTareaSinReferencias.contains(tarea.getIdTareaProyecto()))
+            .collect(Collectors.toList());
+
+        if (!tareasProyectoAEliminar.isEmpty()) {
+            tareaProyectoRepository.deleteAll(tareasProyectoAEliminar);
+        }
     }
 }

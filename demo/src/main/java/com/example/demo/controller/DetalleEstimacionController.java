@@ -353,6 +353,10 @@ public class DetalleEstimacionController {
      */
     @DeleteMapping("/{id}")
     public ApiResponse eliminarEstimacion(@PathVariable Long id) {
+        if (!esAdmin()) {
+            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
+        }
+
         try {
             detalleEstimacionService.eliminarTarea(id);
             return new ApiResponse("Estimación eliminada correctamente", true, null);
