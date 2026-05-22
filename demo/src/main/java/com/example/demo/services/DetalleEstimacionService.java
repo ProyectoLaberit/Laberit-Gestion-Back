@@ -430,7 +430,7 @@ public class DetalleEstimacionService {
                 .collect(Collectors.toList());
     }
 
-  /**
+    /**
      * Obtiene e integra los totales estimativos y reales de las tareas de una subfase del proyecto actual.
      * @param idProyecto ID del proyecto.
      * @param idSubfase ID de la subfase.
@@ -471,7 +471,7 @@ public class DetalleEstimacionService {
         for (Map.Entry<String, List<DetalleEstimacion>> entry : tareasAgrupadas.entrySet()) {
             TareaSubfaseDTO dto = new TareaSubfaseDTO();
             dto.setNombreTarea(entry.getKey());
-            dto.setIdTarea(entry.getValue().get(0).getId());
+            dto.setIdTarea(entry.getValue().get(0).getIdTareaProyecto());
 
             double sumaMin = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMin).sum();
             double sumaMax = entry.getValue().stream().mapToDouble(DetalleEstimacion::getTiempoMax).sum();
