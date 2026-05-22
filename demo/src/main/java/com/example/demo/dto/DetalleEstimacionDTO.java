@@ -10,15 +10,12 @@ public class DetalleEstimacionDTO {
     private Long id;
     private Integer idExcel;
     private Long idTareaProyecto;
-    
     private Integer idDepartamento;
     private Integer idFasePadre;
-    
     private Integer idSubFase;
     private String nombreDepartamento;
     private String nombreFase;
     private String nombreSubfase;
-    
     private String tarea;
     private Double tiempoMin;
     private Double tiempoMax;

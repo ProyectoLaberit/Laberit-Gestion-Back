@@ -55,7 +55,7 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
                 // Si hay un email y el usuario aún no está validado en este hilo de ejecución
                 if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                    
+
                     // Convertimos los roles al formato que entiende Spring (con el prefijo ROLE_)
                     List<SimpleGrantedAuthority> authorities = new ArrayList<>();
                     if (roles != null) {
@@ -67,18 +67,21 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                     // Creamos la tarjeta de identificación oficial para Spring Security
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             email, null, authorities);
-                    
-                    // Le decimos a Spring: "Este usuario es válido y tiene estos roles, déjale pasar"
+
+                    // Le decimos a Spring: "Este usuario es válido y tiene estos roles, déjale
+                    // pasar"
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             } catch (Exception e) {
                 // Si el token es inventado, ha caducado o está mal firmado, cae aquí.
-                // No hacemos nada, simplemente no le damos la validación y Spring le bloqueará luego.
+                // No hacemos nada, simplemente no le damos la validación y Spring le bloqueará
+                // luego.
                 System.out.println("Token inválido o caducado: " + e.getMessage());
             }
         }
 
-        // Pase lo que pase, dejamos que la petición continúe su camino hacia el SecurityConfig
+        // Pase lo que pase, dejamos que la petición continúe su camino hacia el
+        // SecurityConfig
         chain.doFilter(request, response);
     }
 }

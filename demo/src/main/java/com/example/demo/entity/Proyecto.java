@@ -2,24 +2,19 @@ package com.example.demo.entity;
 
 import java.time.LocalDate;
 
+import jakarta.persistence.*;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 /**
  * Entidad que representa los proyectos de la base de datos
  */
-@Entity 
+@Entity
 
-@Table(name = "proyecto") 
+@Table(name = "proyecto")
 
 public class Proyecto {
 
-    @Id 
-    @GeneratedValue(strategy = GenerationType.IDENTITY) 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_proyecto")
     private Long id;
 
@@ -34,7 +29,7 @@ public class Proyecto {
     private LocalDate fechaFin;
 
     private Boolean activo;
-    
+
     @Column(name = "gitlab_proyecto_id")
     private String gitlabId;
 
@@ -46,7 +41,6 @@ public class Proyecto {
 
     public Proyecto() {
     }
-
 
     public Long getId() {
         return id;
@@ -119,5 +113,5 @@ public class Proyecto {
     public void setExcels(Boolean excels) {
         this.excels = excels;
     }
-    
+
 }
