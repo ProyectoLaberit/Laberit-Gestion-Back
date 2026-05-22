@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @Component
 public class JwtUtil {
 
-    //  La llave maestra.
+    // La llave maestra.
     private final SecretKey secretKey;
 
     // Convertimos la frase en una llave criptográfica real

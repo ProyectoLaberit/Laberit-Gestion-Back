@@ -13,17 +13,11 @@ import com.example.demo.repository.TareaProyectoRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -227,64 +221,81 @@ public class GitLabService {
      * 
      * @return Lista unificada de DTOs con el campo vinculada actualizado.
      */
+    /**
+     * Recupera todas las tareas de GitLab, calcula su estado de vinculación
+     * y las persiste TODAS en Neon clasificándolas como válidas o inválidas.
+     * * @param proyectoIdLocal ID del proyecto local.
+     * 
+     * @return Lista unificada de DTOs con el campo vinculada actualizado.
+     */
     public List<GitLabTareaDTO> obtenerTareasConEstadoVinculacion(Long proyectoIdLocal) {
-        // 1. Nos descargamos todo el material bruto desde internet usando el método que
-        // ya tienes
+
+        // 1. Descarga bruta desde GitLab (trae todas las páginas)
         List<GitLabTareaDTO> tareasGitLab = obtenerTareasPorProyecto(proyectoIdLocal);
 
-        // 2. Extraemos todos los issueId que ya existen en Neon para comprobar
-        // duplicados eficientemente
-        List<String> idsEnBD = gitLabTareaRepository.findAll().stream()
+        // 2. IDs ya persistidos en Neon para no duplicar lo histórico
+        Set<String> idsEnBD = gitLabTareaRepository.findAll().stream()
                 .map(GitLabTarea::getIssueId)
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
 
-        // 3. Procesamos la lista una a una
+        // 3. Precalculamos las colas de tareas locales en memoria por título
+        Map<String, Queue<TareaProyecto>> colasPorTitulo = new HashMap<>();
+
+        for (GitLabTareaDTO tarea : tareasGitLab) {
+            if (idsEnBD.contains(tarea.getId()))
+                continue;
+
+            String titulo = (tarea.getTitle() != null) ? tarea.getTitle().trim() : "";
+            if (titulo.isEmpty())
+                continue;
+
+            if (!colasPorTitulo.containsKey(titulo)) {
+                List<TareaProyecto> coincidencias = tareaProyectoRepository.findByTarea(titulo);
+                colasPorTitulo.put(titulo, new LinkedList<>(coincidencias));
+            }
+        }
+
+        // 4. Procesamos la lista y guardamos el 100% de las nuevas filas en Neon
         for (GitLabTareaDTO tarea : tareasGitLab) {
 
-            // ESCENARIO A: La tarea ya existe en Neon
+            // ESCENARIO A: la tarea ya fue registrada en una sincronización anterior
             if (idsEnBD.contains(tarea.getId())) {
                 tarea.setVinculada(true);
                 continue;
             }
 
-            // ESCENARIO B: Es una tarea nueva.
-            // 1. Primero miramos si el título no es nulo
-            boolean tieneTexto = tarea.getTitle() != null && !tarea.getTitle().trim().isEmpty();
+            // ESCENARIO B / C: Es una issue que no existe en Neon. La preparamos para
+            // guardar.
+            String titulo = (tarea.getTitle() != null) ? tarea.getTitle().trim() : "";
 
-            // 2. Buscamos en la tabla tareas_proyecto si hay alguna que se llame IGUAL
-            List<TareaProyecto> coincidenciaPlanificacion = List.of();
+            GitLabTarea nueva = new GitLabTarea();
+            nueva.setIssueId(tarea.getId());
+            nueva.setNumeroGitLab(tarea.getNumeroGitLab());
+            nueva.setTitulo(tarea.getTitle());
+            nueva.setEstado(tarea.getEstado());
 
-            if (tieneTexto) {
-                coincidenciaPlanificacion = tareaProyectoRepository.findByTarea(tarea.getTitle().trim());
-            }
+            Queue<TareaProyecto> cola = titulo.isEmpty() ? null : colasPorTitulo.get(titulo);
 
-            // REGLA DE NEGOCIO: Es válida y se autoguarda SOLO si la lista tiene alguna
-            // coincidencia
-            if (!coincidenciaPlanificacion.isEmpty()) {
+            // Evaluamos si tiene hueco en la planificación local
+            if (cola != null && !cola.isEmpty()) {
+                // 🟢 Tiene coincidencia: Extraemos la tarea libre de la cola
+                TareaProyecto tareaLocal = cola.poll();
 
-                // ¡AUTOGUARDADO! Como coincide, la metemos en Neon vinculada a su TareaProyecto
-                GitLabTarea nueva = new GitLabTarea();
-                nueva.setIssueId(tarea.getId());
-                nueva.setNumeroGitLab(tarea.getNumeroGitLab()); // (Asegúrate de que en el DTO esté con la N mayúscula)
-                nueva.setTitulo(tarea.getTitle());
-                nueva.setEstado(tarea.getEstado());
-
-                // ¡Aquí está la magia! Nos quedamos con el primer elemento de la lista (índice
-                // 0)
-                nueva.setTareaProyecto(coincidenciaPlanificacion.get(0)); // 🛠️ Corregido: Cambiado .get() por .get(0)
-
-                gitLabTareaRepository.save(nueva); // Guarda en Neon
-
-                tarea.setVinculada(true);
+                nueva.setTareaProyecto(tareaLocal); // Enlazamos foreign key
+                nueva.setValida(true); // Marcamos como válida
+                tarea.setVinculada(true); // Avisamos al DTO
             } else {
-                // ESCENARIO C: No hay ninguna tarea en la planificación que se llame igual.
-                // No se guarda automáticamente y el front mostrará el botón "Vincular y
-                // Corregir"
-                tarea.setVinculada(false);
+                // 🔴 No tiene coincidencia (O el título venía vacío): Se guarda huérfana
+                nueva.setTareaProyecto(null); // Foreign key a NULL (permitido gracias al cambio anterior)
+                nueva.setValida(false); // Marcamos como inválida
+                tarea.setVinculada(false); // Avisamos al DTO
             }
+
+            // 💾 SE GUARDA SÍ O SÍ: Independientemente de si fue válida o no
+            gitLabTareaRepository.save(nueva);
         }
 
-        // 4. Devolvemos la lista única que consumirá tu controlador
+        // 5. Devolvemos la lista limpia para Postman / Frontend
         return tareasGitLab;
     }
 
@@ -373,7 +384,6 @@ public class GitLabService {
         tarea.setNumeroGitLab(dto.getNumeroGitLab());
         tarea.setTitulo(dto.getTitle());
         tarea.setEstado(dto.getEstado());
-        tarea.setUrl(urlProyecto);
         tarea.setTareaProyecto(tareaProy); // Establece la relación de clave foránea (FK)
 
         // 4. Persistir los cambios en el motor de base de datos relacional

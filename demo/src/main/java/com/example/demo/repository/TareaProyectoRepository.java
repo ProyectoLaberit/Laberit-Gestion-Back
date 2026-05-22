@@ -19,4 +19,6 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
     List<TareaProyecto> findByIdProyecto(Long idProyecto);
 
     List<TareaProyecto> findByTarea(String tarea);
+
+    List<TareaProyecto> findByIdProyectoAndIdFaseAndTarea(Long idProyecto, Integer idFase, String tarea);
 }

@@ -4,28 +4,35 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.annotation.Auditable;
 import com.example.demo.dto.DetalleEstimacionDTO;
 import com.example.demo.dto.ResumenTiemposDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
+import com.example.demo.entity.*;
+import com.example.demo.repository.*;
 import com.example.demo.entity.Departamento;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
 import com.example.demo.entity.Fase;
+import com.example.demo.entity.GitLabTarea;
 import com.example.demo.entity.RangoDepartamento;
 import com.example.demo.entity.TareaProyecto;
 import com.example.demo.repository.DepartamentoRepository;
 import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.FaseRepository;
+import com.example.demo.repository.GitLabTareaRepository;
 import com.example.demo.repository.TareaProyectoRepository;
 import com.example.demo.repository.ExcelRepository;
 import com.example.demo.repository.ImputacionClockifyRepository;
@@ -53,6 +60,9 @@ public class DetalleEstimacionService {
 
     @Autowired
     private ImputacionClockifyRepository imputacionClockifyRepository;
+
+    @Autowired
+    private GitLabTareaRepository gitLabTareaRepository;
 
     /**
      * Procesa un archivo Excel físico, implementa la estrategia Find-or-Create en el 
@@ -779,11 +789,103 @@ public class DetalleEstimacionService {
         entidad = DetalleEstimacion.class,
         descripcion = "Se eliminó la estimación asociada a la tarea con ID '#{#resultado.idTareaProyecto}'"
     )
+    @Transactional
     public DetalleEstimacion eliminarTarea(Long id) {
         DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
 
+        Long idTareaProyecto = detalle.getIdTareaProyecto();
         detalleEstimacionRepository.delete(detalle);
+        limpiarReferenciasHuerfanasTareaProyecto(
+            java.util.Collections.singletonList(idTareaProyecto),
+            idTareaProyecto == null
+                ? java.util.List.of()
+                : tareaProyectoRepository.findAllById(java.util.Collections.singletonList(idTareaProyecto))
+        );
         return detalle;
+    }
+    @Transactional
+    public int eliminarTareaCompleta(Long idProyecto, Integer idSubfase, String nombreTarea, Integer idExcelElegido) {
+        String nombreTareaLimpio = nombreTarea != null ? nombreTarea.trim() : "";
+        if (idProyecto == null || idSubfase == null || nombreTareaLimpio.isEmpty()) {
+            throw new RuntimeException("Faltan datos para eliminar la tarea.");
+        }
+
+        Integer idExcelObjetivo = resolverIdExcelBase(idProyecto, idExcelElegido);
+        if (idExcelObjetivo == null) {
+            throw new RuntimeException("No se encontrÃ³ el Excel asociado al proyecto.");
+        }
+
+        List<TareaProyecto> tareasProyecto = tareaProyectoRepository
+            .findByIdProyectoAndIdFaseAndTarea(idProyecto, idSubfase, nombreTareaLimpio);
+
+        if (tareasProyecto == null || tareasProyecto.isEmpty()) {
+            throw new RuntimeException("No se encontrÃ³ la tarea a eliminar.");
+        }
+
+        List<Long> idsTareaProyecto = tareasProyecto.stream()
+            .map(TareaProyecto::getIdTareaProyecto)
+            .distinct()
+            .collect(Collectors.toList());
+
+        List<DetalleEstimacion> detallesVisibles = detalleEstimacionRepository
+            .findByIdExcelAndIdTareaProyectoIn(idExcelObjetivo, idsTareaProyecto);
+
+        if (detallesVisibles == null || detallesVisibles.isEmpty()) {
+            throw new RuntimeException("No hay estimaciones de esa tarea en el Excel seleccionado.");
+        }
+
+        List<DetalleEstimacion> detallesAEliminar = new ArrayList<>();
+        for (Long idTareaProyecto : idsTareaProyecto) {
+            detallesAEliminar.addAll(detalleEstimacionRepository.findByIdTareaProyecto(idTareaProyecto));
+        }
+
+        detalleEstimacionRepository.deleteAll(detallesAEliminar);
+
+        limpiarReferenciasHuerfanasTareaProyecto(idsTareaProyecto, tareasProyecto);
+
+        return detallesAEliminar.size();
+    }
+
+    private void limpiarReferenciasHuerfanasTareaProyecto(List<Long> idsTareaProyecto, List<TareaProyecto> tareasProyectoCandidatas) {
+        if (idsTareaProyecto == null || idsTareaProyecto.isEmpty()) {
+            return;
+        }
+
+        Set<Long> idsTareaSinReferencias = new LinkedHashSet<>();
+        for (Long idTareaProyecto : idsTareaProyecto) {
+            if (idTareaProyecto != null && detalleEstimacionRepository.countByIdTareaProyecto(idTareaProyecto) == 0) {
+                idsTareaSinReferencias.add(idTareaProyecto);
+            }
+        }
+
+        if (idsTareaSinReferencias.isEmpty()) {
+            return;
+        }
+
+        List<Long> idsLibres = new ArrayList<>(idsTareaSinReferencias);
+
+        List<GitLabTarea> vinculacionesGitLab = gitLabTareaRepository.findByTareaProyecto_IdTareaProyectoIn(idsLibres);
+        if (vinculacionesGitLab != null && !vinculacionesGitLab.isEmpty()) {
+            gitLabTareaRepository.deleteAll(vinculacionesGitLab);
+        }
+
+        var imputacionesRelacionadas = imputacionClockifyRepository.findByIdTareaProyectoIn(idsLibres);
+        if (imputacionesRelacionadas != null && !imputacionesRelacionadas.isEmpty()) {
+            imputacionesRelacionadas.forEach(imputacion -> {
+                imputacion.setIdTareaProyecto(null);
+                imputacion.setValida(false);
+            });
+            imputacionClockifyRepository.saveAll(imputacionesRelacionadas);
+        }
+
+        List<TareaProyecto> tareasProyectoAEliminar = (tareasProyectoCandidatas == null ? java.util.List.<TareaProyecto>of() : tareasProyectoCandidatas)
+            .stream()
+            .filter(tarea -> tarea != null && idsTareaSinReferencias.contains(tarea.getIdTareaProyecto()))
+            .collect(Collectors.toList());
+
+        if (!tareasProyectoAEliminar.isEmpty()) {
+            tareaProyectoRepository.deleteAll(tareasProyectoAEliminar);
+        }
     }
 }
