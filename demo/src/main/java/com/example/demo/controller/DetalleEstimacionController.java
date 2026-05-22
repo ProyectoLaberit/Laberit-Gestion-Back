@@ -38,8 +38,15 @@ public class DetalleEstimacionController {
         }
 
         return auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(a -> { return a.equals("ROLE_ADMINISTRADOR") || a.equals("ROLE_SUPERADMINISTRADOR"); });
+            .map(GrantedAuthority::getAuthority)
+            .map(authority -> authority == null ? "" : authority.trim().toUpperCase())
+            .map(authority -> authority.startsWith("ROLE_") ? authority.substring(5) : authority)
+            .anyMatch(authority -> {
+                return authority.equals("ADMINISTRADOR")
+                    || authority.equals("SUPERADMINISTRADOR")
+                    || authority.equals("ADMIN")
+                    || authority.equals("SUPERADMIN");
+            });
     }
     
     /**
@@ -273,6 +280,24 @@ public class DetalleEstimacionController {
             return new ApiResponse("Tarea creada correctamente.", true, null);
         } catch (Exception e) {
             return new ApiResponse("Error al crear la tarea: " + e.getMessage(), false, null);
+        }
+    }
+
+    @DeleteMapping("/proyecto/{idProyecto}/subfase/{idSubfase}/tarea")
+    public ApiResponse eliminarTareaCompleta(
+            @PathVariable Long idProyecto,
+            @PathVariable Integer idSubfase,
+            @RequestParam String nombreTarea,
+            @RequestParam(required = false) Integer idExcelElegido) {
+        if (!esAdmin()) {
+            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
+        }
+
+        try {
+            int eliminadas = detalleEstimacionService.eliminarTareaCompleta(idProyecto, idSubfase, nombreTarea, idExcelElegido);
+            return new ApiResponse("Tarea eliminada correctamente.", true, eliminadas);
+        } catch (Exception e) {
+            return new ApiResponse("Error al eliminar la tarea: " + e.getMessage(), false, null);
         }
     }
     /**
