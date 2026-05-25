@@ -95,18 +95,24 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         Row filaKpisHeaders = sheet.createRow(2);
         Row filaKpisValores = sheet.createRow(3);
         
-        // Tarjeta 1: Horas Estimadas Máximas
-        filaKpisHeaders.createCell(1).setCellValue("HORAS EST. MÁXIMAS");
-        filaKpisValores.createCell(1).setCellValue(horasMaximas + "h");
+       // Tarjeta 1: Horas Estimadas Máximas
+        filaKpisHeaders.createCell(1).setCellValue("HORAS EST. MÁXIMAS (h)");
+        Cell celdaMax = filaKpisValores.createCell(1);
+        celdaMax.setCellValue(horasMaximas);
+        celdaMax.setCellStyle(estilos.get("decimal"));
         
         // Tarjeta 2: Horas Reales
-        filaKpisHeaders.createCell(3).setCellValue("HORAS REALES");
-        filaKpisValores.createCell(3).setCellValue(horasRealesTotales + "h");
+        filaKpisHeaders.createCell(3).setCellValue("HORAS REALES (h)");
+        Cell celdaReales = filaKpisValores.createCell(3);
+        celdaReales.setCellValue(horasRealesTotales);
+        celdaReales.setCellStyle(estilos.get("decimal"));
         
         // Tarjeta 3: Desviación vs Máximo
         double desviacionTotal = horasRealesTotales - horasMaximas;
-        filaKpisHeaders.createCell(5).setCellValue("DESVIACIÓN VS MÁX");
-        filaKpisValores.createCell(5).setCellValue(desviacionTotal > 0 ? "+" + desviacionTotal + "h" : desviacionTotal + "h");
+        filaKpisHeaders.createCell(5).setCellValue("DESVIACIÓN VS MÁX (h)");
+        Cell celdaDesv = filaKpisValores.createCell(5);
+        celdaDesv.setCellValue(desviacionTotal);
+        celdaDesv.setCellStyle(estilos.get("decimal"));
         
         // Ajuste de anchos de columna para mejor visualización
         sheet.setColumnWidth(1, 6000);
@@ -118,18 +124,24 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     private Map<String, CellStyle> crearEstilosCorporativos(SXSSFWorkbook workbook) {
         Map<String, CellStyle> estilos = new java.util.HashMap<>();
 
+        // Estilo Cabecera (El que ya tenías)
         CellStyle estiloCabecera = workbook.createCellStyle();
         estiloCabecera.setFillForegroundColor(IndexedColors.DARK_RED.getIndex());
         estiloCabecera.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         estiloCabecera.setAlignment(HorizontalAlignment.CENTER);
         estiloCabecera.setVerticalAlignment(VerticalAlignment.CENTER);
-
         Font fuenteCabecera = workbook.createFont();
         fuenteCabecera.setBold(true);
         fuenteCabecera.setColor(IndexedColors.WHITE.getIndex());
         estiloCabecera.setFont(fuenteCabecera);
-
         estilos.put("cabecera", estiloCabecera);
+
+        // NUEVO: Estilo Decimal
+        CellStyle estiloDecimal = workbook.createCellStyle();
+        org.apache.poi.ss.usermodel.DataFormat format = workbook.createDataFormat();
+        estiloDecimal.setDataFormat(format.getFormat("#,##0.00"));
+        estilos.put("decimal", estiloDecimal);
+
         return estilos;
     }
 
@@ -155,18 +167,35 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto);
         
         int rowNum = 1;
-        for (FilaComparativaDTO tarea : tareas) {
+       for (FilaComparativaDTO tarea : tareas) {
             Row fila = sheet.createRow(rowNum++);
             
             fila.createCell(0).setCellValue(tarea.getIdGitlab() != null ? tarea.getIdGitlab() : "-");
             fila.createCell(1).setCellValue(tarea.getFase());
             fila.createCell(2).setCellValue(tarea.getTarea());
             fila.createCell(3).setCellValue(tarea.getDepartamento());
-            fila.createCell(4).setCellValue(tarea.getEstimacionMinima());
-            fila.createCell(5).setCellValue(tarea.getEstimacionMaxima());
-            fila.createCell(6).setCellValue(tarea.getHorasReales());
-            fila.createCell(7).setCellValue(tarea.getDesviacionHoras());
-            fila.createCell(8).setCellValue(tarea.getDesviacionPorcentaje());
+            
+            // Celdas numéricas con estilo a 2 decimales
+            Cell celdaEstMin = fila.createCell(4);
+            celdaEstMin.setCellValue(tarea.getEstimacionMinima());
+            celdaEstMin.setCellStyle(estilos.get("decimal"));
+            
+            Cell celdaEstMax = fila.createCell(5);
+            celdaEstMax.setCellValue(tarea.getEstimacionMaxima());
+            celdaEstMax.setCellStyle(estilos.get("decimal"));
+            
+            Cell celdaReales = fila.createCell(6);
+            celdaReales.setCellValue(tarea.getHorasReales());
+            celdaReales.setCellStyle(estilos.get("decimal"));
+            
+            Cell celdaDesvHoras = fila.createCell(7);
+            celdaDesvHoras.setCellValue(tarea.getDesviacionHoras());
+            celdaDesvHoras.setCellStyle(estilos.get("decimal"));
+            
+            Cell celdaDesvPorc = fila.createCell(8);
+            celdaDesvPorc.setCellValue(tarea.getDesviacionPorcentaje());
+            celdaDesvPorc.setCellStyle(estilos.get("decimal"));
+            
             fila.createCell(9).setCellValue(tarea.getEstadoGitlab());
         }
     }

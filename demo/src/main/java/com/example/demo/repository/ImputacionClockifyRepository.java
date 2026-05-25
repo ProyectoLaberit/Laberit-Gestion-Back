@@ -69,15 +69,20 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
 
     //Consulta para el Excel Analítico: Suma de horas válidas por tarea, agrupada por proyecto
 
-    @Query("SELECT new com.example.demo.dto.excel.ErrorVinculacionClockifyDTO(" +
-           "c.usuario, c.descripcionOriginal, c.fechaTrabajada, c.horasTrabajadas, c.valida) " +
-           "FROM ImputacionClockify c " +
-           "WHERE c.proyecto.id = :idProyecto AND c.valida = false")
-    List<ErrorVinculacionClockifyDTO> obtenerErroresClockify(@Param("idProyecto") Long idProyecto);
-    
-    // Consulta de apoyo para la Hoja 4 (Avance Semanal)
-    @Query("SELECT c FROM ImputacionClockify c " +
-           "WHERE c.proyecto.id = :idProyecto AND c.valida = true " +
-           "ORDER BY c.fechaTrabajada ASC")
+   @Query(value = "SELECT * FROM imputacion_clockify " +
+           "WHERE id_proyecto = :idProyecto AND valida = true " +
+           "ORDER BY fecha ASC", 
+           nativeQuery = true)
     List<ImputacionClockify> obtenerImputacionesValidasOrdenadas(@Param("idProyecto") Long idProyecto);
+
+    @Query(value = "SELECT " +
+           "'-' AS usuario, " + 
+           "c.descripcion_original AS descripcionOriginal, " +
+           "c.fecha AS fechaTrabajada, " +
+           "c.horas_trabajadas AS horasTrabajadas, " +
+           "c.valida AS valida " +
+           "FROM imputacion_clockify c " +
+           "WHERE c.id_proyecto = :idProyecto AND c.valida = false", 
+           nativeQuery = true)
+    List<ErrorVinculacionClockifyDTO> obtenerErroresClockify(@Param("idProyecto") Long idProyecto);
 }

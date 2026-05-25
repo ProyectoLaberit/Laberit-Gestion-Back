@@ -22,7 +22,11 @@ List<DetalleEstimacion> findByIdExcel(Integer idExcel);
     long countByIdTareaProyecto(Long idTareaProyecto);
 
     //Consultas para el Excel Analítico
-    @Query("SELECT COALESCE(SUM(e.tiempoMax), 0.0) FROM DetalleEstimacion e " +
-           "WHERE e.tareaProyecto.proyecto.id = :idProyecto AND e.excel.vigente = true")
+   @Query(value = "SELECT CAST(COALESCE(SUM(e.tiempo_max), 0.0) AS DOUBLE PRECISION) " +
+           "FROM detalle_estimacion e " +
+           "JOIN tarea_proyecto t ON e.id_tarea_proyecto = t.id_tarea_proyecto " +
+           "JOIN excel ex ON e.id_excel = ex.id_excel " +
+           "WHERE t.id_proyecto = :idProyecto AND ex.vigente = true", 
+           nativeQuery = true)
     Double obtenerTotalHorasMaximasProyecto(@Param("idProyecto") Long idProyecto);
 }
