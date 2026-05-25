@@ -399,6 +399,14 @@ public class GitLabService {
         return gitLabTareaRepository.findAll();
     }
 
+    public List<GitLabTarea> obtenerTareasVinculadasEspecificas(Long[] idsTareaProyecto){
+
+        List<Long> lista = Arrays.asList(idsTareaProyecto);
+
+        return gitLabTareaRepository.findByTareaProyecto_IdTareaProyectoIn(lista);
+
+    }
+
     /**
      * [NUEVO] Modifica una vinculación existente asociándola a un nuevo
      * idDetalleEstimacion.

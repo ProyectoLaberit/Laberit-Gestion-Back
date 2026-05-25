@@ -5,6 +5,7 @@ import com.example.demo.dto.DetalleEstimacionDTO;
 import com.example.demo.dto.HistorialExcelDTO;
 import com.example.demo.dto.ResumenTiemposDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
+import com.example.demo.dto.DepartamentoTareaDTO;
 import com.example.demo.entity.DetalleEstimacion;
 import com.example.demo.entity.Excel;
 import com.example.demo.services.DetalleEstimacionService;
@@ -152,7 +153,7 @@ public class DetalleEstimacionController {
         @RequestParam String tarea,
         @RequestParam(required = false) Integer idExcelElegido) {
     
-        List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallePorCriteriosHistorico(idProyecto, idSubfase, tarea, idExcelElegido);
+        List<DepartamentoTareaDTO> detalles = detalleEstimacionService.obtenerDetalles(idProyecto, idSubfase, tarea, idExcelElegido);
 
         if (detalles.isEmpty()) {
             return new ApiResponse("No se encontraron registros para esta tarea y subfase", false, detalles);

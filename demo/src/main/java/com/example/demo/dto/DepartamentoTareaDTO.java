@@ -5,7 +5,7 @@ package com.example.demo.dto;
 /**
  * Clase enviada y/o recibida del front para mostrar o recibir datos de las tareas
  */
-public class DepartamentoTarea {
+public class DepartamentoTareaDTO {
 
     private Long idTarea;
     private Integer idExcel;
@@ -16,23 +16,32 @@ public class DepartamentoTarea {
     private Double tiempoClockify;
     private Boolean completada;
     private String nombreTareaGit;
+    private Long numeroGit;
+    private String nombreDep;
 
-    public DepartamentoTarea() {
+    public DepartamentoTareaDTO() {
 
     }
 
-    public DepartamentoTarea(Long idTarea, Integer idExcel, Integer idSubFase, String nombretarea, Double tiempoMin,
-            Double tiempoMax, Double tiempoClockify, Boolean completada, String nombreTareaGit) {
+    
+
+    public DepartamentoTareaDTO(Long idTarea, Integer idExcel, Integer idSubFase, String nombretarea, Double tiempoMin,
+            Double tiempoMax, Double tiempoClockify, Boolean completada, String nombreTareaGit, Long numeroGit,
+            String nombreDep) {
         this.idTarea = idTarea;
         this.idExcel = idExcel;
         this.idSubFase = idSubFase;
-        this.Nombretarea = nombretarea;
+        Nombretarea = nombretarea;
         this.tiempoMin = tiempoMin;
         this.tiempoMax = tiempoMax;
         this.tiempoClockify = tiempoClockify;
         this.completada = completada;
         this.nombreTareaGit = nombreTareaGit;
+        this.numeroGit = numeroGit;
+        this.nombreDep = nombreDep;
     }
+
+
 
     public Long getIdTarea() {
         return idTarea;
@@ -106,6 +115,25 @@ public class DepartamentoTarea {
         this.nombreTareaGit = nombreTareaGit;
     }
 
-    
+    public Long getNumeroGit() {
+        return numeroGit;
+    }
+
+    public void setNumeroGit(Long numeroGit) {
+        this.numeroGit = numeroGit;
+    }
+
+
+
+    public String getNombreDep() {
+        return nombreDep;
+    }
+
+
+
+    public void setNombreDep(String nombreDep) {
+        this.nombreDep = nombreDep;
+    }
+  
 
 }

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.example.demo.annotation.Auditable;
+import com.example.demo.dto.DepartamentoTareaDTO;
 import com.example.demo.dto.DetalleEstimacionDTO;
 import com.example.demo.dto.ResumenTiemposDTO;
 import com.example.demo.dto.TareaSubfaseDTO;
@@ -596,6 +597,63 @@ public class DetalleEstimacionService {
      */
     public List<DetalleEstimacionDTO> obtenerDetallePorCriteriosHistorico(Long idProyecto, Integer idSubfase, String nombreTarea, Integer idExcelElegido) {
         return obtenerDetallePorCriterios(idProyecto, idSubfase, nombreTarea, idExcelElegido);
+    }
+
+
+    public List<DepartamentoTareaDTO> obtenerDetalles(Long idProyecto, Integer idSubfase, String nombreTarea, Integer idExcelElegido) {
+    Integer idExcelBase = resolverIdExcelBase(idProyecto, idExcelElegido);
+    if (idExcelBase == null) {
+        return new ArrayList<>();
+    }
+
+    List<DetalleEstimacion> todasLasEstimaciones = detalleEstimacionRepository.findByIdExcel(idExcelBase);
+    List<TareaProyecto> todasTareasProyecto = tareaProyectoRepository.findAll().stream()
+        .filter(t -> t.getIdProyecto().equals(idProyecto))
+        .collect(Collectors.toList());
+
+    Map<Long, TareaProyecto> mapaTareasProyecto = todasTareasProyecto.stream()
+        .collect(Collectors.toMap(TareaProyecto::getIdTareaProyecto, t -> t, (a, b) -> a));
+
+    List<Long> idsTareaProyecto = todasLasEstimaciones.stream()
+        .map(DetalleEstimacion::getIdTareaProyecto)
+        .distinct()
+        .collect(Collectors.toList());
+
+    final Map<Long, String> gitLabTitulos = new HashMap<>();
+    if (!idsTareaProyecto.isEmpty()) {
+        List<GitLabTarea> tareasGitLab = gitLabTareaRepository.findByTareaProyecto_IdTareaProyectoIn(idsTareaProyecto);
+        for (GitLabTarea g : tareasGitLab) {
+            if (g.getTareaProyecto() != null && g.getTareaProyecto().getIdTareaProyecto() != null) {
+                gitLabTitulos.put(g.getTareaProyecto().getIdTareaProyecto(), g.getTitulo());
+            }
+        }
+    }
+
+    return todasLasEstimaciones.stream()
+        .filter(d -> {
+            TareaProyecto tp = mapaTareasProyecto.get(d.getIdTareaProyecto());
+            return tp != null
+                && tp.getIdFase().equals(idSubfase)
+                && tp.getTarea().equalsIgnoreCase(nombreTarea.trim());
+        })
+        .map(entidad -> {
+            TareaProyecto tp = mapaTareasProyecto.get(entidad.getIdTareaProyecto());
+            Double tiempoClockify = imputacionClockifyRepository.sumarHorasPorTarea(entidad.getIdTareaProyecto());
+            return new DepartamentoTareaDTO(
+                entidad.getIdTareaProyecto(),
+                entidad.getIdExcel(),
+                tp != null ? tp.getIdFase() : null,
+                tp != null ? tp.getTarea() : null,
+                entidad.getTiempoMin(),
+                entidad.getTiempoMax(),
+                tiempoClockify != null ? Math.round(tiempoClockify * 10.0) / 10.0 : 0.0,
+                tp != null ? tp.getCompletada() : false,
+                gitLabTitulos.get(entidad.getIdTareaProyecto()),
+                gitLabTareaRepository.findNumeroGitLabByTareaProyectoId(tp.getIdTareaProyecto()),
+                departamentoRepository.findNombreById(tp.getIdDepartamento())
+            );
+        })
+        .collect(Collectors.toList());
     }
 
     /**

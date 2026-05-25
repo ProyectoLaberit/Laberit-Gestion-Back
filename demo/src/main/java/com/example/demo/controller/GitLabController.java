@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
 @RestController
 @RequestMapping("/api/gitlab")
 @CrossOrigin(origins = "*")
@@ -91,7 +92,7 @@ public class GitLabController {
     /**
      * Obtiene todas las issues asociadas localmente en Neon.
      */
-    @GetMapping("/vinculadas")
+    /*@GetMapping("/vinculadas")
     public ResponseEntity<ApiResponse> getTareasVinculadas() {
         try {
             List<GitLabTarea> vinculadas = gitLabService.obtenerTareasVinculadasLocal();
@@ -100,7 +101,22 @@ public class GitLabController {
             return ResponseEntity.status(500)
                     .body(new ApiResponse("Error al recuperar vinculaciones: " + e.getMessage(), false, null));
         }
+    }*/
+
+    @PostMapping("/vinculadas")
+    public ApiResponse tareasVinculadas(
+            @RequestParam Long[] idsTareaProyecto) {
+
+            List<GitLabTarea> vinculadas = gitLabService.obtenerTareasVinculadasEspecificas(idsTareaProyecto);
+        
+            if(vinculadas != null){
+                return new ApiResponse("vinculaciones obtenidas con exito", true, vinculadas);
+            }else{
+                return new ApiResponse("fallo al obtener vinculaciones", false, null);
+            }
+        
     }
+    
 
     /**
      * Cambia la vinculación de una issue a otra tarea del proyecto.
