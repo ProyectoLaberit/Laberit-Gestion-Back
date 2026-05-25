@@ -525,15 +525,17 @@ public class DetalleEstimacionService {
      * @param idProyecto ID del proyecto.
      * @return Map indexado por ID de subfase con sus resúmenes numéricos de tiempos reales y medias estimadas.
      */
-    public Map<Integer, ResumenTiemposDTO> obtenerResumenTodasSubfases(Long idProyecto) {
+    public Map<Integer, ResumenTiemposDTO> obtenerResumenTodasSubfases(Long idProyecto, Integer idExcelElegido) {
         Map<Integer, ResumenTiemposDTO> resultado = new HashMap<>();
-        Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
         
-        if (excel == null) {
+        // Usamos el Excel que nos pide el Front, o el vigente si no pide ninguno.
+        Integer idExcel = resolverIdExcelBase(idProyecto, idExcelElegido);
+        
+        if (idExcel == null) {
             return resultado;
         }
 
-        List<DetalleEstimacion> todasLasTareas = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
+        List<DetalleEstimacion> todasLasTareas = detalleEstimacionRepository.findByIdExcel(idExcel);
         List<Object[]> sumasBD = imputacionClockifyRepository.sumarHorasValidasAgrupadasPorTarea(idProyecto);
         
         Map<Long, Double> mapaHorasReales = new HashMap<>();
@@ -569,11 +571,17 @@ public class DetalleEstimacionService {
             double sumaMaxTotal = 0.0;
 
             for (DetalleEstimacion det : tareas) {
-                Double realValido = mapaHorasReales.getOrDefault(det.getIdTareaProyecto(), 0.0);
-                
-                sumaRealTotal += realValido;
                 sumaMinTotal += (det.getTiempoMin() != null ? det.getTiempoMin() : 0.0);
                 sumaMaxTotal += (det.getTiempoMax() != null ? det.getTiempoMax() : 0.0);
+            }
+            
+            // Agrupamos por ID de tarea para no sumar las horas reales 3 veces si hay 3 departamentos
+            java.util.Set<Long> idsTareasUnicas = tareas.stream()
+                .map(DetalleEstimacion::getIdTareaProyecto)
+                .collect(Collectors.toSet());
+
+            for (Long idTarea : idsTareasUnicas) {
+                sumaRealTotal += mapaHorasReales.getOrDefault(idTarea, 0.0);
             }
 
             double mediaEstimada = (sumaMinTotal + sumaMaxTotal) / 2.0;
@@ -674,7 +682,7 @@ public class DetalleEstimacionService {
      * @return Map estructurado con los cálculos agregados.
      */
     public Map<Integer, ResumenTiemposDTO> obtenerResumenTodasSubfasesHistorico(Long idProyecto, Integer idExcelElegido) {
-        return obtenerResumenTodasSubfases(idProyecto);
+        return obtenerResumenTodasSubfases(idProyecto, idExcelElegido);
     }
 
     /**
