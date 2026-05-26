@@ -216,7 +216,7 @@ public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExc
 
     private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto) {
         // 1. OBTENER LA HOJA EXISTENTE DE LA PLANTILLA (Índice 1 es la segunda hoja)
-        Sheet sheet = workbook.getSheetAt(0);
+        Sheet sheet = workbook.getSheetAt(1);
     
         
         // 2. OBTENCIÓN DE DATOS Y VARIABLES PARA TOTALES
