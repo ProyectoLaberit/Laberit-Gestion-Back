@@ -1,22 +1,22 @@
 package com.example.demo.dto.excel;
 
 public class ProblemasDetectadosDTO {
-    private Integer tareasNoReconocidas;
+    private Integer tareasGitlabNoReconocidas;
     private Integer imputacionesInvalidas;
     private Integer tareasSinHoras;
 
     public ProblemasDetectadosDTO(Integer tareasNoReconocidas, Integer imputacionesInvalidas, Integer tareasSinHoras) {
-        this.tareasNoReconocidas = tareasNoReconocidas;
+        this.tareasGitlabNoReconocidas = tareasNoReconocidas;
         this.imputacionesInvalidas = imputacionesInvalidas;
         this.tareasSinHoras = tareasSinHoras;
     }
 
-    public Integer getTareasNoReconocidas() {
-        return tareasNoReconocidas;
+    public Integer getTareasGitlabNoReconocidas() {
+        return tareasGitlabNoReconocidas;
     }
 
-    public void setTareasNoReconocidas(Integer tareasNoReconocidas) {
-        this.tareasNoReconocidas = tareasNoReconocidas;
+    public void setTareasGitlabNoReconocidas(Integer tareasNoReconocidas) {
+        this.tareasGitlabNoReconocidas = tareasNoReconocidas;
     }
 
     public Integer getImputacionesInvalidas() {
