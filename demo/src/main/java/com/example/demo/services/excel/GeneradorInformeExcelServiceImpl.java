@@ -437,8 +437,8 @@ public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExc
 
     public ProblemasDetectadosDTO obtenerProblemasDetectados(Long idProyecto, int idExcel){
 
-        List<GitLabTarea> tareasBDINvalidas = gitLabTareaRepository.findByValidaAndIdProyecto(false, idProyecto);
-        int numeroInvalidasGit = tareasBDINvalidas.size();
+        List<GitLabTarea> tareasBDInvalidas = gitLabTareaRepository.findByValidaAndIdProyecto(false, idProyecto);
+        int numeroInvalidasGit = tareasBDInvalidas.size();
 
         List<ImputacionClockify> imputacionesBD = imputacionClockifyRepository.findByIdProyectoAndValida(idProyecto, false);
 
