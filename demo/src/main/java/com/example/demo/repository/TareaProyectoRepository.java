@@ -61,4 +61,5 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
            nativeQuery = true)
     List<FilaComparativaDTO> obtenerComparativaTareas(@Param("idProyecto") Long idProyecto);
 
+    int countByIdProyecto(Long idProyecto);
 }
