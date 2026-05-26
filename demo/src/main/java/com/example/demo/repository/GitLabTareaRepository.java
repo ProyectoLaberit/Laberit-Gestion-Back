@@ -1,6 +1,8 @@
 package com.example.demo.repository;
 
 import com.example.demo.entity.GitLabTarea;
+import com.example.demo.entity.Proyecto;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,7 +24,7 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
 
     List<GitLabTarea> findByValidaAndIdProyecto_Id(Boolean valida, Long idProyecto);
 
-    List<GitLabTarea> findByIdProyecto(Long idProyecto);
+    List<GitLabTarea> findByIdProyecto(Proyecto idProyecto);
 
     @Query("SELECT g.numeroGitLab FROM GitLabTarea g WHERE g.tareaProyecto.idTareaProyecto = :idTareaProyecto")
     Long findNumeroGitLabByTareaProyectoId(@Param("idTareaProyecto") Long idTareaProyecto);
@@ -32,6 +34,6 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
             "WHERE t.id_proyecto = :idProyecto", nativeQuery = true)
     int contarTareasVinculadasPorProyecto(@Param("idProyecto") Long idProyecto);
 
-    List<GitLabTarea> findByValidaTrueAndIdProyecto(Long idProyecto);
+    List<GitLabTarea> findByValidaTrueAndIdProyecto(Proyecto idProyecto);
 
 }

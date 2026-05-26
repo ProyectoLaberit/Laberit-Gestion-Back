@@ -14,7 +14,7 @@ public class GitLabTareaDTO {
     private List<String> labels; // Etiquetas asociadas a la tarea
     private String estado; // Estado de la tarea (ej: "opened", "closed")
     private boolean vinculada; // true = Nombre bien y guardada en DB (o corregida). false = Nombre mal y fuera
-                               // de la DB.
+                               // de la DB
 
     public GitLabTareaDTO() {
     }

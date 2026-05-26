@@ -240,8 +240,10 @@ public class GitLabService {
         // 1. Descarga bruta desde GitLab
         List<GitLabTareaDTO> tareasGitLab = obtenerTareasPorProyecto(proyectoIdLocal);
 
+        Optional<Proyecto> proyecto = proyectoRepository.findById(proyectoIdLocal);
+        Proyecto proyecto2 = proyecto.get();
         // 2. IDs ya persistidos en Neon para saber cuáles son viejas
-        Set<String> idsEnBD = gitLabTareaRepository.findByIdProyecto(proyectoIdLocal).stream()
+        Set<String> idsEnBD = gitLabTareaRepository.findByIdProyecto(proyecto2).stream()
                 .map(GitLabTarea::getIssueId)
                 .collect(Collectors.toSet());
         // Contador para las tareas que guardemos nuevas
@@ -289,10 +291,6 @@ public class GitLabService {
                 nueva.setTareaProyecto(null);
                 nueva.setValida(false);
             }
-
-            Optional<Proyecto> proyecto = proyectoRepository.findById(proyectoIdLocal);
-
-            Proyecto proyecto2 = proyecto.get();
             nueva.setIdProyecto(proyecto2);
 
             System.out.println("DEBUG id a guardar: " + proyectoIdLocal);
@@ -408,7 +406,9 @@ public class GitLabService {
      */
     public List<GitLabTarea> obtenerSoloValidasDeBaseDatos(Long idProyecto) {
         // Llama directo a tu nuevo método indexado
-        return gitLabTareaRepository.findByValidaTrueAndIdProyecto(idProyecto);
+        Optional<Proyecto> proyecto = proyectoRepository.findById(idProyecto);
+        Proyecto proyecto2 = proyecto.get();
+        return gitLabTareaRepository.findByValidaTrueAndIdProyecto(proyecto2);
     }
 
     /**
@@ -422,7 +422,9 @@ public class GitLabService {
         // 🗑️ ¡Aquí hemos borrado el .stream().filter(...) antiguo!
         // Como ahora todas las tareas guardadas llevan su id_proyecto en Neon,
         // la base de datos os lo devuelve todo filtrado y mascado al instante.
-        return gitLabTareaRepository.findByIdProyecto(idProyecto);
+        Optional<Proyecto> proyecto = proyectoRepository.findById(idProyecto);
+        Proyecto proyecto2 = proyecto.get();
+        return gitLabTareaRepository.findByIdProyecto(proyecto2);
     }
 
     /**
