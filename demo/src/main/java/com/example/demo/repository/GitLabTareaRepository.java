@@ -1,8 +1,6 @@
 package com.example.demo.repository;
 
 import com.example.demo.entity.GitLabTarea;
-import com.example.demo.entity.TareaProyecto;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,8 +20,11 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
 
     List<GitLabTarea> findByTareaProyecto_IdTareaProyectoIn(List<Long> idsTareaProyecto);
 
+    List<GitLabTarea> findByIdProyecto(Long idProyecto);
+
     @Query("SELECT g.numeroGitLab FROM GitLabTarea g WHERE g.tareaProyecto.idTareaProyecto = :idTareaProyecto")
     Long findNumeroGitLabByTareaProyectoId(@Param("idTareaProyecto") Long idTareaProyecto);
 
-    
+    List<GitLabTarea> findByValidaTrueAndIdProyecto(Long idProyecto);
+
 }

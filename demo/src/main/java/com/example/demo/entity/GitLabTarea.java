@@ -1,5 +1,6 @@
 package com.example.demo.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 /**
@@ -26,11 +27,14 @@ public class GitLabTarea {
     @Column(name = "estado", nullable = false, length = 50)
     private String estado;
 
-
-    @Column(name = "valida")
+    @Column(name = "valida", nullable = false)
     private Boolean valida = false;
 
+    // 🎯 NUEVO CAMPO: Mapea la FK directa hacia la tabla proyecto de Neon
+    @Column(name = "id_proyecto")
+    private Long idProyecto;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_tarea_proyecto", nullable = true)
     private TareaProyecto tareaProyecto;
@@ -39,14 +43,16 @@ public class GitLabTarea {
     public GitLabTarea() {
     }
 
+    // Constructor actualizado con el nuevo campo idProyecto
     public GitLabTarea(Long id, String issueId, Long numeroGitLab, String titulo, String estado, Boolean valida,
-            TareaProyecto tareaProyecto) {
+            Long idProyecto, TareaProyecto tareaProyecto) {
         this.id = id;
         this.issueId = issueId;
         this.numeroGitLab = numeroGitLab;
         this.titulo = titulo;
         this.estado = estado;
         this.valida = valida;
+        this.idProyecto = idProyecto;
         this.tareaProyecto = tareaProyecto;
     }
 
@@ -97,6 +103,16 @@ public class GitLabTarea {
 
     public void setValida(Boolean valida) {
         this.valida = valida;
+    }
+
+    // 🎯 NUEVO GETTER
+    public Long getIdProyecto() {
+        return idProyecto;
+    }
+
+    // 🎯 NUEVO SETTER
+    public void setIdProyecto(Long idProyecto) {
+        this.idProyecto = idProyecto;
     }
 
     public TareaProyecto getTareaProyecto() {
