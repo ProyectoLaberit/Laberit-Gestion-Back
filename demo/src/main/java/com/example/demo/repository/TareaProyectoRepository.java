@@ -25,6 +25,16 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
 
     List<TareaProyecto> findByIdProyectoAndIdFaseAndTarea(Long idProyecto, Integer idFase, String tarea);
 
+    @Query(value = "SELECT t.* FROM tarea_proyecto t " +
+           "LEFT JOIN imputacion_clockify i ON t.id_tarea_proyecto = i.id_tarea_proyecto " +
+           "WHERE i.id_tarea_proyecto IS NULL", nativeQuery = true)
+    List<TareaProyecto> findTareasSinImputacionClockify();
+
+    @Query(value = "SELECT t.* FROM tarea_proyecto t " +
+           "LEFT JOIN imputacion_clockify i ON t.id_tarea_proyecto = i.id_tarea_proyecto " +
+           "WHERE i.id_tarea_proyecto IS NULL AND t.id_proyecto = :idProyecto", nativeQuery = true)
+    List<TareaProyecto> findTareasSinImputacionClockifyByProyecto(@Param("idProyecto") Long idProyecto);
+
     ///Concultas para el Excel Analítico
     
 

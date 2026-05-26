@@ -1,5 +1,6 @@
 package com.example.demo.services.excel;
 
+import com.example.demo.repository.GitLabTareaRepository;
 import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map; // Faltaba este import
@@ -8,11 +9,14 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service; // Faltaba el @Service
 
+import com.example.demo.entity.GitLabTarea;
 import com.example.demo.entity.ImputacionClockify;
+import com.example.demo.entity.TareaProyecto;
 import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.ImputacionClockifyRepository;
 import com.example.demo.repository.TareaProyectoRepository;
 import com.example.demo.dto.excel.FilaComparativaDTO;
+import com.example.demo.dto.excel.ProblemasDetectadosDTO;
 
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import java.io.ByteArrayOutputStream;
@@ -31,6 +35,8 @@ import org.apache.poi.ss.util.CellReference;
 @Service("generadorInformeExcelService")
 public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelService {
 
+    private final GitLabTareaRepository gitLabTareaRepository;
+
     // Aquí sí podemos usar @Autowired (o private final con Lombok)
     @Autowired
     private DetalleEstimacionRepository detalleEstimacionRepository;
@@ -40,6 +46,10 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
     @Autowired
     private TareaProyectoRepository tareaProyectoRepository;
+
+    GeneradorInformeExcelServiceImpl(GitLabTareaRepository gitLabTareaRepository) {
+        this.gitLabTareaRepository = gitLabTareaRepository;
+    }
 
  @Override
 public ByteArrayInputStream generarExcelAnalitico(Long idProyecto) {
@@ -386,6 +396,22 @@ private void escribirCelda(Sheet sheet, int row, int col, double valor, CellStyl
             }
             filaActual++; // Bajamos una fila para el siguiente registro
         }
+    }
+
+    public ProblemasDetectadosDTO obtenerProblemasDetectados(Long idProyecto, Long idExcel){
+
+        List<GitLabTarea> tareasBDINvalidas = gitLabTareaRepository.findByValidaAndTareaProyecto_IdProyecto(false, idProyecto);
+        int numeroInvalidasGit = tareasBDINvalidas.size();
+
+        List<ImputacionClockify> imputacionesBD = imputacionClockifyRepository.findByIdProyectoAndValida(idProyecto, false);
+
+        int numeroInvalidasClockify = imputacionesBD.size();
+
+        List<TareaProyecto> tareasBDSinImputaciones = tareaProyectoRepository.findTareasSinImputacionClockifyByProyecto(idProyecto);
+
+        int numeroSinImputaciones = tareasBDSinImputaciones.size();
+
+        return new ProblemasDetectadosDTO(numeroInvalidasGit, numeroInvalidasClockify, numeroSinImputaciones);
     }
 
 }
