@@ -13,10 +13,15 @@ import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.GitLabTareaRepository;
 import com.example.demo.repository.ImputacionClockifyRepository;
 import com.example.demo.repository.TareaProyectoRepository;
+
+import ch.qos.logback.classic.Logger;
+
 import com.example.demo.dto.excel.CabeceraDTO;
 import com.example.demo.dto.excel.FilaComparativaDTO;
 
 import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayOutputStream;
    import org.apache.poi.ss.usermodel.*;
 import java.io.FileInputStream;
@@ -33,6 +38,7 @@ import org.apache.poi.ss.util.CellReference;
 @Service("generadorInformeExcelService")
 public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelService {
 
+   
     // Aquí sí podemos usar @Autowired (o private final con Lombok)
     @Autowired
     private DetalleEstimacionRepository detalleEstimacionRepository;
@@ -78,8 +84,8 @@ public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExc
         escribirCeldaPorNombre(workbook, sheet, "KPI_MAXIMAS", cabecera.getHorasMaximas());
         escribirCeldaPorNombre(workbook, sheet, "KPI_REALES", cabecera.getHorasReales());
         escribirCeldaPorNombre(workbook, sheet, "KPI_DESVIACION", cabecera.getDesviacion());
-        escribirCeldaPorNombre(workbook, sheet, "KPI_GITLAB", cabecera.getPorcentajesValidasGitlab());
-        escribirCeldaPorNombre(workbook, sheet, "KPI_CLOCKIFY", cabecera.getImputacionesInvalidadas());
+       escribirCeldaPorNombre(workbook, sheet, "KPI_VALIDAS_GITLAB", cabecera.getPorcentajesValidasGitlab());
+    escribirCeldaPorNombre(workbook, sheet, "KPI_INVALIDAS_CLOCKIFY", cabecera.getImputacionesInvalidadas());
 
         // 3. Obtener TODAS las tareas para extraer Top 10 y Gráficos
         List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto);
@@ -432,6 +438,17 @@ public CabeceraDTO obtenerDatosCabecera(Long idProyecto, Integer idExcel) {
     if (totalTareas > 0) {
         porcentajeGitlab = (int) Math.round(((double) tareasVinculadasGitlab / totalTareas) * 100);
     }
+
+    // Trazas de depuración (Logs)
+    // escribeme esto apra pdoer inprimirlo por la cosnola y verificar que los datos se están calculando correctamente
+
+   // 4. Trazas de depuración con prints normales
+    System.out.println("--- DEBUG KPIs EXCEL ---");
+    System.out.println("Total Tareas Proyecto: " + totalTareas);
+    System.out.println("Tareas en GitLab: " + tareasVinculadasGitlab);
+    System.out.println("Porcentaje GitLab Calculado: " + porcentajeGitlab + "%");
+    System.out.println("Imputaciones Inválidas: " + imputacionesInvalidas);
+    System.out.println("------------------------");
     // 4. Construir y retornar el DTO
     CabeceraDTO cabecera = new CabeceraDTO();
     cabecera.setHorasMinimas(horasMin);
