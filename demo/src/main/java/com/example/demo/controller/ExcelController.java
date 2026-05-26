@@ -69,10 +69,10 @@ public class ExcelController {
         descripcion = "Se descargó el Reporte Analítico del Proyecto ID: #idProyecto"
     )
     @GetMapping("/exportar-analitico/{idProyecto}")
-    public ResponseEntity<byte[]> exportarExcelAnalitico(@PathVariable Long idProyecto, @RequestParam(required = false) Integer idExcelElegido) {
+    public ResponseEntity<byte[]> exportarExcelAnalitico(@PathVariable Long idProyecto, @RequestParam(required = false) Integer idExcel) {
         try {
             // Llamamos a nuestro nuevo servicio
-            ByteArrayInputStream bis = generadorInformeExcelService.generarExcelAnalitico(idProyecto, idExcelElegido);
+            ByteArrayInputStream bis = generadorInformeExcelService.generarExcelAnalitico(idProyecto, idExcel);
             
             // Convertimos el InputStream a un array de bytes
             byte[] archivoExcel = bis.readAllBytes();
@@ -84,7 +84,9 @@ public class ExcelController {
             return new ResponseEntity<>(archivoExcel, headers, HttpStatus.OK);
             
         } catch (Exception e) {
+            e.printStackTrace();
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            
         }
     }
 }
