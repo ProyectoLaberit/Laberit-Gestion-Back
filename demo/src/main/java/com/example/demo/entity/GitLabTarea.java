@@ -1,5 +1,6 @@
 package com.example.demo.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 /**
@@ -26,26 +27,26 @@ public class GitLabTarea {
     @Column(name = "estado", nullable = false, length = 50)
     private String estado;
 
-
-    @Column(name = "valida")
+    @Column(name = "valida", nullable = false)
     private Boolean valida = false;
 
-
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_tarea_proyecto", nullable = true)
     private TareaProyecto tareaProyecto;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_proyecto", nullable = true)
-    private Long idProyecto;
+    private Proyecto idProyecto;
 
 
     // --- CONSTRUCTORES ---
     public GitLabTarea() {
     }
 
+    // Constructor actualizado con el nuevo campo idProyecto
     public GitLabTarea(Long id, String issueId, Long numeroGitLab, String titulo, String estado, Boolean valida,
-            TareaProyecto tareaProyecto, Long idProyecto) {
+            Proyecto idProyecto, TareaProyecto tareaProyecto) {
         this.id = id;
         this.issueId = issueId;
         this.numeroGitLab = numeroGitLab;
@@ -105,6 +106,16 @@ public class GitLabTarea {
         this.valida = valida;
     }
 
+    // 🎯 NUEVO GETTER
+    public Proyecto getIdProyecto() {
+        return idProyecto;
+    }
+
+    // 🎯 NUEVO SETTER
+    public void setIdProyecto(Proyecto idProyecto) {
+        this.idProyecto = idProyecto;
+    }
+
     public TareaProyecto getTareaProyecto() {
         return tareaProyecto;
     }
@@ -113,13 +124,7 @@ public class GitLabTarea {
         this.tareaProyecto = tareaProyecto;
     }
 
-    public Long getIdProyecto() {
-        return idProyecto;
-    }
 
-    public void setIdProyecto(Long idProyecto) {
-        this.idProyecto = idProyecto;
-    }
 
     
 }

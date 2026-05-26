@@ -2,6 +2,7 @@ package com.example.demo.services;
 
 import com.example.demo.dto.GitLabProyectoDTO;
 import com.example.demo.dto.GitLabTareaDTO;
+import com.example.demo.dto.ProyectoDTO;
 import com.example.demo.entity.ApiConfig;
 import com.example.demo.entity.GitLabTarea;
 import com.example.demo.entity.Proyecto;
@@ -228,15 +229,23 @@ public class GitLabService {
      * 
      * @return Lista unificada de DTOs con el campo vinculada actualizado.
      */
-    public List<GitLabTareaDTO> obtenerTareasConEstadoVinculacion(Long proyectoIdLocal) {
-
-        // 1. Descarga bruta desde GitLab (trae todas las páginas)
+    /**
+     * Sincroniza las tareas desde GitLab y las persiste en Neon.
+     * * @param proyectoIdLocal ID del proyecto local.
+     * 
+     * @return El número total de tareas NUEVAS que se han guardado en la base de
+     *         datos.
+     */
+    public int sincronizarYContarNuevasTareas(Long proyectoIdLocal) {
+        // 1. Descarga bruta desde GitLab
         List<GitLabTareaDTO> tareasGitLab = obtenerTareasPorProyecto(proyectoIdLocal);
 
-        // 2. IDs ya persistidos en Neon para no duplicar lo histórico
-        Set<String> idsEnBD = gitLabTareaRepository.findAll().stream()
+        // 2. IDs ya persistidos en Neon para saber cuáles son viejas
+        Set<String> idsEnBD = gitLabTareaRepository.findByIdProyecto(proyectoIdLocal).stream()
                 .map(GitLabTarea::getIssueId)
                 .collect(Collectors.toSet());
+        // Contador para las tareas que guardemos nuevas
+        int tareasNuevasGuardadas = 0;
 
         // 3. Precalculamos las colas de tareas locales en memoria por título
         Map<String, Queue<TareaProyecto>> colasPorTitulo = new HashMap<>();
@@ -255,17 +264,13 @@ public class GitLabService {
             }
         }
 
-        // 4. Procesamos la lista y guardamos el 100% de las nuevas filas en Neon
+        // 4. Procesamos la lista y guardamos SOLO las que no existían
         for (GitLabTareaDTO tarea : tareasGitLab) {
 
-            // ESCENARIO A: la tarea ya fue registrada en una sincronización anterior
             if (idsEnBD.contains(tarea.getId())) {
-                tarea.setVinculada(true);
                 continue;
             }
 
-            // ESCENARIO B / C: Es una issue que no existe en Neon. La preparamos para
-            // guardar.
             String titulo = (tarea.getTitle() != null) ? tarea.getTitle().trim() : "";
 
             GitLabTarea nueva = new GitLabTarea();
@@ -276,27 +281,29 @@ public class GitLabService {
 
             Queue<TareaProyecto> cola = titulo.isEmpty() ? null : colasPorTitulo.get(titulo);
 
-            // Evaluamos si tiene hueco en la planificación local
             if (cola != null && !cola.isEmpty()) {
-                // 🟢 Tiene coincidencia: Extraemos la tarea libre de la cola
                 TareaProyecto tareaLocal = cola.poll();
-
-                nueva.setTareaProyecto(tareaLocal); // Enlazamos foreign key
-                nueva.setValida(true); // Marcamos como válida
-                tarea.setVinculada(true); // Avisamos al DTO
+                nueva.setTareaProyecto(tareaLocal);
+                nueva.setValida(true);
             } else {
-                // 🔴 No tiene coincidencia (O el título venía vacío): Se guarda huérfana
-                nueva.setTareaProyecto(null); // Foreign key a NULL (permitido gracias al cambio anterior)
-                nueva.setValida(false); // Marcamos como inválida
-                tarea.setVinculada(false); // Avisamos al DTO
+                nueva.setTareaProyecto(null);
+                nueva.setValida(false);
             }
 
-            // 💾 SE GUARDA SÍ O SÍ: Independientemente de si fue válida o no
+            Optional<Proyecto> proyecto = proyectoRepository.findById(proyectoIdLocal);
+
+            Proyecto proyecto2 = proyecto.get();
+            nueva.setIdProyecto(proyecto2);
+
+            System.out.println("DEBUG id a guardar: " + proyectoIdLocal);
+            System.out.println("DEBUG valor en entidad: " + nueva.getIdProyecto());
+
             gitLabTareaRepository.save(nueva);
+            tareasNuevasGuardadas++;
         }
 
-        // 5. Devolvemos la lista limpia para Postman / Frontend
-        return tareasGitLab;
+        // 5. Devolvemos el número total de inserciones
+        return tareasNuevasGuardadas;
     }
 
     /**
@@ -341,7 +348,7 @@ public class GitLabService {
     }
 
     // =========================================================================
-    // [NUEVOS MÉTODOS] Lógica para interactuar con la nueva tabla de Neon
+    // Lógica para interactuar con la nueva tabla de Neon
     // "tareas_gitlab"
     // =========================================================================
 
@@ -367,7 +374,7 @@ public class GitLabService {
      * @throws RuntimeException Si el identificador de la tarea de proyecto no se
      *                          localiza en la base de datos.
      */
-    public GitLabTarea vincularTareaAProyecto(GitLabTareaDTO dto, Long idTareaProyecto, String urlProyecto) {
+    public GitLabTarea vincularTareaAProyecto(GitLabTareaDTO dto, Long idTareaProyecto) {
 
         // 1. Validar la existencia de la tarea de destino en la planificación local
         TareaProyecto tareaProy = tareaProyectoRepository.findById(idTareaProyecto)
@@ -386,29 +393,40 @@ public class GitLabService {
         tarea.setEstado(dto.getEstado());
         tarea.setTareaProyecto(tareaProy); // Establece la relación de clave foránea (FK)
 
+        tarea.setValida(true);
+
         // 4. Persistir los cambios en el motor de base de datos relacional
         return gitLabTareaRepository.save(tarea);
     }
 
     /**
-     * [NUEVO] Recupera todas las tareas que ya han sido registradas y vinculadas
-     * localmente.
-     * * @return Lista de entidades GitLabTarea.
+     * Recupera de Neon únicamente las tareas que tienen coincidencia exacta
+     * con la planificación y cuyo estado es marcado como válido.
+     * * @param idProyecto ID del proyecto local para filtrar.
+     * 
+     * @return Lista de entidades GitLabTarea (con @JsonIgnore aplicado).
      */
-    public List<GitLabTarea> obtenerTareasVinculadasLocal() {
-        return gitLabTareaRepository.findAll();
-    }
-
-    public List<GitLabTarea> obtenerTareasVinculadasEspecificas(Long[] idsTareaProyecto){
-
-        List<Long> lista = Arrays.asList(idsTareaProyecto);
-
-        return gitLabTareaRepository.findByTareaProyecto_IdTareaProyectoIn(lista);
-
+    public List<GitLabTarea> obtenerSoloValidasDeBaseDatos(Long idProyecto) {
+        // Llama directo a tu nuevo método indexado
+        return gitLabTareaRepository.findByValidaTrueAndIdProyecto(idProyecto);
     }
 
     /**
-     * [NUEVO] Modifica una vinculación existente asociándola a un nuevo
+     * Recupera de Neon el 100% de las tareas registradas de ese proyecto,
+     * incluyendo las huérfanas/inválidas para que el usuario las gestione.
+     * * @param idProyecto ID del proyecto local para filtrar.
+     * 
+     * @return Lista completa de control con todas las tareas asociadas.
+     */
+    public List<GitLabTarea> obtenerTodasDeBaseDatos(Long idProyecto) {
+        // 🗑️ ¡Aquí hemos borrado el .stream().filter(...) antiguo!
+        // Como ahora todas las tareas guardadas llevan su id_proyecto en Neon,
+        // la base de datos os lo devuelve todo filtrado y mascado al instante.
+        return gitLabTareaRepository.findByIdProyecto(idProyecto);
+    }
+
+    /**
+     * Modifica una vinculación existente asociándola a un nuevo
      * idDetalleEstimacion.
      *
      * @param idGitlab                 ID único global de la issue en GitLab.
@@ -425,11 +443,13 @@ public class GitLabService {
                         "El nuevo id_tarea_proyecto " + nuevoIdTareaProyecto + " no existe."));
 
         tarea.setTareaProyecto(nuevaTareaProyecto);
+        tarea.setValida(true); // Se fuerza a true al ser una edición manual correcta
+
         return gitLabTareaRepository.save(tarea);
     }
 
     /**
-     * [NUEVO] Elimina de la base de datos la relación de una tarea de GitLab
+     * Elimina de la base de datos la relación de una tarea de GitLab
      * (Desvincular).
      *
      * @param idGitlab ID único global de la issue a eliminar.
