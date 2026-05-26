@@ -29,4 +29,18 @@ List<DetalleEstimacion> findByIdExcel(Integer idExcel);
            "WHERE t.id_proyecto = :idProyecto AND ex.vigente = true", 
            nativeQuery = true)
     Double obtenerTotalHorasMaximasProyecto(@Param("idProyecto") Long idProyecto);
+
+    @Query(value = "SELECT CAST(COALESCE(SUM(e.tiempo_max), 0.0) AS DOUBLE PRECISION) " +
+        "FROM detalle_estimacion e " +
+        "JOIN tarea_proyecto t ON e.id_tarea_proyecto = t.id_tarea_proyecto " +
+        "WHERE t.id_proyecto = :idProyecto AND e.id_excel = :idExcel", 
+        nativeQuery = true)
+Double obtenerTotalHorasMaximasProyecto(@Param("idProyecto") Long idProyecto, @Param("idExcel") Integer idExcel);
+
+@Query(value = "SELECT CAST(COALESCE(SUM(e.tiempo_min), 0.0) AS DOUBLE PRECISION) " +
+        "FROM detalle_estimacion e " +
+        "JOIN tarea_proyecto t ON e.id_tarea_proyecto = t.id_tarea_proyecto " +
+        "WHERE t.id_proyecto = :idProyecto AND e.id_excel = :idExcel", 
+        nativeQuery = true)
+Double obtenerTotalHorasMinimasProyecto(@Param("idProyecto") Long idProyecto, @Param("idExcel") Integer idExcel);
 }
