@@ -55,11 +55,10 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     @Autowired
     private TareaProyectoRepository tareaProyectoRepository;
 
-    GeneradorInformeExcelServiceImpl(GitLabTareaRepository gitLabTareaRepository) {
-        this.gitLabTareaRepository = gitLabTareaRepository;
-    }
-    @Autowired
+    @Autowired 
     private GitLabTareaRepository gitLabTareaRepository;
+
+    
 
  @Override
 public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExcel) {
