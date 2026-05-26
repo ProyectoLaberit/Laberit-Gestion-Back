@@ -85,4 +85,6 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
            "WHERE c.id_proyecto = :idProyecto AND c.valida = false", 
            nativeQuery = true)
     List<ErrorVinculacionClockifyDTO> obtenerErroresClockify(@Param("idProyecto") Long idProyecto);
+
+    Integer countByIdProyectoAndValidaFalse(Long idProyecto);
 }
