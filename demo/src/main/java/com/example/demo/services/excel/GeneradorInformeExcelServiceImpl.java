@@ -3,11 +3,11 @@ package com.example.demo.services.excel;
 import com.example.demo.repository.GitLabTareaRepository;
 import java.io.ByteArrayInputStream;
 import java.util.List;
-import java.util.Map; // Faltaba este import
+import java.util.Map;
 
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service; // Faltaba el @Service
+import org.springframework.stereotype.Service;
 
 import com.example.demo.entity.GitLabTarea;
 import com.example.demo.entity.ImputacionClockify;
@@ -27,7 +27,7 @@ import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
-   import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.*;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -42,12 +42,12 @@ import org.apache.poi.ss.util.CellReference;
 @Service("generadorInformeExcelService")
 public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelService {
 
-    
-
-   
-    // Aquí sí podemos usar @Autowired (o private final con Lombok)
+    // Aquí sí podemos usar @Autowired
     @Autowired
     private DetalleEstimacionRepository detalleEstimacionRepository;
+
+    @Autowired
+    private com.example.demo.services.DetalleEstimacionService detalleEstimacionService;
 
     @Autowired
     private ImputacionClockifyRepository imputacionClockifyRepository;
@@ -58,97 +58,125 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     @Autowired 
     private GitLabTareaRepository gitLabTareaRepository;
 
-    
 
- @Override
-public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExcel) {
-    try (InputStream is = getClass().getResourceAsStream("/plantillas/dashboard_template.xlsx");
-         Workbook workbook = WorkbookFactory.create(is); 
-         ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-        Map<String, CellStyle> estilos = crearEstilosCorporativos(workbook);
+    @Override
+    public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExcel) {
+        try (InputStream is = getClass().getResourceAsStream("/plantillas/dashboard_template.xlsx");
+            Workbook workbook = WorkbookFactory.create(is); 
+            ByteArrayOutputStream out = new ByteArrayOutputStream()) 
+        {
 
-        // Llamamos al método con el nombre correcto
-        generarDashboardConPlantilla(workbook,  idProyecto, idExcel);
-        generarHojaTareas(workbook, estilos, idProyecto);
+            Map<String, CellStyle> estilos = crearEstilosCorporativos(workbook);
 
-        workbook.write(out);
-        return new ByteArrayInputStream(out.toByteArray());
+            // Llamamos al método con el nombre correcto
+            generarDashboardConPlantilla(workbook,  idProyecto, idExcel);
+            generarHojaTareas(workbook, estilos, idProyecto, idExcel);
 
-    } catch (Exception e) {
-        throw new RuntimeException("Error al generar el reporte analítico Excel", e);
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error al generar el reporte analítico Excel", e);
+        }
     }
-}
 
     // Aquí sí podemos tener métodos privados con lógica
-// 1. Modificamos la firma para incluir Integer idExcel
-   private void generarDashboardConPlantilla(Workbook workbook, Long idProyecto, Integer idExcel) {
-    Sheet sheet = workbook.getSheetAt(0);
+    // Modificamos la firma para incluir Integer idExcel
+    private void generarDashboardConPlantilla(Workbook workbook, Long idProyecto, Integer idExcel) {
+        Sheet sheet = workbook.getSheetAt(0);
 
-    // 1. KPIs Principales usando el DTO
-    CabeceraDTO cabecera = obtenerDatosCabecera(idProyecto, idExcel);
-    if (cabecera != null) {
-        escribirCeldaPorNombre(workbook, sheet, "KPI_MINIMAS", cabecera.getHorasMinimas());
-        escribirCeldaPorNombre(workbook, sheet, "KPI_MAXIMAS", cabecera.getHorasMaximas());
-        escribirCeldaPorNombre(workbook, sheet, "KPI_REALES", cabecera.getHorasReales());
-        escribirCeldaPorNombre(workbook, sheet, "KPI_DESVIACION", cabecera.getDesviacion());
-        escribirCeldaPorNombre(workbook, sheet, "KPI_VALIDAS_GITLAB", cabecera.getPorcentajesValidasGitlab());
-        escribirCeldaPorNombre(workbook, sheet, "KPI_INVALIDAS_CLOCKIFY", cabecera.getImputacionesInvalidadas());
+        // KPIs Principales
+        CabeceraDTO cabecera = obtenerDatosCabecera(idProyecto, idExcel);
+        if (cabecera != null) {
+            escribirCeldaPorNombre(workbook, sheet, "KPI_MINIMAS", cabecera.getHorasMinimas());
+            escribirCeldaPorNombre(workbook, sheet, "KPI_MAXIMAS", cabecera.getHorasMaximas());
+            escribirCeldaPorNombre(workbook, sheet, "KPI_REALES", cabecera.getHorasReales());
+            escribirCeldaPorNombre(workbook, sheet, "KPI_DESVIACION", cabecera.getDesviacion());
+            escribirCeldaPorNombre(workbook, sheet, "KPI_VALIDAS_GITLAB", cabecera.getPorcentajesValidasGitlab());
+            escribirCeldaPorNombre(workbook, sheet, "KPI_INVALIDAS_CLOCKIFY", cabecera.getImputacionesInvalidadas());
+        }
+
+        // KPIs de Problemas Detectados (Incidencias)
+        ProblemasDetectadosDTO problemas = obtenerProblemasDetectados(idProyecto, idExcel);
+        System.out.println("Problemas Detectados: " + problemas.getTareasGitlabNoReconocidas()); // Log para depuración
+        if (problemas != null) {
+            escribirCeldaPorNombre(workbook, sheet, "INC_GITLAB", problemas.getTareasGitlabNoReconocidas());
+            escribirCeldaPorNombre(workbook, sheet, "INC_CLOCKIFY", problemas.getImputacionesInvalidas());
+            escribirCeldaPorNombre(workbook, sheet, "INC_SIN_HORAS", problemas.getTareasSinHoras());
+        }
+
+        // Obtener TODAS las tareas para extraer Top 10 y Gráficos
+        List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
+                .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
+                .collect(Collectors.toList());
+
+        // 4. Validar que la lista no esté vacía antes de procesar streams
+        if (tareas != null && !tareas.isEmpty()) {
+            
+            // 4.1. Procesar y rellenar TOP 10 Desviaciones
+            List<Object[]> top10 = tareas.stream()
+                    .sorted((t1, t2) -> Double.compare(t2.getDesviacionHoras(), t1.getDesviacionHoras()))
+                    .limit(10)
+                    .map(t -> {
+                        String estadoSalud = "Verde";
+                        if (t.getDesviacionHoras() > 10) {
+                            estadoSalud = "Rojo";
+                        } else if (t.getDesviacionHoras() > 0) {
+                            estadoSalud = "Amarillo";
+                        }
+
+                        return new Object[]{
+                            t.getIdGitlab() != null ? t.getIdGitlab() : "-",
+                            t.getFase(),
+                            t.getTarea(),
+                            t.getDepartamento(),
+                            Math.round(t.getEstimacionMinima()),
+                            Math.round(t.getEstimacionMaxima()),
+                            Math.round(t.getHorasReales()),
+                            Math.round(t.getDesviacionHoras()),
+                            estadoSalud,
+                            t.getEstadoGitlab() != null ? t.getEstadoGitlab() : "-"
+                        };
+                    })
+                    .collect(Collectors.toList());
+            
+            escribirListaDesdeAncla(workbook, sheet, "TOP10_INICIO", top10);
+
+            // 4.2. Procesar y rellenar Gráfico de Departamentos (Ordenado)
+            List<Object[]> datosDepartamentos = tareas.stream()
+                    .collect(Collectors.groupingBy(FilaComparativaDTO::getDepartamento, Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
+                    .entrySet().stream()
+                    .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
+                    .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
+                    .collect(Collectors.toList());
+                    
+            escribirListaDesdeAncla(workbook, sheet, "GRAF_DEP_INICIO", datosDepartamentos);
+
+            // 4.3. Procesar y rellenar Gráfico de Fases (Ordenado)
+            List<Object[]> datosFases = tareas.stream()
+                    .collect(Collectors.groupingBy(FilaComparativaDTO::getFase, Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
+                    .entrySet().stream()
+                    .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
+                    .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
+                    .collect(Collectors.toList());
+                    
+            escribirListaDesdeAncla(workbook, sheet, "GRAF_FASE_INICIO", datosFases);
+        }
     }
 
-    // 2. KPIs de Problemas Detectados (Incidencias)
-    ProblemasDetectadosDTO problemas = obtenerProblemasDetectados(idProyecto, idExcel);
-    System.out.println("Problemas Detectados: " + problemas.getTareasGitlabNoReconocidas()); // Log para depuración
-    if (problemas != null) {
-        escribirCeldaPorNombre(workbook, sheet, "INC_GITLAB", problemas.getTareasGitlabNoReconocidas());
-        escribirCeldaPorNombre(workbook, sheet, "INC_CLOCKIFY", problemas.getImputacionesInvalidas());
-        escribirCeldaPorNombre(workbook, sheet, "INC_SIN_HORAS", problemas.getTareasSinHoras());
-    }
-
-    // 3. Obtener TODAS las tareas para extraer Top 10 y Gráficos
-    List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto);
-
-    // 4. Validar que la lista no esté vacía antes de procesar streams
-    if (tareas != null && !tareas.isEmpty()) {
+    private void escribirCelda(Sheet sheet, int row, int col, double valor, CellStyle estilo) {
+        Row fila = sheet.getRow(row);
+        if (fila == null) fila = sheet.createRow(row);
         
-        // 4.1. Procesar y rellenar TOP 10 Desviaciones
-        List<Object[]> top10 = tareas.stream()
-                .sorted((t1, t2) -> Double.compare(t2.getDesviacionHoras(), t1.getDesviacionHoras()))
-                .limit(10)
-                .map(t -> new Object[]{
-                        t.getFase(),
-                        t.getTarea(),
-                        Math.round(t.getEstimacionMaxima()),
-                        Math.round(t.getHorasReales()),
-                        Math.round(t.getDesviacionHoras())
-                })
-                .collect(Collectors.toList());
+        Cell celda = fila.getCell(col);
+        if (celda == null) celda = fila.createCell(col);
         
-        escribirListaDesdeAncla(workbook, sheet, "TOP10_INICIO", top10);
-
-        // 4.2. Procesar y rellenar Gráfico de Departamentos (Ordenado)
-        List<Object[]> datosDepartamentos = tareas.stream()
-                .collect(Collectors.groupingBy(FilaComparativaDTO::getDepartamento, Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
-                .entrySet().stream()
-                .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
-                .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
-                .collect(Collectors.toList());
-                
-        escribirListaDesdeAncla(workbook, sheet, "GRAF_DEP_INICIO", datosDepartamentos);
-
-        // 4.3. Procesar y rellenar Gráfico de Fases (Ordenado)
-        List<Object[]> datosFases = tareas.stream()
-                .collect(Collectors.groupingBy(FilaComparativaDTO::getFase, Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
-                .entrySet().stream()
-                .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
-                .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
-                .collect(Collectors.toList());
-                
-        escribirListaDesdeAncla(workbook, sheet, "GRAF_FASE_INICIO", datosFases);
+        celda.setCellValue(valor);
+        if (estilo != null) {
+            celda.setCellStyle(estilo);
+        }
     }
-}
-
-
 
 
 
@@ -246,13 +274,16 @@ public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExc
         return estilos;
     }
 
-    private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto) {
+    private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto, Integer idExcel) {
         // 1. OBTENER LA HOJA EXISTENTE DE LA PLANTILLA (Índice 1 es la segunda hoja)
         Sheet sheet = workbook.getSheetAt(1);
     
         
         // 2. OBTENCIÓN DE DATOS Y VARIABLES PARA TOTALES
-        List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto);
+        List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
+                .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
+                .collect(Collectors.toList());
+
         double totalEstMin = 0.0;
         double totalEstMax = 0.0;
         double totalReales = 0.0;
@@ -437,7 +468,7 @@ public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExc
 
     public ProblemasDetectadosDTO obtenerProblemasDetectados(Long idProyecto, int idExcel){
 
-        List<GitLabTarea> tareasBDInvalidas = gitLabTareaRepository.findByValidaAndIdProyecto(false, idProyecto);
+        List<GitLabTarea> tareasBDInvalidas = gitLabTareaRepository.findByValidaAndIdProyecto_Id(false, idProyecto);
         int numeroInvalidasGit = tareasBDInvalidas.size();
 
         List<ImputacionClockify> imputacionesBD = imputacionClockifyRepository.findByIdProyectoAndValida(idProyecto, false);
@@ -451,53 +482,53 @@ public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExc
         return new ProblemasDetectadosDTO(numeroInvalidasGit, numeroInvalidasClockify, numeroSinImputaciones);
     }
 
-@Override
-public CabeceraDTO obtenerDatosCabecera(Long idProyecto, Integer idExcel) {
-    // 1. Recuperar datos brutos de los repositorios
-    Double min = detalleEstimacionRepository.obtenerTotalHorasMinimasProyecto(idProyecto, idExcel);
-    Double max = detalleEstimacionRepository.obtenerTotalHorasMaximasProyecto(idProyecto, idExcel);
-    
-    // NOTA: Asumimos que Clockify suma las horas a nivel de proyecto, si depende del excel, añade el parámetro también.
-    Double reales = imputacionClockifyRepository.sumarHorasTotalesProyecto(idProyecto);
-    
-    // 2. Controlar nulos antes de redondear
-    long horasMin = (min != null) ? Math.round(min) : 0L;
-    long horasMax = (max != null) ? Math.round(max) : 0L;
-    long horasReales = (reales != null) ? Math.round(reales) : 0L;
-    long desviacion = horasReales - horasMax;
+    @Override
+    public CabeceraDTO obtenerDatosCabecera(Long idProyecto, Integer idExcel) {
+        // 1. Recuperar datos brutos de los repositorios
+        Double min = detalleEstimacionRepository.obtenerTotalHorasMinimasProyecto(idProyecto, idExcel);
+        Double max = detalleEstimacionRepository.obtenerTotalHorasMaximasProyecto(idProyecto, idExcel);
+        
+        // NOTA: Asumimos que Clockify suma las horas a nivel de proyecto, si depende del excel, añade el parámetro también.
+        Double reales = imputacionClockifyRepository.sumarHorasTotalesProyecto(idProyecto);
+        
+        // 2. Controlar nulos antes de redondear
+        long horasMin = (min != null) ? Math.round(min) : 0L;
+        long horasMax = (max != null) ? Math.round(max) : 0L;
+        long horasReales = (reales != null) ? Math.round(reales) : 0L;
+        long desviacion = horasReales - horasMax;
 
-    // 3. Consultas para los contadores de GitLab y Clockify (Provisional)
-    int imputacionesInvalidas = imputacionClockifyRepository.countByIdProyectoAndValidaFalse(idProyecto);
-    
-    int totalTareas = tareaProyectoRepository.countByIdProyecto(idProyecto);
-     int tareasVinculadasGitlab = gitLabTareaRepository.contarTareasVinculadasPorProyecto(idProyecto); 
+        // 3. Consultas para los contadores de GitLab y Clockify (Provisional)
+        int imputacionesInvalidas = imputacionClockifyRepository.countByIdProyectoAndValidaFalse(idProyecto);
+        
+        int totalTareas = tareaProyectoRepository.countByIdProyecto(idProyecto);
+        int tareasVinculadasGitlab = gitLabTareaRepository.contarTareasVinculadasPorProyecto(idProyecto); 
 
-    int porcentajeGitlab = 0;
-    if (totalTareas > 0) {
-        porcentajeGitlab = (int) Math.round(((double) tareasVinculadasGitlab / totalTareas) * 100);
+        int porcentajeGitlab = 0;
+        if (totalTareas > 0) {
+            porcentajeGitlab = (int) Math.round(((double) tareasVinculadasGitlab / totalTareas) * 100);
+        }
+
+        // Trazas de depuración (Logs)
+    
+
+    // 4. Trazas de depuración con prints normales
+        System.out.println("--- DEBUG KPIs EXCEL ---");
+        System.out.println("Total Tareas Proyecto: " + totalTareas);
+        System.out.println("Tareas en GitLab: " + tareasVinculadasGitlab);
+        System.out.println("Porcentaje GitLab Calculado: " + porcentajeGitlab + "%");
+        System.out.println("Imputaciones Inválidas: " + imputacionesInvalidas);
+        System.out.println("------------------------");
+
+        // 4. Construir y retornar el DTO
+        CabeceraDTO cabecera = new CabeceraDTO();
+        cabecera.setHorasMinimas(horasMin);
+        cabecera.setHorasMaximas(horasMax);
+        cabecera.setHorasReales(horasReales);
+        cabecera.setDesviacion(desviacion);
+        cabecera.setPorcentajesValidasGitlab(porcentajeGitlab);
+        cabecera.setImputacionesInvalidadas(imputacionesInvalidas);
+
+        return cabecera;
     }
-
-    // Trazas de depuración (Logs)
-   
-
-   // 4. Trazas de depuración con prints normales
-    System.out.println("--- DEBUG KPIs EXCEL ---");
-    System.out.println("Total Tareas Proyecto: " + totalTareas);
-    System.out.println("Tareas en GitLab: " + tareasVinculadasGitlab);
-    System.out.println("Porcentaje GitLab Calculado: " + porcentajeGitlab + "%");
-    System.out.println("Imputaciones Inválidas: " + imputacionesInvalidas);
-    System.out.println("------------------------");
-
-    // 4. Construir y retornar el DTO
-    CabeceraDTO cabecera = new CabeceraDTO();
-    cabecera.setHorasMinimas(horasMin);
-    cabecera.setHorasMaximas(horasMax);
-    cabecera.setHorasReales(horasReales);
-    cabecera.setDesviacion(desviacion);
-    cabecera.setPorcentajesValidasGitlab(porcentajeGitlab);
-    cabecera.setImputacionesInvalidadas(imputacionesInvalidas);
-
-    return cabecera;
-}
 
 }
