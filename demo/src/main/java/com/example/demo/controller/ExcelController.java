@@ -66,8 +66,8 @@ public class ExcelController {
         entidad = Excel.class, // Ajusta si la entidad auditada principal debe ser Proyecto.class
         descripcion = "Se descargó el Reporte Analítico del Proyecto ID: #idProyecto"
     )
-    @GetMapping("/exportar-analitico/{idProyecto}")
-    public ResponseEntity<byte[]> exportarExcelAnalitico(@PathVariable Long idProyecto,Integer idExcel) {
+    @GetMapping("/exportar-analitico/{idProyecto}/{idExcel}")
+    public ResponseEntity<byte[]> exportarExcelAnalitico(@PathVariable Long idProyecto,@PathVariable Integer idExcel) {
         try {
             // Llamamos a nuestro nuevo servicio
             ByteArrayInputStream bis = generadorInformeExcelService.generarExcelAnalitico(idProyecto,idExcel);
