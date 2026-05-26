@@ -289,7 +289,7 @@ public class GitLabService {
                 nueva.setValida(false);
             }
 
-            // ✅ Se asigna al final para que nada lo sobreescriba
+            
             nueva.setIdProyecto(proyectoIdLocal);
 
             System.out.println("DEBUG id a guardar: " + proyectoIdLocal);
