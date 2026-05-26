@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import java.io.ByteArrayInputStream;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,7 @@ public class ExcelController {
     private ExcelService excelService;
 
     @Autowired
+    @Qualifier("generadorInformeExcelService")
     private GeneradorInformeExcelService generadorInformeExcelService;
 
     /**
