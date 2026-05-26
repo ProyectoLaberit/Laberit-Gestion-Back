@@ -22,7 +22,7 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
 
     List<GitLabTarea> findByTareaProyecto_IdTareaProyectoIn(List<Long> idsTareaProyecto);
 
-    List<GitLabTarea> findByValidaAndIdProyecto(Boolean valida, Long idProyecto);
+    List<GitLabTarea> findByValidaAndIdProyecto_Id(Boolean valida, Long idProyecto);
 
     @Query("SELECT g.numeroGitLab FROM GitLabTarea g WHERE g.tareaProyecto.idTareaProyecto = :idTareaProyecto")
     Long findNumeroGitLabByTareaProyectoId(@Param("idTareaProyecto") Long idTareaProyecto);

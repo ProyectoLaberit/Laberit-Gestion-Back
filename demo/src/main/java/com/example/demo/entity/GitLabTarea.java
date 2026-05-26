@@ -37,7 +37,7 @@ public class GitLabTarea {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_proyecto", nullable = true)
-    private Long idProyecto;
+    private Proyecto idProyecto;
 
 
     // --- CONSTRUCTORES ---
@@ -45,7 +45,7 @@ public class GitLabTarea {
     }
 
     public GitLabTarea(Long id, String issueId, Long numeroGitLab, String titulo, String estado, Boolean valida,
-            TareaProyecto tareaProyecto, Long idProyecto) {
+            TareaProyecto tareaProyecto, Proyecto idProyecto) {
         this.id = id;
         this.issueId = issueId;
         this.numeroGitLab = numeroGitLab;
@@ -113,11 +113,11 @@ public class GitLabTarea {
         this.tareaProyecto = tareaProyecto;
     }
 
-    public Long getIdProyecto() {
+    public Proyecto getIdProyecto() {
         return idProyecto;
     }
 
-    public void setIdProyecto(Long idProyecto) {
+    public void setIdProyecto(Proyecto idProyecto) {
         this.idProyecto = idProyecto;
     }
 
