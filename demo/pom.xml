@@ -138,6 +138,13 @@
             
         </dependency>
 
+		<!-- Para reducir el código repetitivo en las clases de modelo, como getters, setters, constructores, etc. -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<optional>true</optional>
+		</dependency>
+
 	</dependencies>
 
 	<build>

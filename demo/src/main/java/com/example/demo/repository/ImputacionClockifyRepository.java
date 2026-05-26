@@ -1,5 +1,6 @@
 package com.example.demo.repository;
 
+import com.example.demo.dto.excel.ErrorVinculacionClockifyDTO;
 import com.example.demo.entity.ImputacionClockify;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -65,4 +66,23 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
     // Lo mismo, pero aplicando el filtro de fechas
     @Query("SELECT i FROM ImputacionClockify i WHERE i.idProyecto = :idProyecto AND i.idDepartamento = :idDepartamento AND (i.idTareaProyecto = :idTareaProyecto OR (i.valida = false AND i.idTareaProyecto IS NULL)) AND i.fecha BETWEEN :desde AND :hasta")
     List<ImputacionClockify> obtenerDatosVistaDepartamentoFechas(@Param("idProyecto") Long idProyecto, @Param("idTareaProyecto") Long idTareaProyecto, @Param("idDepartamento") Integer idDepartamento, @Param("desde") java.time.LocalDate desde, @Param("hasta") java.time.LocalDate hasta);
+
+    //Consulta para el Excel Analítico: Suma de horas válidas por tarea, agrupada por proyecto
+
+   @Query(value = "SELECT * FROM imputacion_clockify " +
+           "WHERE id_proyecto = :idProyecto AND valida = true " +
+           "ORDER BY fecha ASC", 
+           nativeQuery = true)
+    List<ImputacionClockify> obtenerImputacionesValidasOrdenadas(@Param("idProyecto") Long idProyecto);
+
+    @Query(value = "SELECT " +
+           "'-' AS usuario, " + 
+           "c.descripcion_original AS descripcionOriginal, " +
+           "c.fecha AS fechaTrabajada, " +
+           "c.horas_trabajadas AS horasTrabajadas, " +
+           "c.valida AS valida " +
+           "FROM imputacion_clockify c " +
+           "WHERE c.id_proyecto = :idProyecto AND c.valida = false", 
+           nativeQuery = true)
+    List<ErrorVinculacionClockifyDTO> obtenerErroresClockify(@Param("idProyecto") Long idProyecto);
 }
