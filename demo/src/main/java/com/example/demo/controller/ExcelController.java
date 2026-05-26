@@ -67,10 +67,10 @@ public class ExcelController {
         descripcion = "Se descargó el Reporte Analítico del Proyecto ID: #idProyecto"
     )
     @GetMapping("/exportar-analitico/{idProyecto}")
-    public ResponseEntity<byte[]> exportarExcelAnalitico(@PathVariable Long idProyecto) {
+    public ResponseEntity<byte[]> exportarExcelAnalitico(@PathVariable Long idProyecto,Integer idExcel) {
         try {
             // Llamamos a nuestro nuevo servicio
-            ByteArrayInputStream bis = generadorInformeExcelService.generarExcelAnalitico(idProyecto);
+            ByteArrayInputStream bis = generadorInformeExcelService.generarExcelAnalitico(idProyecto,idExcel);
             
             // Convertimos el InputStream a un array de bytes
             byte[] archivoExcel = bis.readAllBytes();
