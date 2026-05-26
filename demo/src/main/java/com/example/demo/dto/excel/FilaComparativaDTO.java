@@ -4,6 +4,7 @@ package com.example.demo.dto.excel;
 
 
 public interface FilaComparativaDTO {
+    Integer getIdExcel();
     String getIdGitlab();
     String getFase();
     String getTarea();
