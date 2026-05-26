@@ -2,11 +2,11 @@ package com.example.demo.services.excel;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;
-import java.util.Map; // Faltaba este import
+import java.util.Map;
 
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service; // Faltaba el @Service
+import org.springframework.stereotype.Service;
 
 import com.example.demo.entity.ImputacionClockify;
 import com.example.demo.repository.DetalleEstimacionRepository;
@@ -16,7 +16,7 @@ import com.example.demo.dto.excel.FilaComparativaDTO;
 
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import java.io.ByteArrayOutputStream;
-   import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.*;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
@@ -31,9 +31,12 @@ import org.apache.poi.ss.util.CellReference;
 @Service("generadorInformeExcelService")
 public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelService {
 
-    // Aquí sí podemos usar @Autowired (o private final con Lombok)
+    // Aquí sí podemos usar @Autowired
     @Autowired
     private DetalleEstimacionRepository detalleEstimacionRepository;
+
+    @Autowired
+    private com.example.demo.services.DetalleEstimacionService detalleEstimacionService;
 
     @Autowired
     private ImputacionClockifyRepository imputacionClockifyRepository;
@@ -41,90 +44,104 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     @Autowired
     private TareaProyectoRepository tareaProyectoRepository;
 
- @Override
-public ByteArrayInputStream generarExcelAnalitico(Long idProyecto) {
-    try (InputStream is = getClass().getResourceAsStream("/plantillas/dashboard_template.xlsx");
-         Workbook workbook = WorkbookFactory.create(is); 
-         ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+    @Override
+    public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExcelElegido) {
+        try (InputStream is = getClass().getResourceAsStream("/plantillas/dashboard_template.xlsx");
+            Workbook workbook = WorkbookFactory.create(is); 
+            ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-        Map<String, CellStyle> estilos = crearEstilosCorporativos(workbook);
+            Map<String, CellStyle> estilos = crearEstilosCorporativos(workbook);
 
-        // Llamamos al método con el nombre correcto
-        generarDashboardConPlantilla(workbook, estilos, idProyecto);
-        generarHojaTareas(workbook, estilos, idProyecto);
+            // Llamamos al método con el nombre correcto
+            generarDashboardConPlantilla(workbook, estilos, idProyecto, idExcelElegido);
+            generarHojaTareas(workbook, estilos, idProyecto, idExcelElegido);
 
-        workbook.write(out);
-        return new ByteArrayInputStream(out.toByteArray());
+            workbook.write(out);
+            return new ByteArrayInputStream(out.toByteArray());
 
-    } catch (Exception e) {
-        throw new RuntimeException("Error al generar el reporte analítico Excel", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al generar el reporte analítico Excel", e);
+        }
     }
-}
 
     // Aquí sí podemos tener métodos privados con lógica
-private void generarDashboardConPlantilla(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto) {
-    Sheet sheet = workbook.getSheetAt(0);
+    private void generarDashboardConPlantilla(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto, Integer idExcelElegido) {
+        Sheet sheet = workbook.getSheetAt(0);
 
-    // 1. KPIs Principales (Redondeados)
-    double horasMaximas = detalleEstimacionRepository.obtenerTotalHorasMaximasProyecto(idProyecto);
-    double horasReales = imputacionClockifyRepository.sumarHorasTotalesProyecto(idProyecto);
-    double desviacion = horasReales - horasMaximas;
+        // Obtener TODAS las tareas para extraer Top 10 y Gráficos
+        List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
+                .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcelElegido))
+                .collect(Collectors.toList());
 
-    escribirCeldaPorNombre(workbook, sheet, "KPI_MAXIMAS", Math.round(horasMaximas));
-    escribirCeldaPorNombre(workbook, sheet, "KPI_REALES", Math.round(horasReales));
-    escribirCeldaPorNombre(workbook, sheet, "KPI_DESVIACION", Math.round(desviacion));
+        // KPIs Principales (Redondeados)
+        double horasMaximas = tareas.stream().mapToDouble(FilaComparativaDTO::getEstimacionMaxima).sum();
+        double horasReales = tareas.stream().mapToDouble(FilaComparativaDTO::getHorasReales).sum();
+        double desviacion = horasReales - horasMaximas;
 
-    // 2. Obtener TODAS las tareas para extraer Top 10 y Gráficos
-    List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto);
+        escribirCeldaPorNombre(workbook, sheet, "KPI_MAXIMAS", Math.round(horasMaximas));
+        escribirCeldaPorNombre(workbook, sheet, "KPI_REALES", Math.round(horasReales));
+        escribirCeldaPorNombre(workbook, sheet, "KPI_DESVIACION", Math.round(desviacion));
 
-    // 3. Procesar y rellenar TOP 10 Desviaciones
-    List<Object[]> top10 = tareas.stream()
-            .sorted((t1, t2) -> Double.compare(t2.getDesviacionHoras(), t1.getDesviacionHoras()))
-            .limit(10)
-            .map(t -> new Object[]{
-                    t.getIdGitlab() != null ? t.getIdGitlab() : "-",
-                    t.getFase(),
-                    t.getTarea(),
-                    Math.round(t.getEstimacionMaxima()),
-                    Math.round(t.getHorasReales()),
-                    Math.round(t.getDesviacionHoras())
-            })
-            .collect(Collectors.toList());
-    
-    escribirListaDesdeAncla(workbook, sheet, "TOP10_INICIO", top10);
+        // Procesar y rellenar TOP 10 Desviaciones
+        List<Object[]> top10 = tareas.stream()
+                .sorted((t1, t2) -> Double.compare(t2.getDesviacionHoras(), t1.getDesviacionHoras()))
+                .limit(10)
+                .map(t -> {
+                        String estadoSalud = "Verde";
+                        if (t.getDesviacionHoras() > 10) {
+                            estadoSalud = "Rojo";
+                        } else if (t.getDesviacionHoras() > 0) {
+                            estadoSalud = "Amarillo";
+                        }
 
-    // 4. Procesar y rellenar Gráfico de Departamentos (Agrupación por suma de horas reales)
-    List<Object[]> datosDepartamentos = tareas.stream()
-            .collect(Collectors.groupingBy(FilaComparativaDTO::getDepartamento, Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
-            .entrySet().stream()
-            .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
-            .collect(Collectors.toList());
-            
-    escribirListaDesdeAncla(workbook, sheet, "GRAF_DEP_INICIO", datosDepartamentos);
+                        return new Object[]{
+                            t.getIdGitlab() != null ? t.getIdGitlab() : "-",
+                            t.getFase(),
+                            t.getTarea(),
+                            t.getDepartamento(),
+                            Math.round(t.getEstimacionMinima()),
+                            Math.round(t.getEstimacionMaxima()),
+                            Math.round(t.getHorasReales()),
+                            Math.round(t.getDesviacionHoras()),
+                            estadoSalud,
+                            t.getEstadoGitlab() != null ? t.getEstadoGitlab() : "-"
+                        };
+                })
+                .collect(Collectors.toList());
+        
+        escribirListaDesdeAncla(workbook, sheet, "TOP10_INICIO", top10);
 
-    // 5. Procesar y rellenar Gráfico de Fases (Agrupación por suma de horas reales)
-    List<Object[]> datosFases = tareas.stream()
-            .collect(Collectors.groupingBy(FilaComparativaDTO::getFase, Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
-            .entrySet().stream()
-            .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
-            .collect(Collectors.toList());
-            
-    escribirListaDesdeAncla(workbook, sheet, "GRAF_FASE_INICIO", datosFases);
-}
-private void escribirCelda(Sheet sheet, int row, int col, double valor, CellStyle estilo) {
-    Row fila = sheet.getRow(row);
-    if (fila == null) fila = sheet.createRow(row);
-    
-    Cell celda = fila.getCell(col);
-    if (celda == null) celda = fila.createCell(col);
-    
-    celda.setCellValue(valor);
-    if (estilo != null) {
-        celda.setCellStyle(estilo);
+        // 4. Procesar y rellenar Gráfico de Departamentos (Agrupación por suma de horas reales)
+        List<Object[]> datosDepartamentos = tareas.stream()
+                .collect(Collectors.groupingBy(FilaComparativaDTO::getDepartamento, Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
+                .entrySet().stream()
+                .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
+                .collect(Collectors.toList());
+                
+        escribirListaDesdeAncla(workbook, sheet, "GRAF_DEP_INICIO", datosDepartamentos);
+
+        // 5. Procesar y rellenar Gráfico de Fases (Agrupación por suma de horas reales)
+        List<Object[]> datosFases = tareas.stream()
+                .collect(Collectors.groupingBy(FilaComparativaDTO::getFase, Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
+                .entrySet().stream()
+                .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
+                .collect(Collectors.toList());
+                
+        escribirListaDesdeAncla(workbook, sheet, "GRAF_FASE_INICIO", datosFases);
     }
-}
 
-
+    private void escribirCelda(Sheet sheet, int row, int col, double valor, CellStyle estilo) {
+        Row fila = sheet.getRow(row);
+        if (fila == null) fila = sheet.createRow(row);
+        
+        Cell celda = fila.getCell(col);
+        if (celda == null) celda = fila.createCell(col);
+        
+        celda.setCellValue(valor);
+        if (estilo != null) {
+            celda.setCellStyle(estilo);
+        }
+    }
 
     private Map<String, CellStyle> crearEstilosCorporativos(Workbook workbook) {
         Map<String, CellStyle> estilos = new java.util.HashMap<>();
@@ -219,7 +236,7 @@ private void escribirCelda(Sheet sheet, int row, int col, double valor, CellStyl
         return estilos;
     }
 
-   private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto) {
+    private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto, Integer idExcelElegido) {
         Sheet sheet = workbook.createSheet("2. TAREAS");
         
         // 1. CREACIÓN DE CABECERA (Azul Oscuro)

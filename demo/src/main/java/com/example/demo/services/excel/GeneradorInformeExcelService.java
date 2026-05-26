@@ -4,6 +4,6 @@ import java.io.ByteArrayInputStream;
 
 public interface GeneradorInformeExcelService {
     
-    ByteArrayInputStream generarExcelAnalitico(Long idProyecto);
+    ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExcelElegido);
 
 }
