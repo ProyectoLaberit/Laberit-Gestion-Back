@@ -35,8 +35,6 @@ import org.apache.poi.ss.util.CellReference;
 @Service("generadorInformeExcelService")
 public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelService {
 
-    private final GitLabTareaRepository gitLabTareaRepository;
-
     // Aquí sí podemos usar @Autowired (o private final con Lombok)
     @Autowired
     private DetalleEstimacionRepository detalleEstimacionRepository;
@@ -47,9 +45,10 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     @Autowired
     private TareaProyectoRepository tareaProyectoRepository;
 
-    GeneradorInformeExcelServiceImpl(GitLabTareaRepository gitLabTareaRepository) {
-        this.gitLabTareaRepository = gitLabTareaRepository;
-    }
+    @Autowired 
+    private GitLabTareaRepository gitLabTareaRepository;
+
+    
 
  @Override
 public ByteArrayInputStream generarExcelAnalitico(Long idProyecto) {
