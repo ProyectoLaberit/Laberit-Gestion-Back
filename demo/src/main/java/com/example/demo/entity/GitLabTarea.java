@@ -35,12 +35,17 @@ public class GitLabTarea {
     @JoinColumn(name = "id_tarea_proyecto", nullable = true)
     private TareaProyecto tareaProyecto;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_proyecto", nullable = true)
+    private Long idProyecto;
+
+
     // --- CONSTRUCTORES ---
     public GitLabTarea() {
     }
 
     public GitLabTarea(Long id, String issueId, Long numeroGitLab, String titulo, String estado, Boolean valida,
-            TareaProyecto tareaProyecto) {
+            TareaProyecto tareaProyecto, Long idProyecto) {
         this.id = id;
         this.issueId = issueId;
         this.numeroGitLab = numeroGitLab;
@@ -48,6 +53,7 @@ public class GitLabTarea {
         this.estado = estado;
         this.valida = valida;
         this.tareaProyecto = tareaProyecto;
+        this.idProyecto = idProyecto;
     }
 
     // --- GETTERS Y SETTERS ---
@@ -106,4 +112,14 @@ public class GitLabTarea {
     public void setTareaProyecto(TareaProyecto tareaProyecto) {
         this.tareaProyecto = tareaProyecto;
     }
+
+    public Long getIdProyecto() {
+        return idProyecto;
+    }
+
+    public void setIdProyecto(Long idProyecto) {
+        this.idProyecto = idProyecto;
+    }
+
+    
 }
