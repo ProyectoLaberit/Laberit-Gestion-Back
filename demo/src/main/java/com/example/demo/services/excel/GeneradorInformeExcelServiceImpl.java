@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service; // Faltaba el @Service
 
 import com.example.demo.entity.ImputacionClockify;
 import com.example.demo.repository.DetalleEstimacionRepository;
+import com.example.demo.repository.GitLabTareaRepository;
 import com.example.demo.repository.ImputacionClockifyRepository;
 import com.example.demo.repository.TareaProyectoRepository;
 import com.example.demo.dto.excel.CabeceraDTO;
@@ -41,6 +42,9 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
     @Autowired
     private TareaProyectoRepository tareaProyectoRepository;
+
+    @Autowired
+    private GitLabTareaRepository gitLabTareaRepository;
 
  @Override
 public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExcel) {
@@ -419,17 +423,23 @@ public CabeceraDTO obtenerDatosCabecera(Long idProyecto, Integer idExcel) {
     long desviacion = horasReales - horasMax;
 
     // 3. Consultas para los contadores de GitLab y Clockify (Provisional)
-    int gitlabPct = 94; 
-    int clockifyInv = 12; 
+    int imputacionesInvalidas = imputacionClockifyRepository.countByIdProyectoAndValidaFalse(idProyecto);
+    
+    int totalTareas = tareaProyectoRepository.countByIdProyecto(idProyecto);
+     int tareasVinculadasGitlab = gitLabTareaRepository.contarTareasVinculadasPorProyecto(idProyecto); 
 
+    int porcentajeGitlab = 0;
+    if (totalTareas > 0) {
+        porcentajeGitlab = (int) Math.round(((double) tareasVinculadasGitlab / totalTareas) * 100);
+    }
     // 4. Construir y retornar el DTO
     CabeceraDTO cabecera = new CabeceraDTO();
     cabecera.setHorasMinimas(horasMin);
     cabecera.setHorasMaximas(horasMax);
     cabecera.setHorasReales(horasReales);
     cabecera.setDesviacion(desviacion);
-    cabecera.setPorcentajesValidasGitlab(gitlabPct);
-    cabecera.setImputacionesInvalidadas(clockifyInv);
+    cabecera.setPorcentajesValidasGitlab(porcentajeGitlab);
+    cabecera.setImputacionesInvalidadas(imputacionesInvalidas);
 
     return cabecera;
 }
