@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
 @RestController
 @RequestMapping("/api/gitlab")
 @CrossOrigin(origins = "*")
@@ -34,12 +33,13 @@ public class GitLabController {
      *         - 500 Internal Server Error: Si hubo un fallo en la comunicación con
      *         GitLab o error de configuración.
      */
-    @GetMapping("/tareas/{proyectoId}")
-    public ResponseEntity<ApiResponse> getTareas(@PathVariable Long proyectoId) {
+    @GetMapping("/sincronizar/{proyectoId}")
+    public ResponseEntity<ApiResponse> sincronizarTareasGitLab(@PathVariable Long proyectoId) {
         try {
-            List<GitLabTareaDTO> tareas = gitLabService.obtenerTareasConEstadoVinculacion(proyectoId);
+            int tareasNuevas = gitLabService.sincronizarYContarNuevasTareas(proyectoId);
 
-            return ResponseEntity.ok(new ApiResponse("Tareas recuperadas de GitLab", true, tareas));
+            return ResponseEntity
+                    .ok(new ApiResponse("Tareas recuperadas de GitLab: " + tareasNuevas, false, tareasNuevas));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ApiResponse(e.getMessage(), false, null));
         }
@@ -81,7 +81,7 @@ public class GitLabController {
             @RequestParam Long idTareaProyecto,
             @RequestParam(required = false) String urlProyecto) {
         try {
-            GitLabTarea vinculada = gitLabService.vincularTareaAProyecto(tareaDTO, idTareaProyecto, urlProyecto);
+            GitLabTarea vinculada = gitLabService.vincularTareaAProyecto(tareaDTO, idTareaProyecto);
             return ResponseEntity.ok(new ApiResponse("Tarea vinculada con éxito", true, vinculada));
         } catch (Exception e) {
             return ResponseEntity.status(500)
@@ -90,33 +90,40 @@ public class GitLabController {
     }
 
     /**
-     * Obtiene todas las issues asociadas localmente en Neon.
+     * VISTA 1: Obtiene únicamente las tareas confirmadas y emparejadas (valida =
+     * true).
      */
-    /*@GetMapping("/vinculadas")
-    public ResponseEntity<ApiResponse> getTareasVinculadas() {
+    @GetMapping("/vinculadas/validas/{idProyecto}")
+    public ResponseEntity<ApiResponse> getSoloValidadas(@PathVariable Long idProyecto) {
         try {
-            List<GitLabTarea> vinculadas = gitLabService.obtenerTareasVinculadasLocal();
-            return ResponseEntity.ok(new ApiResponse("Listado de vinculaciones locales obtenido", true, vinculadas));
+            // Llamamos a la función de lectura limpia de Neon
+            List<GitLabTarea> validas = gitLabService.obtenerSoloValidasDeBaseDatos(idProyecto);
+
+            return ResponseEntity.ok(
+                    new ApiResponse("Tareas válidas recuperadas de Neon con éxito", true, validas));
         } catch (Exception e) {
             return ResponseEntity.status(500)
-                    .body(new ApiResponse("Error al recuperar vinculaciones: " + e.getMessage(), false, null));
+                    .body(new ApiResponse("Error al leer válidas: " + e.getMessage(), false, null));
         }
-    }*/
-
-    @PostMapping("/vinculadas")
-    public ApiResponse tareasVinculadas(
-            @RequestParam Long[] idsTareaProyecto) {
-
-            List<GitLabTarea> vinculadas = gitLabService.obtenerTareasVinculadasEspecificas(idsTareaProyecto);
-        
-            if(vinculadas != null){
-                return new ApiResponse("vinculaciones obtenidas con exito", true, vinculadas);
-            }else{
-                return new ApiResponse("fallo al obtener vinculaciones", false, null);
-            }
-        
     }
-    
+
+    /**
+     * VISTA 2: Obtiene el listado completo de control (Válidas +
+     * Inválidas/Huérfanas).
+     */
+    @GetMapping("/vinculadas/todas/{idProyecto}")
+    public ResponseEntity<ApiResponse> getTodasRegistradas(@PathVariable Long idProyecto) {
+        try {
+            // Llamamos a la función que mezcla las vinculadas y las huérfanas
+            List<GitLabTarea> todas = gitLabService.obtenerTodasDeBaseDatos(idProyecto);
+
+            return ResponseEntity.ok(
+                    new ApiResponse("Historial completo recuperado de Neon con éxito", true, todas));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse("Error al leer el historial: " + e.getMessage(), false, null));
+        }
+    }
 
     /**
      * Cambia la vinculación de una issue a otra tarea del proyecto.
