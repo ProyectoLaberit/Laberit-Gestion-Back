@@ -21,6 +21,7 @@ import ch.qos.logback.classic.Logger;
 
 import com.example.demo.dto.excel.CabeceraDTO;
 import com.example.demo.dto.excel.FilaComparativaDTO;
+import com.example.demo.dto.excel.FilaGitLabTareaDTO;
 import com.example.demo.dto.excel.ProblemasDetectadosDTO;
 
 import org.apache.poi.xssf.usermodel.XSSFColor;
@@ -127,16 +128,12 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                         }
 
                         return new Object[]{
-                            t.getIdGitlab() != null ? t.getIdGitlab() : "-",
                             t.getFase(),
                             t.getTarea(),
-                            t.getDepartamento(),
-                            Math.round(t.getEstimacionMinima()),
                             Math.round(t.getEstimacionMaxima()),
                             Math.round(t.getHorasReales()),
                             Math.round(t.getDesviacionHoras()),
-                            estadoSalud,
-                            t.getEstadoGitlab() != null ? t.getEstadoGitlab() : "-"
+                            estadoSalud
                         };
                     })
                     .collect(Collectors.toList());
@@ -268,76 +265,51 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     
         
         // 2. OBTENCIÓN DE DATOS Y VARIABLES PARA TOTALES
-        List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
-                .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
-                .collect(Collectors.toList());
+        List<FilaGitLabTareaDTO> tareas = obtenerTareasEstructuradas(idProyecto, idExcel);
+
+        List<Object[]> filasTabla = tareas.stream()
+        .map(tarea -> {
+            String iconoSalud = tarea.getDesviacionHoras() > 10 ? "❌" : (tarea.getDesviacionHoras() > 0 ? "⚠️" : "✅");
+            return new Object[]{
+                tarea.getIdGitlab(),
+                tarea.getFase() != null ? tarea.getFase() : "",
+                tarea.getTarea() != null ? tarea.getTarea() : "",
+                tarea.getDepartamento() != null ? tarea.getDepartamento() : "",
+                tarea.getEstimacionMinima(),
+                tarea.getEstimacionMaxima(),
+                tarea.getHorasReales(),
+                tarea.getDesviacionHoras(),
+                iconoSalud,
+                tarea.getEstadoGitlab()
+            };
+        })
+        .collect(Collectors.toList());
+
+        escribirListaDesdeAncla(workbook, sheet, "TABLA_TAREAS_INICIO", filasTabla);
 
         double totalEstMin = 0.0;
         double totalEstMax = 0.0;
         double totalReales = 0.0;
         double totalDesv = 0.0;
         
-        // 3. POBLADO DE DATOS
-        int rowNum = 2; // Empezamos en la fila 2 para no pisar la cabecera visual
-        
-        for (FilaComparativaDTO tarea : tareas) {
-            // 3.1. Obtener o crear la fila de forma segura
-            Row fila = sheet.getRow(rowNum);
-            if (fila == null) {
-                fila = sheet.createRow(rowNum);
-            }
-
-            // 3.2. Insertar datos de texto (con prevención de nulos)
-            fila.createCell(0).setCellValue(tarea.getIdGitlab() != null ? tarea.getIdGitlab() : "-");
-            fila.createCell(1).setCellValue(tarea.getFase() != null ? tarea.getFase() : "");
-            fila.createCell(2).setCellValue(tarea.getTarea() != null ? tarea.getTarea() : "");
-            fila.createCell(3).setCellValue(tarea.getDepartamento() != null ? tarea.getDepartamento() : "");
-
-            // 3.3. Insertar datos numéricos y acumular totales
-            Cell celdaEstMin = fila.createCell(4);
-            celdaEstMin.setCellValue(tarea.getEstimacionMinima());
-            celdaEstMin.setCellStyle(estilos.get("decimal"));
+        for (FilaGitLabTareaDTO tarea : tareas) {
             totalEstMin += tarea.getEstimacionMinima();
-
-            Cell celdaEstMax = fila.createCell(5);
-            celdaEstMax.setCellValue(tarea.getEstimacionMaxima());
-            celdaEstMax.setCellStyle(estilos.get("decimal"));
             totalEstMax += tarea.getEstimacionMaxima();
-
-            Cell celdaReales = fila.createCell(6);
-            celdaReales.setCellValue(tarea.getHorasReales());
-            celdaReales.setCellStyle(estilos.get("decimal"));
             totalReales += tarea.getHorasReales();
-
-            Cell celdaDesvHoras = fila.createCell(7);
-            celdaDesvHoras.setCellValue(tarea.getDesviacionHoras());
             totalDesv += tarea.getDesviacionHoras();
-
-            // 3.4. Lógica de Semáforo y Formato Condicional
-            String iconoSalud = "✅"; 
-            
-            if (tarea.getDesviacionHoras() > 0 && tarea.getDesviacionHoras() <= 10) {
-                iconoSalud = "⚠️";
-                celdaDesvHoras.setCellStyle(estilos.get("desviacionMala"));
-            } else if (tarea.getDesviacionHoras() > 10) {
-                iconoSalud = "❌";
-                celdaDesvHoras.setCellStyle(estilos.get("desviacionMala"));
-            } else {
-                celdaDesvHoras.setCellStyle(estilos.get("desviacionBuena"));
-            }
-
-            Cell celdaSalud = fila.createCell(8);
-            celdaSalud.setCellValue(iconoSalud);
-            celdaSalud.setCellStyle(estilos.get("icono"));
-
-            fila.createCell(9).setCellValue(tarea.getEstadoGitlab() != null ? tarea.getEstadoGitlab() : "");
-
-            // 3.5. Incrementar el contador para la siguiente vuelta
-            rowNum++;
         }
 
         // 4. FILA DE TOTALES INFERIOR
+        Name nombreAncla = workbook.getName("TABLA_TAREAS_INICIO");
+        int rowNum = 2; // Por si acaso falla el ancla
+        if (nombreAncla != null) {
+            org.apache.poi.ss.util.AreaReference ref = new org.apache.poi.ss.util.AreaReference(nombreAncla.getRefersToFormula(), workbook.getSpreadsheetVersion());
+            rowNum = ref.getFirstCell().getRow() + tareas.size();
+        }
+
+        
         Row filaTotales = sheet.getRow(rowNum);
+
         if (filaTotales == null) {
             filaTotales = sheet.createRow(rowNum);
         }
@@ -564,6 +536,31 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                 .entrySet().stream()
                 .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
                 .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<FilaGitLabTareaDTO> obtenerTareasEstructuradas(Long idProyecto, Integer idExcel) {
+        // Filtra las tareas del proyecto para conservar únicamente las asociadas al Excel indicado
+        List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
+                .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
+                .collect(Collectors.toList());
+
+        // Mapea la lista de entidades procesadas hacia la estructura del nuevo DTO
+        return tareas.stream()
+                .map(t -> {
+                    FilaGitLabTareaDTO dto = new FilaGitLabTareaDTO();
+                    dto.setIdGitlab(t.getIdGitlab() != null ? t.getIdGitlab() : "-");
+                    dto.setFase(t.getFase());
+                    dto.setTarea(t.getTarea());
+                    dto.setDepartamento(t.getDepartamento());
+                    dto.setEstimacionMinima((int) Math.round(t.getEstimacionMinima()));
+                    dto.setEstimacionMaxima((int) Math.round(t.getEstimacionMaxima()));
+                    dto.setHorasReales((int) Math.round(t.getHorasReales()));
+                    dto.setDesviacionHoras((int) Math.round(t.getDesviacionHoras()));
+                    dto.setEstadoGitlab(t.getEstadoGitlab() != null ? t.getEstadoGitlab() : "-");
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
