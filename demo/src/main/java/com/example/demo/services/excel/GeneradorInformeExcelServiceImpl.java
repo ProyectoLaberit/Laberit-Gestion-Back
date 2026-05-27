@@ -21,6 +21,7 @@ import ch.qos.logback.classic.Logger;
 
 import com.example.demo.dto.excel.CabeceraDTO;
 import com.example.demo.dto.excel.FilaComparativaDTO;
+import com.example.demo.dto.excel.FilaGitLabTareaDTO;
 import com.example.demo.dto.excel.ProblemasDetectadosDTO;
 
 import org.apache.poi.xssf.usermodel.XSSFColor;
@@ -127,16 +128,12 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                         }
 
                         return new Object[]{
-                            t.getIdGitlab() != null ? t.getIdGitlab() : "-",
                             t.getFase(),
                             t.getTarea(),
-                            t.getDepartamento(),
-                            Math.round(t.getEstimacionMinima()),
                             Math.round(t.getEstimacionMaxima()),
                             Math.round(t.getHorasReales()),
                             Math.round(t.getDesviacionHoras()),
-                            estadoSalud,
-                            t.getEstadoGitlab() != null ? t.getEstadoGitlab() : "-"
+                            estadoSalud
                         };
                     })
                     .collect(Collectors.toList());
@@ -268,9 +265,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     
         
         // 2. OBTENCIÓN DE DATOS Y VARIABLES PARA TOTALES
-        List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
-                .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
-                .collect(Collectors.toList());
+        List<FilaGitLabTareaDTO> tareas = obtenerTareasEstructuradas(idProyecto, idExcel);
 
         double totalEstMin = 0.0;
         double totalEstMax = 0.0;
@@ -280,7 +275,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         // 3. POBLADO DE DATOS
         int rowNum = 2; // Empezamos en la fila 2 para no pisar la cabecera visual
         
-        for (FilaComparativaDTO tarea : tareas) {
+        for (FilaGitLabTareaDTO tarea : tareas) {
             // 3.1. Obtener o crear la fila de forma segura
             Row fila = sheet.getRow(rowNum);
             if (fila == null) {
@@ -564,6 +559,31 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                 .entrySet().stream()
                 .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
                 .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<FilaGitLabTareaDTO> obtenerTareasEstructuradas(Long idProyecto, Integer idExcel) {
+        // Filtra las tareas del proyecto para conservar únicamente las asociadas al Excel indicado
+        List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
+                .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
+                .collect(Collectors.toList());
+
+        // Mapea la lista de entidades procesadas hacia la estructura del nuevo DTO
+        return tareas.stream()
+                .map(t -> {
+                    FilaGitLabTareaDTO dto = new FilaGitLabTareaDTO();
+                    dto.setIdGitlab(t.getIdGitlab() != null ? t.getIdGitlab() : "-");
+                    dto.setFase(t.getFase());
+                    dto.setTarea(t.getTarea());
+                    dto.setDepartamento(t.getDepartamento());
+                    dto.setEstimacionMinima((int) Math.round(t.getEstimacionMinima()));
+                    dto.setEstimacionMaxima((int) Math.round(t.getEstimacionMaxima()));
+                    dto.setHorasReales((int) Math.round(t.getHorasReales()));
+                    dto.setDesviacionHoras((int) Math.round(t.getDesviacionHoras()));
+                    dto.setEstadoGitlab(t.getEstadoGitlab() != null ? t.getEstadoGitlab() : "-");
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 
