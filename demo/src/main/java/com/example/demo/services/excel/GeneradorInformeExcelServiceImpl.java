@@ -143,24 +143,12 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             
             escribirListaDesdeAncla(workbook, sheet, "TOP10_INICIO", top10);
 
-            // 4.2. Procesar y rellenar Gráfico de Departamentos (Ordenado)
-            List<Object[]> datosDepartamentos = tareas.stream()
-                    .collect(Collectors.groupingBy(FilaComparativaDTO::getDepartamento, Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
-                    .entrySet().stream()
-                    .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
-                    .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
-                    .collect(Collectors.toList());
-                    
+            // Procesar y rellenar Gráfico de Departamentos
+            List<Object[]> datosDepartamentos = obtenerDatosGraficoDepartamentos(idProyecto, idExcel);
             escribirListaDesdeAncla(workbook, sheet, "GRAF_DEP_INICIO", datosDepartamentos);
 
-            // 4.3. Procesar y rellenar Gráfico de Fases (Ordenado)
-            List<Object[]> datosFases = tareas.stream()
-                    .collect(Collectors.groupingBy(FilaComparativaDTO::getFase, Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
-                    .entrySet().stream()
-                    .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
-                    .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
-                    .collect(Collectors.toList());
-                    
+            // Procesar y rellenar Gráfico de Fases
+            List<Object[]> datosFases = obtenerDatosGraficoFases(idProyecto, idExcel);
             escribirListaDesdeAncla(workbook, sheet, "GRAF_FASE_INICIO", datosFases);
         }
     }
@@ -529,6 +517,54 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         cabecera.setImputacionesInvalidadas(imputacionesInvalidas);
 
         return cabecera;
+    }
+
+    private List<Object[]> obtenerDatosGraficoDepartamentos(Long idProyecto, Integer idExcel) {
+        // Filtra las tareas del proyecto para conservar únicamente las asociadas al Excel indicado
+        List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
+                .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
+                .collect(Collectors.toList());
+
+        // Agrupa por departamento, suma las horas reales y ordena el resultado de mayor a menor
+        List<Object[]> todosLosDepartamentos = tareas.stream()
+                .collect(Collectors.groupingBy(
+                        t -> t.getDepartamento() != null ? t.getDepartamento() : "Sin Departamento", 
+                        Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
+                .entrySet().stream()
+                .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
+                .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
+                .collect(Collectors.toList());
+
+        // Devuelve la lista original si contiene 4 elementos o menos
+        if (todosLosDepartamentos.size() <= 4) {
+            return todosLosDepartamentos;
+        }
+
+        // Separa los 4 departamentos principales y agrupa la suma del resto bajo la categoría "Otros"
+        List<Object[]> top4 = new java.util.ArrayList<>(todosLosDepartamentos.subList(0, 4));
+        long sumaOtros = todosLosDepartamentos.subList(4, todosLosDepartamentos.size()).stream()
+                .mapToLong(e -> (Long) e[1])
+                .sum();
+        
+        top4.add(new Object[]{"Otros", sumaOtros});
+        return top4;
+    }
+
+    private List<Object[]> obtenerDatosGraficoFases(Long idProyecto, Integer idExcel) {
+        // Filtra las tareas del proyecto para conservar únicamente las asociadas al Excel indicado
+        List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
+                .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
+                .collect(Collectors.toList());
+
+        // Agrupa por fase, suma las horas reales, redondea los valores y los ordena de mayor a menor
+        return tareas.stream()
+                .collect(Collectors.groupingBy(
+                        t -> t.getFase() != null ? t.getFase() : "Sin Fase", 
+                        Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
+                .entrySet().stream()
+                .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
+                .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
+                .collect(Collectors.toList());
     }
 
 }
