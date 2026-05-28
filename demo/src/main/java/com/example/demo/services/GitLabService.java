@@ -450,6 +450,19 @@ public class GitLabService {
      *
      * @param idGitlab ID único global de la issue a eliminar.
      */
+    public GitLabTarea actualizarTituloIssue(String issueId, String titulo) {
+        if (titulo == null || titulo.trim().isEmpty()) {
+            throw new RuntimeException("El titulo de la issue no puede estar vacio.");
+        }
+
+        GitLabTarea tarea = gitLabTareaRepository.findByIssueId(issueId)
+                .orElseThrow(
+                        () -> new RuntimeException("No se encontro ninguna issue registrada con ID: " + issueId));
+
+        tarea.setTitulo(titulo.trim());
+        return gitLabTareaRepository.save(tarea);
+    }
+
     public void eliminarVinculacion(String issueId) {
         GitLabTarea tarea = gitLabTareaRepository.findByIssueId(issueId)
                 .orElseThrow(

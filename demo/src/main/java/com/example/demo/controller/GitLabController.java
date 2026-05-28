@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/gitlab")
@@ -144,6 +145,23 @@ public class GitLabController {
     /**
      * Desvincula y borra el registro local de la issue de GitLab.
      */
+    /**
+     * Actualiza el titulo local de una issue de GitLab registrada en Neon.
+     */
+    @PutMapping("/issue/{issueId}/titulo")
+    public ResponseEntity<ApiResponse> actualizarTituloIssue(
+            @PathVariable String issueId,
+            @RequestBody Map<String, String> body) {
+        try {
+            String titulo = body != null ? body.get("titulo") : null;
+            GitLabTarea actualizada = gitLabService.actualizarTituloIssue(issueId, titulo);
+            return ResponseEntity.ok(new ApiResponse("Titulo de issue actualizado correctamente", true, actualizada));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse("Error al actualizar titulo: " + e.getMessage(), false, null));
+        }
+    }
+
     @DeleteMapping("/vincular/{issueId}")
     public ResponseEntity<ApiResponse> eliminarVinculacion(@PathVariable String issueId) {
         try {
