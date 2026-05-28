@@ -15,13 +15,17 @@ import com.example.demo.entity.TareaProyecto;
 import com.example.demo.repository.DetalleEstimacionRepository;
 import com.example.demo.repository.GitLabTareaRepository;
 import com.example.demo.repository.ImputacionClockifyRepository;
+import com.example.demo.repository.ProyectoRepository;
 import com.example.demo.repository.TareaProyectoRepository;
 
 import ch.qos.logback.classic.Logger;
 
 import com.example.demo.dto.excel.CabeceraDTO;
+import com.example.demo.dto.excel.FilaAuditoriaClockifyDTO;
 import com.example.demo.dto.excel.FilaComparativaDTO;
+import com.example.demo.dto.excel.FilaValidacionGitlabDTO;
 import com.example.demo.dto.excel.ProblemasDetectadosDTO;
+import com.example.demo.dto.excel.ResumenValidacionDTO;
 
 import org.apache.poi.xssf.usermodel.XSSFColor;
 import org.slf4j.LoggerFactory;
@@ -55,22 +59,22 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     @Autowired
     private TareaProyectoRepository tareaProyectoRepository;
 
-    @Autowired 
+    @Autowired
     private GitLabTareaRepository gitLabTareaRepository;
 
-
+    @Autowired
+    private ProyectoRepository proyectoRepository;
 
     @Override
     public ByteArrayInputStream generarExcelAnalitico(Long idProyecto, Integer idExcel) {
         try (InputStream is = getClass().getResourceAsStream("/plantillas/dashboard_template.xlsx");
-            Workbook workbook = WorkbookFactory.create(is); 
-            ByteArrayOutputStream out = new ByteArrayOutputStream()) 
-        {
+                Workbook workbook = WorkbookFactory.create(is);
+                ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
             Map<String, CellStyle> estilos = crearEstilosCorporativos(workbook);
 
             // Llamamos al método con el nombre correcto
-            generarDashboardConPlantilla(workbook,  idProyecto, idExcel);
+            generarDashboardConPlantilla(workbook, idProyecto, idExcel);
             generarHojaTareas(workbook, estilos, idProyecto, idExcel);
 
             workbook.write(out);
@@ -99,7 +103,6 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
         // KPIs de Problemas Detectados (Incidencias)
         ProblemasDetectadosDTO problemas = obtenerProblemasDetectados(idProyecto, idExcel);
-        System.out.println("Problemas Detectados: " + problemas.getTareasGitlabNoReconocidas()); // Log para depuración
         if (problemas != null) {
             escribirCeldaPorNombre(workbook, sheet, "INC_GITLAB", problemas.getTareasGitlabNoReconocidas());
             escribirCeldaPorNombre(workbook, sheet, "INC_CLOCKIFY", problemas.getImputacionesInvalidas());
@@ -111,10 +114,9 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                 .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
                 .collect(Collectors.toList());
 
-        // 4. Validar que la lista no esté vacía antes de procesar streams
         if (tareas != null && !tareas.isEmpty()) {
-            
-            // 4.1. Procesar y rellenar TOP 10 Desviaciones
+
+            // Top 10 Desviaciones
             List<Object[]> top10 = tareas.stream()
                     .sorted((t1, t2) -> Double.compare(t2.getDesviacionHoras(), t1.getDesviacionHoras()))
                     .limit(10)
@@ -125,29 +127,28 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                         } else if (t.getDesviacionHoras() > 0) {
                             estadoSalud = "Amarillo";
                         }
-
-                        return new Object[]{
-                            t.getIdGitlab() != null ? t.getIdGitlab() : "-",
-                            t.getFase(),
-                            t.getTarea(),
-                            t.getDepartamento(),
-                            Math.round(t.getEstimacionMinima()),
-                            Math.round(t.getEstimacionMaxima()),
-                            Math.round(t.getHorasReales()),
-                            Math.round(t.getDesviacionHoras()),
-                            estadoSalud,
-                            t.getEstadoGitlab() != null ? t.getEstadoGitlab() : "-"
+                        return new Object[] {
+                                t.getIdGitlab() != null ? t.getIdGitlab() : "-",
+                                t.getFase(),
+                                t.getTarea(),
+                                t.getDepartamento(),
+                                Math.round(t.getEstimacionMinima()),
+                                Math.round(t.getEstimacionMaxima()),
+                                Math.round(t.getHorasReales()),
+                                Math.round(t.getDesviacionHoras()),
+                                estadoSalud,
+                                t.getEstadoGitlab() != null ? t.getEstadoGitlab() : "-"
                         };
                     })
                     .collect(Collectors.toList());
-            
+
             escribirListaDesdeAncla(workbook, sheet, "TOP10_INICIO", top10);
 
-            // Procesar y rellenar Gráfico de Departamentos
+            // Gráfico de Departamentos
             List<Object[]> datosDepartamentos = obtenerDatosGraficoDepartamentos(idProyecto, idExcel);
             escribirListaDesdeAncla(workbook, sheet, "GRAF_DEP_INICIO", datosDepartamentos);
 
-            // Procesar y rellenar Gráfico de Fases
+            // Gráfico de Fases
             List<Object[]> datosFases = obtenerDatosGraficoFases(idProyecto, idExcel);
             escribirListaDesdeAncla(workbook, sheet, "GRAF_FASE_INICIO", datosFases);
         }
@@ -155,19 +156,18 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
     private void escribirCelda(Sheet sheet, int row, int col, double valor, CellStyle estilo) {
         Row fila = sheet.getRow(row);
-        if (fila == null) fila = sheet.createRow(row);
-        
+        if (fila == null)
+            fila = sheet.createRow(row);
+
         Cell celda = fila.getCell(col);
-        if (celda == null) celda = fila.createCell(col);
-        
+        if (celda == null)
+            celda = fila.createCell(col);
+
         celda.setCellValue(valor);
         if (estilo != null) {
             celda.setCellStyle(estilo);
         }
     }
-
-
-
 
     private Map<String, CellStyle> crearEstilosCorporativos(Workbook workbook) {
         Map<String, CellStyle> estilos = new java.util.HashMap<>();
@@ -262,11 +262,11 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         return estilos;
     }
 
-    private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto, Integer idExcel) {
+    private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto,
+            Integer idExcel) {
         // 1. OBTENER LA HOJA EXISTENTE DE LA PLANTILLA (Índice 1 es la segunda hoja)
         Sheet sheet = workbook.getSheetAt(1);
-    
-        
+
         // 2. OBTENCIÓN DE DATOS Y VARIABLES PARA TOTALES
         List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
                 .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
@@ -276,10 +276,10 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         double totalEstMax = 0.0;
         double totalReales = 0.0;
         double totalDesv = 0.0;
-        
+
         // 3. POBLADO DE DATOS
         int rowNum = 2; // Empezamos en la fila 2 para no pisar la cabecera visual
-        
+
         for (FilaComparativaDTO tarea : tareas) {
             // 3.1. Obtener o crear la fila de forma segura
             Row fila = sheet.getRow(rowNum);
@@ -314,8 +314,8 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             totalDesv += tarea.getDesviacionHoras();
 
             // 3.4. Lógica de Semáforo y Formato Condicional
-            String iconoSalud = "✅"; 
-            
+            String iconoSalud = "✅";
+
             if (tarea.getDesviacionHoras() > 0 && tarea.getDesviacionHoras() <= 10) {
                 iconoSalud = "⚠️";
                 celdaDesvHoras.setCellStyle(estilos.get("desviacionMala"));
@@ -342,46 +342,46 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             filaTotales = sheet.createRow(rowNum);
         }
         filaTotales.setHeightInPoints(20);
-        
+
         Cell celdaTextoTotal = filaTotales.createCell(0);
         celdaTextoTotal.setCellValue("TOTAL");
         celdaTextoTotal.setCellStyle(estilos.get("filaTotal"));
-        
+
         for (int i = 1; i <= 3; i++) {
             Cell c = filaTotales.createCell(i);
             c.setCellStyle(estilos.get("filaTotal"));
         }
-        
-        Cell tMin = filaTotales.createCell(4); 
-        tMin.setCellValue(totalEstMin); 
+
+        Cell tMin = filaTotales.createCell(4);
+        tMin.setCellValue(totalEstMin);
         tMin.setCellStyle(estilos.get("filaTotal"));
-        
-        Cell tMax = filaTotales.createCell(5); 
-        tMax.setCellValue(totalEstMax); 
+
+        Cell tMax = filaTotales.createCell(5);
+        tMax.setCellValue(totalEstMax);
         tMax.setCellStyle(estilos.get("filaTotal"));
-        
-        Cell tReales = filaTotales.createCell(6); 
-        tReales.setCellValue(totalReales); 
+
+        Cell tReales = filaTotales.createCell(6);
+        tReales.setCellValue(totalReales);
         tReales.setCellStyle(estilos.get("filaTotal"));
-        
-        Cell tDesv = filaTotales.createCell(7); 
-        tDesv.setCellValue(totalDesv); 
-        
+
+        Cell tDesv = filaTotales.createCell(7);
+        tDesv.setCellValue(totalDesv);
+
         // Estilo mixto para el Total Desviación
         CellStyle estiloTotalDesv = workbook.createCellStyle();
         estiloTotalDesv.cloneStyleFrom(estilos.get("filaTotal"));
         Font fontTotalDesv = workbook.createFont();
         fontTotalDesv.setBold(true);
-        
+
         if (totalDesv > 0) {
             fontTotalDesv.setColor(IndexedColors.RED.getIndex());
         } else {
             fontTotalDesv.setColor(IndexedColors.GREEN.getIndex());
         }
-        
+
         estiloTotalDesv.setFont(fontTotalDesv);
         tDesv.setCellStyle(estiloTotalDesv);
-        
+
         for (int i = 8; i <= 9; i++) {
             Cell c = filaTotales.createCell(i);
             c.setCellStyle(estilos.get("filaTotal"));
@@ -394,17 +394,17 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             // Encontrar la coordenada real a partir del nombre
             AreaReference ref = new AreaReference(nombre.getRefersToFormula(), workbook.getSpreadsheetVersion());
             CellReference cellRef = ref.getFirstCell();
-            
+
             Row fila = sheet.getRow(cellRef.getRow());
             if (fila == null) {
                 fila = sheet.createRow(cellRef.getRow());
             }
-            
+
             Cell celda = fila.getCell(cellRef.getCol());
             if (celda == null) {
                 celda = fila.createCell(cellRef.getCol());
             }
-            
+
             // Escribir el valor respetando su tipo
             if (valor instanceof Double) {
                 celda.setCellValue((Double) valor);
@@ -454,16 +454,18 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         }
     }
 
-    public ProblemasDetectadosDTO obtenerProblemasDetectados(Long idProyecto, int idExcel){
+    public ProblemasDetectadosDTO obtenerProblemasDetectados(Long idProyecto, int idExcel) {
 
         List<GitLabTarea> tareasBDInvalidas = gitLabTareaRepository.findByValidaAndIdProyecto_Id(false, idProyecto);
         int numeroInvalidasGit = tareasBDInvalidas.size();
 
-        List<ImputacionClockify> imputacionesBD = imputacionClockifyRepository.findByIdProyectoAndValida(idProyecto, false);
+        List<ImputacionClockify> imputacionesBD = imputacionClockifyRepository.findByIdProyectoAndValida(idProyecto,
+                false);
 
         int numeroInvalidasClockify = imputacionesBD.size();
 
-        List<TareaProyecto> tareasBDSinImputaciones = tareaProyectoRepository.findTareasSinImputacionClockifyByProyecto(idProyecto);
+        List<TareaProyecto> tareasBDSinImputaciones = tareaProyectoRepository
+                .findTareasSinImputacionClockifyByProyecto(idProyecto);
 
         int numeroSinImputaciones = tareasBDSinImputaciones.size();
 
@@ -475,10 +477,11 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         // 1. Recuperar datos brutos de los repositorios
         Double min = detalleEstimacionRepository.obtenerTotalHorasMinimasProyecto(idProyecto, idExcel);
         Double max = detalleEstimacionRepository.obtenerTotalHorasMaximasProyecto(idProyecto, idExcel);
-        
-        // NOTA: Asumimos que Clockify suma las horas a nivel de proyecto, si depende del excel, añade el parámetro también.
+
+        // NOTA: Asumimos que Clockify suma las horas a nivel de proyecto, si depende
+        // del excel, añade el parámetro también.
         Double reales = imputacionClockifyRepository.sumarHorasTotalesProyecto(idProyecto);
-        
+
         // 2. Controlar nulos antes de redondear
         long horasMin = (min != null) ? Math.round(min) : 0L;
         long horasMax = (max != null) ? Math.round(max) : 0L;
@@ -487,9 +490,9 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
         // 3. Consultas para los contadores de GitLab y Clockify (Provisional)
         int imputacionesInvalidas = imputacionClockifyRepository.countByIdProyectoAndValidaFalse(idProyecto);
-        
+
         int totalTareas = tareaProyectoRepository.countByIdProyecto(idProyecto);
-        int tareasVinculadasGitlab = gitLabTareaRepository.contarTareasVinculadasPorProyecto(idProyecto); 
+        int tareasVinculadasGitlab = gitLabTareaRepository.contarTareasVinculadasPorProyecto(idProyecto);
 
         int porcentajeGitlab = 0;
         if (totalTareas > 0) {
@@ -497,9 +500,8 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         }
 
         // Trazas de depuración (Logs)
-    
 
-    // 4. Trazas de depuración con prints normales
+        // 4. Trazas de depuración con prints normales
         System.out.println("--- DEBUG KPIs EXCEL ---");
         System.out.println("Total Tareas Proyecto: " + totalTareas);
         System.out.println("Tareas en GitLab: " + tareasVinculadasGitlab);
@@ -520,18 +522,20 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     }
 
     private List<Object[]> obtenerDatosGraficoDepartamentos(Long idProyecto, Integer idExcel) {
-        // Filtra las tareas del proyecto para conservar únicamente las asociadas al Excel indicado
+        // Filtra las tareas del proyecto para conservar únicamente las asociadas al
+        // Excel indicado
         List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
                 .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
                 .collect(Collectors.toList());
 
-        // Agrupa por departamento, suma las horas reales y ordena el resultado de mayor a menor
+        // Agrupa por departamento, suma las horas reales y ordena el resultado de mayor
+        // a menor
         List<Object[]> todosLosDepartamentos = tareas.stream()
                 .collect(Collectors.groupingBy(
-                        t -> t.getDepartamento() != null ? t.getDepartamento() : "Sin Departamento", 
+                        t -> t.getDepartamento() != null ? t.getDepartamento() : "Sin Departamento",
                         Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
                 .entrySet().stream()
-                .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
+                .map(e -> new Object[] { e.getKey(), Math.round(e.getValue()) })
                 .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
                 .collect(Collectors.toList());
 
@@ -540,31 +544,87 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             return todosLosDepartamentos;
         }
 
-        // Separa los 4 departamentos principales y agrupa la suma del resto bajo la categoría "Otros"
+        // Separa los 4 departamentos principales y agrupa la suma del resto bajo la
+        // categoría "Otros"
         List<Object[]> top4 = new java.util.ArrayList<>(todosLosDepartamentos.subList(0, 4));
         long sumaOtros = todosLosDepartamentos.subList(4, todosLosDepartamentos.size()).stream()
                 .mapToLong(e -> (Long) e[1])
                 .sum();
-        
-        top4.add(new Object[]{"Otros", sumaOtros});
+
+        top4.add(new Object[] { "Otros", sumaOtros });
         return top4;
     }
 
     private List<Object[]> obtenerDatosGraficoFases(Long idProyecto, Integer idExcel) {
-        // Filtra las tareas del proyecto para conservar únicamente las asociadas al Excel indicado
+        // Filtra las tareas del proyecto para conservar únicamente las asociadas al
+        // Excel indicado
         List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
                 .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
                 .collect(Collectors.toList());
 
-        // Agrupa por fase, suma las horas reales, redondea los valores y los ordena de mayor a menor
+        // Agrupa por fase, suma las horas reales, redondea los valores y los ordena de
+        // mayor a menor
         return tareas.stream()
                 .collect(Collectors.groupingBy(
-                        t -> t.getFase() != null ? t.getFase() : "Sin Fase", 
+                        t -> t.getFase() != null ? t.getFase() : "Sin Fase",
                         Collectors.summingDouble(FilaComparativaDTO::getHorasReales)))
                 .entrySet().stream()
-                .map(e -> new Object[]{e.getKey(), Math.round(e.getValue())})
+                .map(e -> new Object[] { e.getKey(), Math.round(e.getValue()) })
                 .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
                 .collect(Collectors.toList());
+    }
+
+    public ResumenValidacionDTO obtenerResumenValidacion(Long idProyecto) {
+
+        // --- GitLab ---
+        int totalGitlab = gitLabTareaRepository.findByIdProyecto(
+                proyectoRepository.findById(idProyecto).orElseThrow()).size();
+
+        // Cambiamos esto: usamos findByValidaAndIdProyecto_Id en lugar de
+        // contarTareasVinculadasPorProyecto
+        int gitlabOk = gitLabTareaRepository.findByValidaAndIdProyecto_Id(true, idProyecto).size();
+        int gitlabHuerfanas = totalGitlab - gitlabOk;
+
+        // --- Clockify ---
+        int totalClockify = imputacionClockifyRepository.findByIdProyecto(idProyecto).size();
+        int clockifyErroneas = imputacionClockifyRepository.countByIdProyectoAndValidaFalse(idProyecto);
+        int clockifyOk = totalClockify - clockifyErroneas;
+
+        return new ResumenValidacionDTO(
+                totalGitlab, gitlabOk, gitlabHuerfanas,
+                totalClockify, clockifyOk, clockifyErroneas);
+    }
+
+    public List<FilaValidacionGitlabDTO> obtenerFilasValidacionGitlab(Long idProyecto) {
+
+        List<GitLabTarea> tareas = gitLabTareaRepository.findByIdProyecto(
+                proyectoRepository.findById(idProyecto).orElseThrow());
+
+        return tareas.stream().map(t -> {
+            FilaValidacionGitlabDTO fila = new FilaValidacionGitlabDTO();
+            fila.setIdGitlab(t.getIssueId());
+            fila.setNombreGitlab(t.getTitulo());
+            fila.setNombreProyecto(
+                    t.getTareaProyecto() != null ? t.getTareaProyecto().getTarea() : "No vinculada");
+            fila.setEstado(t.getEstado());
+            fila.setVinculada(t.getValida());
+            return fila;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<FilaAuditoriaClockifyDTO> obtenerFilasAuditoriaClockify(Long idProyecto) {
+
+        List<ImputacionClockify> imputaciones = imputacionClockifyRepository
+                .findByIdProyectoAndValida(idProyecto, false);
+
+        return imputaciones.stream().map(i -> {
+            FilaAuditoriaClockifyDTO fila = new FilaAuditoriaClockifyDTO();
+            fila.setFecha(FilaAuditoriaClockifyDTO.formatearFecha(i.getFecha()));
+            fila.setDescripcion(i.getDescripcionOriginal());
+            fila.setHoras(FilaAuditoriaClockifyDTO.formatearHoras(i.getHorasTrabajadas()));
+            return fila;
+        }).collect(Collectors.toList());
     }
 
 }
