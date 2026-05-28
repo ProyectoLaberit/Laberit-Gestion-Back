@@ -71,7 +71,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             Map<String, CellStyle> estilos = crearEstilosCorporativos(workbook);
 
             // Llamamos al método con el nombre correcto
-            generarDashboardConPlantilla(workbook,  idProyecto, idExcel);
+            generarDashboardConPlantilla(workbook, estilos, idProyecto, idExcel);
             generarHojaTareas(workbook, estilos, idProyecto, idExcel);
 
             workbook.write(out);
@@ -84,7 +84,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
     // Aquí sí podemos tener métodos privados con lógica
     // Modificamos la firma para incluir Integer idExcel
-    private void generarDashboardConPlantilla(Workbook workbook, Long idProyecto, Integer idExcel) {
+    private void generarDashboardConPlantilla(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto, Integer idExcel) {
         Sheet sheet = workbook.getSheetAt(0);
 
         // KPIs Principales
@@ -120,25 +120,40 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                     .sorted((t1, t2) -> Double.compare(t2.getDesviacionHoras(), t1.getDesviacionHoras()))
                     .limit(10)
                     .map(t -> {
-                        String estadoSalud = "Verde";
-                        if (t.getDesviacionHoras() > 10) {
-                            estadoSalud = "Rojo";
-                        } else if (t.getDesviacionHoras() > 0) {
-                            estadoSalud = "Amarillo";
-                        }
-
                         return new Object[]{
-                            t.getFase(),
-                            t.getTarea(),
+                            t.getFase() != null ? t.getFase() : "",
+                            t.getTarea() != null ? t.getTarea() : "",
                             Math.round(t.getEstimacionMaxima()),
                             Math.round(t.getHorasReales()),
-                            Math.round(t.getDesviacionHoras()),
-                            estadoSalud
+                            Math.round(t.getDesviacionHoras())
                         };
                     })
                     .collect(Collectors.toList());
             
             escribirListaDesdeAncla(workbook, sheet, "TOP10_INICIO", top10);
+
+            // Aplicar colores a la columna de Desviación del TOP 10
+            Name anclaTop10 = workbook.getName("TOP10_INICIO");
+            if (anclaTop10 != null) {
+                org.apache.poi.ss.util.AreaReference ref = new org.apache.poi.ss.util.AreaReference(anclaTop10.getRefersToFormula(), workbook.getSpreadsheetVersion());
+                int filaInicial = ref.getFirstCell().getRow();
+                int colDesviacion = ref.getFirstCell().getCol() + 4; // Columna 5 (índice 4)
+
+                for (int i = 0; i < top10.size(); i++) {
+                    Row fila = sheet.getRow(filaInicial + i);
+                    if (fila != null) {
+                        Cell celdaDesv = fila.getCell(colDesviacion);
+                        if (celdaDesv != null) {
+                            double valorDesv = celdaDesv.getNumericCellValue();
+                            if (valorDesv > 0) {
+                                celdaDesv.setCellStyle(estilos.get("desviacionMala"));
+                            } else {
+                                celdaDesv.setCellStyle(estilos.get("desviacionBuena"));
+                            }
+                        }
+                    }
+                }
+            }
 
             // Procesar y rellenar Gráfico de Departamentos
             List<Object[]> datosDepartamentos = obtenerDatosGraficoDepartamentos(idProyecto, idExcel);
@@ -269,7 +284,6 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
         List<Object[]> filasTabla = tareas.stream()
         .map(tarea -> {
-            String iconoSalud = tarea.getDesviacionHoras() > 10 ? "❌" : (tarea.getDesviacionHoras() > 0 ? "⚠️" : "✅");
             return new Object[]{
                 tarea.getIdGitlab(),
                 tarea.getFase() != null ? tarea.getFase() : "",
@@ -279,7 +293,6 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                 tarea.getEstimacionMaxima(),
                 tarea.getHorasReales(),
                 tarea.getDesviacionHoras(),
-                iconoSalud,
                 tarea.getEstadoGitlab()
             };
         })
@@ -300,64 +313,10 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         }
 
         // 4. FILA DE TOTALES INFERIOR
-        Name nombreAncla = workbook.getName("TABLA_TAREAS_INICIO");
-        int rowNum = 2; // Por si acaso falla el ancla
-        if (nombreAncla != null) {
-            org.apache.poi.ss.util.AreaReference ref = new org.apache.poi.ss.util.AreaReference(nombreAncla.getRefersToFormula(), workbook.getSpreadsheetVersion());
-            rowNum = ref.getFirstCell().getRow() + tareas.size();
-        }
-
-        
-        Row filaTotales = sheet.getRow(rowNum);
-
-        if (filaTotales == null) {
-            filaTotales = sheet.createRow(rowNum);
-        }
-        filaTotales.setHeightInPoints(20);
-        
-        Cell celdaTextoTotal = filaTotales.createCell(0);
-        celdaTextoTotal.setCellValue("TOTAL");
-        celdaTextoTotal.setCellStyle(estilos.get("filaTotal"));
-        
-        for (int i = 1; i <= 3; i++) {
-            Cell c = filaTotales.createCell(i);
-            c.setCellStyle(estilos.get("filaTotal"));
-        }
-        
-        Cell tMin = filaTotales.createCell(4); 
-        tMin.setCellValue(totalEstMin); 
-        tMin.setCellStyle(estilos.get("filaTotal"));
-        
-        Cell tMax = filaTotales.createCell(5); 
-        tMax.setCellValue(totalEstMax); 
-        tMax.setCellStyle(estilos.get("filaTotal"));
-        
-        Cell tReales = filaTotales.createCell(6); 
-        tReales.setCellValue(totalReales); 
-        tReales.setCellStyle(estilos.get("filaTotal"));
-        
-        Cell tDesv = filaTotales.createCell(7); 
-        tDesv.setCellValue(totalDesv); 
-        
-        // Estilo mixto para el Total Desviación
-        CellStyle estiloTotalDesv = workbook.createCellStyle();
-        estiloTotalDesv.cloneStyleFrom(estilos.get("filaTotal"));
-        Font fontTotalDesv = workbook.createFont();
-        fontTotalDesv.setBold(true);
-        
-        if (totalDesv > 0) {
-            fontTotalDesv.setColor(IndexedColors.RED.getIndex());
-        } else {
-            fontTotalDesv.setColor(IndexedColors.GREEN.getIndex());
-        }
-        
-        estiloTotalDesv.setFont(fontTotalDesv);
-        tDesv.setCellStyle(estiloTotalDesv);
-        
-        for (int i = 8; i <= 9; i++) {
-            Cell c = filaTotales.createCell(i);
-            c.setCellStyle(estilos.get("filaTotal"));
-        }
+        escribirCeldaPorNombre(workbook, sheet, "TOTAL_MIN", totalEstMin);
+        escribirCeldaPorNombre(workbook, sheet, "TOTAL_MAX", totalEstMax);
+        escribirCeldaPorNombre(workbook, sheet, "TOTAL_REALES", totalReales);
+        escribirCeldaPorNombre(workbook, sheet, "TOTAL_DESV", totalDesv);
     }
 
     private void escribirCeldaPorNombre(Workbook workbook, Sheet sheet, String nombreRango, Object valor) {
