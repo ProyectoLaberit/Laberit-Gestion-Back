@@ -39,6 +39,7 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
     
 
     @Query(value = "SELECT " +
+            "e.id_excel AS idExcel, " +
             "g.issue_id AS idGitlab, " +
             "f.nombre AS fase, " +
             "t.tarea AS tarea, " +

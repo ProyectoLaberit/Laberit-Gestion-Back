@@ -390,6 +390,7 @@ public class GitLabService {
         tarea.setTitulo(dto.getTitle());
         tarea.setEstado(dto.getEstado());
         tarea.setTareaProyecto(tareaProy); // Establece la relación de clave foránea (FK)
+        proyectoRepository.findById(tareaProy.getIdProyecto()).ifPresent(tarea::setIdProyecto);
 
         tarea.setValida(true);
 
@@ -405,10 +406,7 @@ public class GitLabService {
      * @return Lista de entidades GitLabTarea (con @JsonIgnore aplicado).
      */
     public List<GitLabTarea> obtenerSoloValidasDeBaseDatos(Long idProyecto) {
-        // Llama directo a tu nuevo método indexado
-        Optional<Proyecto> proyecto = proyectoRepository.findById(idProyecto);
-        Proyecto proyecto2 = proyecto.get();
-        return gitLabTareaRepository.findByValidaTrueAndIdProyecto(proyecto2);
+        return gitLabTareaRepository.findValidasByProyectoIncluyendoVinculacion(idProyecto);
     }
 
     /**
@@ -419,12 +417,7 @@ public class GitLabService {
      * @return Lista completa de control con todas las tareas asociadas.
      */
     public List<GitLabTarea> obtenerTodasDeBaseDatos(Long idProyecto) {
-        // 🗑️ ¡Aquí hemos borrado el .stream().filter(...) antiguo!
-        // Como ahora todas las tareas guardadas llevan su id_proyecto en Neon,
-        // la base de datos os lo devuelve todo filtrado y mascado al instante.
-        Optional<Proyecto> proyecto = proyectoRepository.findById(idProyecto);
-        Proyecto proyecto2 = proyecto.get();
-        return gitLabTareaRepository.findByIdProyecto(proyecto2);
+        return gitLabTareaRepository.findTodasByProyectoIncluyendoVinculacion(idProyecto);
     }
 
     /**
@@ -445,6 +438,7 @@ public class GitLabService {
                         "El nuevo id_tarea_proyecto " + nuevoIdTareaProyecto + " no existe."));
 
         tarea.setTareaProyecto(nuevaTareaProyecto);
+        proyectoRepository.findById(nuevaTareaProyecto.getIdProyecto()).ifPresent(tarea::setIdProyecto);
         tarea.setValida(true); // Se fuerza a true al ser una edición manual correcta
 
         return gitLabTareaRepository.save(tarea);

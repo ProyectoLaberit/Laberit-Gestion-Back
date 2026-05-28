@@ -36,4 +36,16 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
 
     List<GitLabTarea> findByValidaTrueAndIdProyecto(Proyecto idProyecto);
 
+    @Query("SELECT g FROM GitLabTarea g " +
+            "LEFT JOIN g.idProyecto p " +
+            "LEFT JOIN g.tareaProyecto t " +
+            "WHERE g.valida = true AND (p.id = :idProyecto OR t.idProyecto = :idProyecto)")
+    List<GitLabTarea> findValidasByProyectoIncluyendoVinculacion(@Param("idProyecto") Long idProyecto);
+
+    @Query("SELECT g FROM GitLabTarea g " +
+            "LEFT JOIN g.idProyecto p " +
+            "LEFT JOIN g.tareaProyecto t " +
+            "WHERE p.id = :idProyecto OR t.idProyecto = :idProyecto")
+    List<GitLabTarea> findTodasByProyectoIncluyendoVinculacion(@Param("idProyecto") Long idProyecto);
+
 }

@@ -39,7 +39,7 @@ public class GitLabController {
             int tareasNuevas = gitLabService.sincronizarYContarNuevasTareas(proyectoId);
 
             return ResponseEntity
-                    .ok(new ApiResponse("Tareas recuperadas de GitLab: " + tareasNuevas, false, tareasNuevas));
+                    .ok(new ApiResponse("Tareas recuperadas de GitLab: " + tareasNuevas, true, tareasNuevas));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(new ApiResponse(e.getMessage(), false, null));
         }
