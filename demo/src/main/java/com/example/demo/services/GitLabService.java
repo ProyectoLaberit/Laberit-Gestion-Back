@@ -240,12 +240,8 @@ public class GitLabService {
         // 1. Descarga bruta desde GitLab
         List<GitLabTareaDTO> tareasGitLab = obtenerTareasPorProyecto(proyectoIdLocal);
 
-        Optional<Proyecto> proyecto = proyectoRepository.findById(proyectoIdLocal);
-
-        
-        Proyecto proyecto2 = proyecto.get();
         // 2. IDs ya persistidos en Neon para saber cuáles son viejas
-        Set<String> idsEnBD = gitLabTareaRepository.findByIdProyecto(proyecto2).stream()
+        Set<String> idsEnBD = gitLabTareaRepository.findByIdProyecto(proyectoIdLocal).stream()
                 .map(GitLabTarea::getIssueId)
                 .collect(Collectors.toSet());
         // Contador para las tareas que guardemos nuevas
@@ -287,13 +283,13 @@ public class GitLabService {
 
             if (cola != null && !cola.isEmpty()) {
                 TareaProyecto tareaLocal = cola.poll();
-                nueva.setTareaProyecto(tareaLocal);
+                nueva.setTareaProyecto(tareaLocal.getIdTareaProyecto());
                 nueva.setValida(true);
             } else {
                 nueva.setTareaProyecto(null);
                 nueva.setValida(false);
             }
-            nueva.setIdProyecto(proyecto2);
+            nueva.setIdProyecto(proyectoIdLocal);
 
             System.out.println("DEBUG id a guardar: " + proyectoIdLocal);
             System.out.println("DEBUG valor en entidad: " + nueva.getIdProyecto());
@@ -391,8 +387,9 @@ public class GitLabService {
         tarea.setNumeroGitLab(dto.getNumeroGitLab());
         tarea.setTitulo(dto.getTitle());
         tarea.setEstado(dto.getEstado());
-        tarea.setTareaProyecto(tareaProy); // Establece la relación de clave foránea (FK)
-        proyectoRepository.findById(tareaProy.getIdProyecto()).ifPresent(tarea::setIdProyecto);
+        tarea.setTareaProyecto(idTareaProyecto); // Establece la relación de clave foránea (FK)
+        tarea.setIdProyecto(tareaProy.getIdProyecto());
+        //proyectoRepository.findById(tareaProy.getIdProyecto()).ifPresent(tarea::setIdProyecto);
 
         tarea.setValida(true);
 
@@ -439,8 +436,9 @@ public class GitLabService {
                 .orElseThrow(() -> new RuntimeException(
                         "El nuevo id_tarea_proyecto " + nuevoIdTareaProyecto + " no existe."));
 
-        tarea.setTareaProyecto(nuevaTareaProyecto);
-        proyectoRepository.findById(nuevaTareaProyecto.getIdProyecto()).ifPresent(tarea::setIdProyecto);
+        tarea.setTareaProyecto(nuevaTareaProyecto.getIdTareaProyecto());
+        tarea.setIdProyecto(nuevaTareaProyecto.getIdProyecto());
+        //proyectoRepository.findById(nuevaTareaProyecto.getIdProyecto()).ifPresent(tarea::setIdProyecto);
         tarea.setValida(true); // Se fuerza a true al ser una edición manual correcta
 
         return gitLabTareaRepository.save(tarea);

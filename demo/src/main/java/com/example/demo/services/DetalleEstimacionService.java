@@ -629,10 +629,10 @@ public class DetalleEstimacionService {
 
     final Map<Long, String> gitLabTitulos = new HashMap<>();
     if (!idsTareaProyecto.isEmpty()) {
-        List<GitLabTarea> tareasGitLab = gitLabTareaRepository.findByTareaProyecto_IdTareaProyectoIn(idsTareaProyecto);
+        List<GitLabTarea> tareasGitLab = gitLabTareaRepository.findByTareaProyectoIn(idsTareaProyecto);
         for (GitLabTarea g : tareasGitLab) {
-            if (g.getTareaProyecto() != null && g.getTareaProyecto().getIdTareaProyecto() != null) {
-                gitLabTitulos.put(g.getTareaProyecto().getIdTareaProyecto(), g.getTitulo());
+            if (g.getTareaProyecto() != null && g.getTareaProyecto() != null) {
+                gitLabTitulos.put(g.getTareaProyecto(), g.getTitulo());
             }
         }
     }
@@ -939,7 +939,7 @@ public class DetalleEstimacionService {
 
         List<Long> idsLibres = new ArrayList<>(idsTareaSinReferencias);
 
-        List<GitLabTarea> vinculacionesGitLab = gitLabTareaRepository.findByTareaProyecto_IdTareaProyectoIn(idsLibres);
+        List<GitLabTarea> vinculacionesGitLab = gitLabTareaRepository.findByTareaProyectoIn(idsLibres);
         if (vinculacionesGitLab != null && !vinculacionesGitLab.isEmpty()) {
             gitLabTareaRepository.deleteAll(vinculacionesGitLab);
         }

@@ -30,12 +30,9 @@ public class GitLabTarea {
     @Column(name = "valida", nullable = false)
     private Boolean valida = false;
 
-   
-    @ManyToOne(fetch = FetchType.LAZY)
     @Column(name = "id_tarea_proyecto")
     private Long tareaProyecto;
 
-    @ManyToOne(fetch = FetchType.LAZY)
     @Column(name = "id_proyecto")
     private Long idProyecto;
 

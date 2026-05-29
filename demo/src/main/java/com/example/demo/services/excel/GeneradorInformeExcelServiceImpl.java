@@ -388,7 +388,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
     public ProblemasDetectadosDTO obtenerProblemasDetectados(Long idProyecto, int idExcel) {
 
-        List<GitLabTarea> tareasBDInvalidas = gitLabTareaRepository.findByValidaAndIdProyecto_Id(false, idProyecto);
+        List<GitLabTarea> tareasBDInvalidas = gitLabTareaRepository.findByValidaAndIdProyecto(false, idProyecto);
         int numeroInvalidasGit = tareasBDInvalidas.size();
 
         List<ImputacionClockify> imputacionesBD = imputacionClockifyRepository.findByIdProyectoAndValida(idProyecto,
@@ -532,12 +532,11 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     public ResumenValidacionDTO obtenerResumenValidacion(Long idProyecto) {
 
         // --- GitLab ---
-        int totalGitlab = gitLabTareaRepository.findByIdProyecto(
-                proyectoRepository.findById(idProyecto).orElseThrow()).size();
+        int totalGitlab = gitLabTareaRepository.findByIdProyecto(idProyecto).size();
 
         // Cambiamos esto: usamos findByValidaAndIdProyecto_Id en lugar de
         // contarTareasVinculadasPorProyecto
-        int gitlabOk = gitLabTareaRepository.findByValidaAndIdProyecto_Id(true, idProyecto).size();
+        int gitlabOk = gitLabTareaRepository.findByValidaAndIdProyecto(true, idProyecto).size();
         int gitlabHuerfanas = totalGitlab - gitlabOk;
 
         // --- Clockify ---
@@ -552,15 +551,13 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
     public List<FilaValidacionGitlabDTO> obtenerFilasValidacionGitlab(Long idProyecto) {
 
-        List<GitLabTarea> tareas = gitLabTareaRepository.findByIdProyecto(
-                proyectoRepository.findById(idProyecto).orElseThrow());
-
+        List<GitLabTarea> tareas = gitLabTareaRepository.findByIdProyecto(idProyecto);
         return tareas.stream().map(t -> {
             FilaValidacionGitlabDTO fila = new FilaValidacionGitlabDTO();
             fila.setIdGitlab(t.getIssueId());
             fila.setNombreGitlab(t.getTitulo());
             fila.setNombreProyecto(
-                    t.getTareaProyecto() != null ? t.getTareaProyecto().getTarea() : "No vinculada");
+                    t.getIdProyecto() != null ? proyectoRepository.findById(t.getIdProyecto()).get().getNombre() : "No vinculada");
             fila.setEstado(t.getEstado());
             fila.setVinculada(t.getValida());
             return fila;
