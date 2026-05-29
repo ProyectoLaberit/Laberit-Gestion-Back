@@ -7,16 +7,21 @@ package com.example.demo.dto;
  */
 public class ResumenTiemposDTO {
     private Double tiempoRealTotal;
-    private Double tiempoEstimadoMedia;
+    private Double tiempoEstimadoMin;
+    private Double tiempoEstimadoMax;
 
-    public ResumenTiemposDTO(Double tiempoRealTotal, Double tiempoEstimadoMedia) {
+    public ResumenTiemposDTO(Double tiempoRealTotal, Double tiempoEstimadoMin, Double tiempoEstimadoMax) {
         this.tiempoRealTotal = tiempoRealTotal;
-        this.tiempoEstimadoMedia = tiempoEstimadoMedia;
+        this.tiempoEstimadoMin = tiempoEstimadoMin;
+        this.tiempoEstimadoMax = tiempoEstimadoMax;
     }
 
     public Double getTiempoRealTotal() { return tiempoRealTotal; }
     public void setTiempoRealTotal(Double tiempoRealTotal) { this.tiempoRealTotal = tiempoRealTotal; }
 
-    public Double getTiempoEstimadoMedia() { return tiempoEstimadoMedia; }
-    public void setTiempoEstimadoMedia(Double tiempoEstimadoMedia) { this.tiempoEstimadoMedia = tiempoEstimadoMedia; }
+    public Double getTiempoEstimadoMin() { return tiempoEstimadoMin; }
+    public void setTiempoEstimadoMin(Double tiempoEstimadoMin) { this.tiempoEstimadoMin = tiempoEstimadoMin; }
+
+    public Double getTiempoEstimadoMax() { return tiempoEstimadoMax; }
+    public void setTiempoEstimadoMax(Double tiempoEstimadoMax) { this.tiempoEstimadoMax = tiempoEstimadoMax; }
 }

@@ -584,12 +584,11 @@ public class DetalleEstimacionService {
                 sumaRealTotal += mapaHorasReales.getOrDefault(idTarea, 0.0);
             }
 
-            double mediaEstimada = (sumaMinTotal + sumaMaxTotal) / 2.0;
-            
             sumaRealTotal = Math.round(sumaRealTotal * 10.0) / 10.0;
-            mediaEstimada = Math.round(mediaEstimada * 10.0) / 10.0;
+            double minRedondeado = Math.round(sumaMinTotal * 10.0) / 10.0;
+            double maxRedondeado = Math.round(sumaMaxTotal * 10.0) / 10.0;
 
-            resultado.put(idSubfase, new ResumenTiemposDTO(sumaRealTotal, mediaEstimada));
+            resultado.put(idSubfase, new ResumenTiemposDTO(sumaRealTotal, minRedondeado, maxRedondeado));
         }
 
         return resultado;
@@ -717,25 +716,25 @@ public class DetalleEstimacionService {
     public ResumenTiemposDTO obtenerResumenProyecto(Long idProyecto) {
         Double realTotal = imputacionClockifyRepository.sumarHorasTotalesProyecto(idProyecto);
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
-        double mediaEstimada = 0.0;
+        double sumaMin = 0.0;
+        double sumaMax = 0.0;
         
         if (excel != null) {
             List<DetalleEstimacion> todasLasTareas = detalleEstimacionRepository.findByIdExcel(excel.getIdExcel());
             
-            double sumaMin = todasLasTareas.stream()
+            sumaMin = todasLasTareas.stream()
                     .mapToDouble(t -> { return t.getTiempoMin() != null ? t.getTiempoMin() : 0.0; })
                     .sum();
-            double sumaMax = todasLasTareas.stream()
+            sumaMax = todasLasTareas.stream()
                     .mapToDouble(t -> { return t.getTiempoMax() != null ? t.getTiempoMax() : 0.0; })
                     .sum();
-            
-            mediaEstimada = (sumaMin + sumaMax) / 2.0;
         }
 
         double realRedondeado = Math.round((realTotal != null ? realTotal : 0.0) * 10.0) / 10.0;
-        double mediaRedondeada = Math.round(mediaEstimada * 10.0) / 10.0;
+        double minRedondeado = Math.round(sumaMin * 10.0) / 10.0;
+        double maxRedondeado = Math.round(sumaMax * 10.0) / 10.0;
 
-        return new ResumenTiemposDTO(realRedondeado, mediaRedondeada);
+        return new ResumenTiemposDTO(realRedondeado, minRedondeado, maxRedondeado);
     }
 
     /**
