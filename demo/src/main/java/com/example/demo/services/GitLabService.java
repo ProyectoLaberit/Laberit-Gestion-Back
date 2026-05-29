@@ -241,6 +241,8 @@ public class GitLabService {
         List<GitLabTareaDTO> tareasGitLab = obtenerTareasPorProyecto(proyectoIdLocal);
 
         Optional<Proyecto> proyecto = proyectoRepository.findById(proyectoIdLocal);
+
+        
         Proyecto proyecto2 = proyecto.get();
         // 2. IDs ya persistidos en Neon para saber cuáles son viejas
         Set<String> idsEnBD = gitLabTareaRepository.findByIdProyecto(proyecto2).stream()
