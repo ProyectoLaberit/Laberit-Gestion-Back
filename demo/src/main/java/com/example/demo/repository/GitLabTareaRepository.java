@@ -46,6 +46,6 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
             "LEFT JOIN g.idProyecto p " +
             "LEFT JOIN g.tareaProyecto t " +
             "WHERE p.id = :idProyecto OR t.idProyecto = :idProyecto")
-    List<GitLabTarea> findTodasByProyectoIncluyendoVinculacion(@Param("idProyecto") Long idProyecto);
+    List<GitLabTarea> findTodasByProyectoIncluyendoVinculacion(@Param("idProyecto") Proyecto idProyecto);
 
 }

@@ -417,7 +417,11 @@ public class GitLabService {
      * @return Lista completa de control con todas las tareas asociadas.
      */
     public List<GitLabTarea> obtenerTodasDeBaseDatos(Long idProyecto) {
-        return gitLabTareaRepository.findTodasByProyectoIncluyendoVinculacion(idProyecto);
+        Optional<Proyecto> proyectobd = proyectoRepository.findById(idProyecto);
+
+        Proyecto proyecto = proyectobd.get();
+
+        return gitLabTareaRepository.findTodasByProyectoIncluyendoVinculacion(proyecto);
     }
 
     /**
