@@ -657,6 +657,7 @@ public class DetalleEstimacionService {
                 tp != null ? tp.getCompletada() : false,
                 gitLabTitulos.get(entidad.getIdTareaProyecto()),
                 gitLabTareaRepository.findNumeroGitLabByTareaProyectoId(tp.getIdTareaProyecto()),
+                tp.getIdDepartamento(),
                 departamentoRepository.findNombreById(tp.getIdDepartamento())
             );
         })

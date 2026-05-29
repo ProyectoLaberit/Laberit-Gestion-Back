@@ -101,9 +101,11 @@ public class ImputacionClockifyService {
      * una tarea y un departamento específicos.
      */
     public List<ImputacionClockify> obtenerPorDepartamentoYTarea(Long idProyecto, Long idTareaProyecto, Integer idDepartamento, String subfase) {
-        System.out.println("DEBUG: Buscando imputaciones -> Proyecto: " + idProyecto + ", Tarea: " + idTareaProyecto + ", Depto: " + idDepartamento);
+        Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
+
+        System.out.println("DEBUG: Buscando imputaciones -> Proyecto: " + idProyecto + ", Tarea: " + idTareaProyecto + ", Depto: " + idDepartamentoReal);
         // Obtenemos los datos brutos del repo
-        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamento(idProyecto, idTareaProyecto, idDepartamento);
+        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamento(idProyecto, idTareaProyecto, idDepartamentoReal);
         
         String subfaseLimpia = normalizar(subfase);
 
@@ -124,7 +126,8 @@ public class ImputacionClockifyService {
      * y un departamento concretos dentro de un proyecto.
      */
     public Integer contarValidasPorDepartamento(Long idProyecto, Long idTareaProyecto, Integer idDepartamento) {
-        return repository.countByIdProyectoAndIdTareaProyectoAndIdDepartamentoAndValidaTrue(idProyecto, idTareaProyecto, idDepartamento);
+        Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
+        return repository.countByIdProyectoAndIdTareaProyectoAndIdDepartamentoAndValidaTrue(idProyecto, idTareaProyecto, idDepartamentoReal);
     }
 
     /**
@@ -132,7 +135,8 @@ public class ImputacionClockifyService {
      * y un departamento específicos en un proyecto.
      */
     public Integer contarInvalidasPorDepartamento(Long idProyecto, Long idTareaProyecto, Integer idDepartamento) {
-        return repository.countByIdProyectoAndIdTareaProyectoAndIdDepartamentoAndValidaFalse(idProyecto, idTareaProyecto, idDepartamento);
+        Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
+        return repository.countByIdProyectoAndIdTareaProyectoAndIdDepartamentoAndValidaFalse(idProyecto, idTareaProyecto, idDepartamentoReal);
     }
 
     /**
@@ -241,7 +245,8 @@ public class ImputacionClockifyService {
             return java.util.Collections.emptyList();
         }
         
-        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamentoFechas(idProyecto, idTareaProyecto, idDepartamento, desde, hasta);
+        Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
+        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamentoFechas(idProyecto, idTareaProyecto, idDepartamentoReal, desde, hasta);
         
         String subfaseLimpia = normalizar(subfase);
         
@@ -251,6 +256,21 @@ public class ImputacionClockifyService {
             }
             return normalizar(imp.getSubfaseExtraida()).equals(subfaseLimpia);
         }).collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Obtiene el departamento real desde tarea_proyecto para evitar consultas vacias
+     * cuando el front envia un identificador heredado o incorrecto.
+     */
+    private Integer resolverDepartamentoReal(Long idProyecto, Long idTareaProyecto, Integer idDepartamentoFallback) {
+        if (idTareaProyecto == null) {
+            return idDepartamentoFallback;
+        }
+
+        return tareaProyectoRepository.findById(idTareaProyecto)
+                .filter(tarea -> idProyecto == null || tarea.getIdProyecto().equals(idProyecto))
+                .map(tarea -> tarea.getIdDepartamento())
+                .orElse(idDepartamentoFallback);
     }
 
     // Limpia tildes y espacios

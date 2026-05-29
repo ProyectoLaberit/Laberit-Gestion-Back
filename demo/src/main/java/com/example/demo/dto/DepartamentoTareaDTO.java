@@ -17,6 +17,7 @@ public class DepartamentoTareaDTO {
     private Boolean completada;
     private String nombreTareaGit;
     private Long numeroGit;
+    private Integer idDepartamento;
     private String nombreDep;
 
     public DepartamentoTareaDTO() {
@@ -27,7 +28,7 @@ public class DepartamentoTareaDTO {
 
     public DepartamentoTareaDTO(Long idTarea, Integer idExcel, Integer idSubFase, String nombretarea, Double tiempoMin,
             Double tiempoMax, Double tiempoClockify, Boolean completada, String nombreTareaGit, Long numeroGit,
-            String nombreDep) {
+            Integer idDepartamento, String nombreDep) {
         this.idTarea = idTarea;
         this.idExcel = idExcel;
         this.idSubFase = idSubFase;
@@ -38,6 +39,7 @@ public class DepartamentoTareaDTO {
         this.completada = completada;
         this.nombreTareaGit = nombreTareaGit;
         this.numeroGit = numeroGit;
+        this.idDepartamento = idDepartamento;
         this.nombreDep = nombreDep;
     }
 
@@ -121,6 +123,14 @@ public class DepartamentoTareaDTO {
 
     public void setNumeroGit(Long numeroGit) {
         this.numeroGit = numeroGit;
+    }
+
+    public Integer getIdDepartamento() {
+        return idDepartamento;
+    }
+
+    public void setIdDepartamento(Integer idDepartamento) {
+        this.idDepartamento = idDepartamento;
     }
 
 
