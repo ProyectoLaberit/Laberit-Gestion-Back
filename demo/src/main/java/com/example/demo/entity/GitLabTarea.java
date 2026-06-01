@@ -18,7 +18,7 @@ public class GitLabTarea {
     @Column(name = "issue_id", nullable = false, length = 100)
     private String issueId;
 
-    @Column(name = "numero_git_lab", nullable = false)
+    @Column(name = "numero_gitlab", nullable = false)
     private Long numeroGitLab;
 
     @Column(name = "titulo", nullable = false)
