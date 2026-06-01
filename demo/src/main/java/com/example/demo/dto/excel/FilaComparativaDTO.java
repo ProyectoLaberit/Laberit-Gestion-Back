@@ -15,4 +15,5 @@ public interface FilaComparativaDTO {
     Double getDesviacionHoras();
     Double getDesviacionPorcentaje();
     String getEstadoGitlab();
+    
 }

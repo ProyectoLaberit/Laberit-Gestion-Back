@@ -40,8 +40,8 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
 
     @Query(value = "SELECT " +
             "e.id_excel AS idExcel, " +
-            "g.issue_id AS idGitlab, " +
-            "f.nombre AS fase, " +
+            "CAST(g.numero_gitlab AS VARCHAR) AS idGitlab, " + 
+            "COALESCE(fp.nombre, f.nombre) AS fase, " +  
             "t.tarea AS tarea, " +
             "d.nombre AS departamento, " +
             "COALESCE(e.tiempo_min, 0.0) AS estimacionMinima, " +
@@ -52,13 +52,14 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
             "COALESCE(g.estado, 'Sin issue') AS estadoGitlab " +
             "FROM tarea_proyecto t " +
             "LEFT JOIN fase f ON t.id_fase = f.id_fase " +
+            "LEFT JOIN fase fp ON f.fase_padre = fp.id_fase " + 
             "LEFT JOIN departamento d ON t.id_departamento = d.id_departamento " +
             "LEFT JOIN detalle_estimacion e ON e.id_tarea_proyecto = t.id_tarea_proyecto " +
             "LEFT JOIN excel ex ON e.id_excel = ex.id_excel AND ex.vigente = true " +
             "LEFT JOIN imputacion_clockify c ON c.id_tarea_proyecto = t.id_tarea_proyecto AND c.valida = true " +
             "LEFT JOIN tarea_gitlab g ON g.id_tarea_proyecto = t.id_tarea_proyecto " +
             "WHERE t.id_proyecto = :idProyecto " +
-            "GROUP BY t.id_tarea_proyecto, e.id_excel, g.issue_id, f.nombre, t.tarea, d.nombre, e.tiempo_min, e.tiempo_max, g.estado",
+            "GROUP BY t.id_tarea_proyecto, e.id_excel, g.numero_gitlab, fp.nombre, f.nombre, t.tarea, d.nombre, e.tiempo_min, e.tiempo_max, g.estado", 
             nativeQuery = true)
     List<FilaComparativaDTO> obtenerComparativaTareas(@Param("idProyecto") Long idProyecto);
 

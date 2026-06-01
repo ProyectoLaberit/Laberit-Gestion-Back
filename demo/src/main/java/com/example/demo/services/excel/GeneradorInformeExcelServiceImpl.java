@@ -4,22 +4,15 @@ import com.example.demo.repository.GitLabTareaRepository;
 import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
 import com.example.demo.entity.GitLabTarea;
 import com.example.demo.entity.ImputacionClockify;
 import com.example.demo.entity.TareaProyecto;
 import com.example.demo.repository.DetalleEstimacionRepository;
-import com.example.demo.repository.GitLabTareaRepository;
 import com.example.demo.repository.ImputacionClockifyRepository;
 import com.example.demo.repository.ProyectoRepository;
 import com.example.demo.repository.TareaProyectoRepository;
-
-import ch.qos.logback.classic.Logger;
-
 import com.example.demo.dto.excel.CabeceraDTO;
 import com.example.demo.dto.excel.FilaAuditoriaClockifyDTO;
 import com.example.demo.dto.excel.FilaComparativaDTO;
@@ -27,16 +20,9 @@ import com.example.demo.dto.excel.FilaGitLabTareaDTO;
 import com.example.demo.dto.excel.FilaValidacionGitlabDTO;
 import com.example.demo.dto.excel.ProblemasDetectadosDTO;
 import com.example.demo.dto.excel.ResumenValidacionDTO;
-
-import org.apache.poi.xssf.usermodel.XSSFColor;
-import org.slf4j.LoggerFactory;
-
 import java.io.ByteArrayOutputStream;
 import org.apache.poi.ss.usermodel.*;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.poi.ss.util.AreaReference;
 import org.apache.poi.ss.util.CellReference;
@@ -77,7 +63,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             // Llamamos al método con el nombre correcto
             generarDashboardConPlantilla(workbook, estilos, idProyecto, idExcel);
             generarHojaTareas(workbook, estilos, idProyecto, idExcel);
-
+             generarHojaValidaciones(workbook, idProyecto);       
             workbook.write(out);
             return new ByteArrayInputStream(out.toByteArray());
 
@@ -88,10 +74,10 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
     // Aquí sí podemos tener métodos privados con lógica
     // Modificamos la firma para incluir Integer idExcel
-    private void generarDashboardConPlantilla(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto, Integer idExcel) {
+   private void generarDashboardConPlantilla(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto, Integer idExcel) {
         Sheet sheet = workbook.getSheetAt(0);
 
-        // KPIs Principales
+        // 1. KPIs Principales (Sin forzar estilos desde Java)
         CabeceraDTO cabecera = obtenerDatosCabecera(idProyecto, idExcel);
         if (cabecera != null) {
             escribirCeldaPorNombre(workbook, sheet, "KPI_MINIMAS", cabecera.getHorasMinimas());
@@ -102,7 +88,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             escribirCeldaPorNombre(workbook, sheet, "KPI_INVALIDAS_CLOCKIFY", cabecera.getImputacionesInvalidadas());
         }
 
-        // KPIs de Problemas Detectados (Incidencias)
+        // 2. KPIs de Problemas Detectados
         ProblemasDetectadosDTO problemas = obtenerProblemasDetectados(idProyecto, idExcel);
         if (problemas != null) {
             escribirCeldaPorNombre(workbook, sheet, "INC_GITLAB", problemas.getTareasGitlabNoReconocidas());
@@ -110,14 +96,14 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             escribirCeldaPorNombre(workbook, sheet, "INC_SIN_HORAS", problemas.getTareasSinHoras());
         }
 
-        // Obtener TODAS las tareas para extraer Top 10 y Gráficos
+        // 3. Obtener TODAS las tareas
         List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
                 .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
                 .collect(Collectors.toList());
 
         if (tareas != null && !tareas.isEmpty()) {
 
-            // Top 10 Desviaciones
+            // 4. Top 10 Desviaciones (Solo inyectar datos, sin estilos de color)
             List<Object[]> top10 = tareas.stream()
                     .sorted((t1, t2) -> Double.compare(t2.getDesviacionHoras(), t1.getDesviacionHoras()))
                     .limit(10)
@@ -134,34 +120,10 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
             escribirListaDesdeAncla(workbook, sheet, "TOP10_INICIO", top10);
 
-            // Aplicar colores a la columna de Desviación del TOP 10
-            Name anclaTop10 = workbook.getName("TOP10_INICIO");
-            if (anclaTop10 != null) {
-                org.apache.poi.ss.util.AreaReference ref = new org.apache.poi.ss.util.AreaReference(anclaTop10.getRefersToFormula(), workbook.getSpreadsheetVersion());
-                int filaInicial = ref.getFirstCell().getRow();
-                int colDesviacion = ref.getFirstCell().getCol() + 4; // Columna 5 (índice 4)
-
-                for (int i = 0; i < top10.size(); i++) {
-                    Row fila = sheet.getRow(filaInicial + i);
-                    if (fila != null) {
-                        Cell celdaDesv = fila.getCell(colDesviacion);
-                        if (celdaDesv != null) {
-                            double valorDesv = celdaDesv.getNumericCellValue();
-                            if (valorDesv > 0) {
-                                celdaDesv.setCellStyle(estilos.get("desviacionMala"));
-                            } else {
-                                celdaDesv.setCellStyle(estilos.get("desviacionBuena"));
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Procesar y rellenar Gráfico de Departamentos
+            // 5. Procesar Gráficos
             List<Object[]> datosDepartamentos = obtenerDatosGraficoDepartamentos(idProyecto, idExcel);
             escribirListaDesdeAncla(workbook, sheet, "GRAF_DEP_INICIO", datosDepartamentos);
 
-            // Gráfico de Fases
             List<Object[]> datosFases = obtenerDatosGraficoFases(idProyecto, idExcel);
             escribirListaDesdeAncla(workbook, sheet, "GRAF_FASE_INICIO", datosFases);
         }
@@ -169,12 +131,16 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
     private void escribirCelda(Sheet sheet, int row, int col, double valor, CellStyle estilo) {
         Row fila = sheet.getRow(row);
-        if (fila == null)
+        if (fila == null){
             fila = sheet.createRow(row);
-
+        }
+            
+ 
         Cell celda = fila.getCell(col);
-        if (celda == null)
+        if (celda == null){
             celda = fila.createCell(col);
+        }
+            
 
         celda.setCellValue(valor);
         if (estilo != null) {
@@ -229,20 +195,31 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
         // 5. Desviación Negativa / Buena (Verde)
         CellStyle estiloDesvBuena = workbook.createCellStyle();
-        estiloDesvBuena.setDataFormat(format.getFormat("#,##0.00"));
+        estiloDesvBuena.setDataFormat(format.getFormat("-#,##0.00")); 
+        estiloDesvBuena.setAlignment(HorizontalAlignment.CENTER);
+        estiloDesvBuena.setVerticalAlignment(VerticalAlignment.CENTER);
+        estiloDesvBuena.setBorderBottom(BorderStyle.THIN);
+        estiloDesvBuena.setBorderTop(BorderStyle.THIN);
+        estiloDesvBuena.setBorderLeft(BorderStyle.THIN);
+        estiloDesvBuena.setBorderRight(BorderStyle.THIN);
         Font fontVerde = workbook.createFont();
         fontVerde.setColor(IndexedColors.GREEN.getIndex());
         estiloDesvBuena.setFont(fontVerde);
         estilos.put("desviacionBuena", estiloDesvBuena);
 
-        // 6. Desviación Positiva / Mala (Rojo)
+        // 6. Desviación Positiva / Mala (Rojo con +)
         CellStyle estiloDesvMala = workbook.createCellStyle();
-        estiloDesvMala.setDataFormat(format.getFormat("#,##0.00"));
+        estiloDesvMala.setDataFormat(format.getFormat("+#,##0.00")); // El + fuerza el símbolo
+        estiloDesvMala.setAlignment(HorizontalAlignment.CENTER);
+        estiloDesvMala.setVerticalAlignment(VerticalAlignment.CENTER);
+        estiloDesvMala.setBorderBottom(BorderStyle.THIN);
+        estiloDesvMala.setBorderTop(BorderStyle.THIN);
+        estiloDesvMala.setBorderLeft(BorderStyle.THIN);
+        estiloDesvMala.setBorderRight(BorderStyle.THIN);
         Font fontRoja = workbook.createFont();
         fontRoja.setColor(IndexedColors.RED.getIndex());
         estiloDesvMala.setFont(fontRoja);
         estilos.put("desviacionMala", estiloDesvMala);
-
         // Cabecera Azul Oscuro (Hoja Tareas)
         CellStyle estiloCabeceraAzul = workbook.createCellStyle();
         estiloCabeceraAzul.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
@@ -272,32 +249,69 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         estiloIcono.setVerticalAlignment(VerticalAlignment.CENTER);
         estilos.put("icono", estiloIcono);
 
+        // Añade esto al final de crearEstilosCorporativos:
+        Font fuenteKpiBuena = workbook.createFont();
+        fuenteKpiBuena.setColor(IndexedColors.GREEN.getIndex());
+        fuenteKpiBuena.setBold(true);
+        fuenteKpiBuena.setFontHeightInPoints((short) 24); // Ajusta al tamaño de tu KPI
+
+        Font fuenteKpiMala = workbook.createFont();
+        fuenteKpiMala.setColor(IndexedColors.RED.getIndex());
+        fuenteKpiMala.setBold(true);
+        fuenteKpiMala.setFontHeightInPoints((short) 24);
+
+        CellStyle kpiBuena = workbook.createCellStyle();
+        kpiBuena.setAlignment(HorizontalAlignment.CENTER);
+        kpiBuena.setVerticalAlignment(VerticalAlignment.CENTER);
+        kpiBuena.setFont(fuenteKpiBuena);
+        estilos.put("kpiDesviacionBuena", kpiBuena);
+
+        CellStyle kpiMala = workbook.createCellStyle();
+        kpiMala.setAlignment(HorizontalAlignment.CENTER);
+        kpiMala.setVerticalAlignment(VerticalAlignment.CENTER);
+        kpiMala.setFont(fuenteKpiMala);
+        estilos.put("kpiDesviacionMala", kpiMala);
+
         return estilos;
     }
 
-    private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto,
-            Integer idExcel) {
-        // 1. OBTENER LA HOJA EXISTENTE DE LA PLANTILLA (Índice 1 es la segunda hoja)
+  private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto, Integer idExcel) {
         Sheet sheet = workbook.getSheetAt(1);
 
-        // 2. OBTENCIÓN DE DATOS Y VARIABLES PARA TOTALES
         List<FilaGitLabTareaDTO> tareas = obtenerTareasEstructuradas(idProyecto, idExcel);
 
         List<Object[]> filasTabla = tareas.stream()
-        .map(tarea -> {
-            return new Object[]{
-                tarea.getIdGitlab(),
-                tarea.getFase() != null ? tarea.getFase() : "",
-                tarea.getTarea() != null ? tarea.getTarea() : "",
-                tarea.getDepartamento() != null ? tarea.getDepartamento() : "",
-                tarea.getEstimacionMinima(),
-                tarea.getEstimacionMaxima(),
-                tarea.getHorasReales(),
-                tarea.getDesviacionHoras(),
-                tarea.getEstadoGitlab()
-            };
-        })
-        .collect(Collectors.toList());
+            .map(tarea -> {
+                String estadoOriginal = tarea.getEstadoGitlab() != null ? tarea.getEstadoGitlab().toLowerCase() : "";
+                String estadoTraducido = "Sin issue";
+                
+                if (estadoOriginal.equals("opened")) {
+                    estadoTraducido = "En proceso";
+                } else {
+                    if (estadoOriginal.equals("closed")) {
+                        estadoTraducido = "Completada";
+                    }
+                }
+
+                String idFormateado = "-";
+                if (tarea.getIdGitlab() != null && !tarea.getIdGitlab().trim().isEmpty() && !tarea.getIdGitlab().equals("-")) {
+                    idFormateado = "#" + tarea.getIdGitlab();
+                }
+
+                return new Object[]{
+                    idFormateado,
+                    tarea.getFase() != null ? tarea.getFase() : "",
+                    tarea.getTarea() != null ? tarea.getTarea() : "",
+                    tarea.getDepartamento() != null ? tarea.getDepartamento() : "",
+                    tarea.getEstimacionMinima(),
+                    tarea.getEstimacionMaxima(),
+                    tarea.getHorasReales(),
+                    tarea.getDesviacionHoras(),
+                    tarea.getDesviacionPorcentaje(),
+                    estadoTraducido                  
+                };
+            })
+            .collect(Collectors.toList());
 
         escribirListaDesdeAncla(workbook, sheet, "TABLA_TAREAS_INICIO", filasTabla);
 
@@ -313,14 +327,19 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             totalDesv += tarea.getDesviacionHoras();
         }
 
-        // 4. FILA DE TOTALES INFERIOR
+        double porcentajeTotal = 0.0;
+        if (totalEstMax > 0) {
+            porcentajeTotal = (totalDesv / totalEstMax) * 100;
+        }
+
         escribirCeldaPorNombre(workbook, sheet, "TOTAL_MIN", totalEstMin);
         escribirCeldaPorNombre(workbook, sheet, "TOTAL_MAX", totalEstMax);
         escribirCeldaPorNombre(workbook, sheet, "TOTAL_REALES", totalReales);
         escribirCeldaPorNombre(workbook, sheet, "TOTAL_DESV", totalDesv);
+        escribirCeldaPorNombre(workbook, sheet, "TOTAL_DESV_PORC", porcentajeTotal);
     }
-
-    private void escribirCeldaPorNombre(Workbook workbook, Sheet sheet, String nombreRango, Object valor) {
+    
+   private void escribirCeldaPorNombre(Workbook workbook, Sheet sheet, String nombreRango, Object valor) {
         Name nombre = workbook.getName(nombreRango);
         if (nombre != null) {
             // Encontrar la coordenada real a partir del nombre
@@ -337,11 +356,13 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                 celda = fila.createCell(cellRef.getCol());
             }
 
-            // Escribir el valor respetando su tipo
+            // Escribir el valor respetando su tipo exacto (Añadido soporte para Long)
             if (valor instanceof Double) {
                 celda.setCellValue((Double) valor);
             } else if (valor instanceof Integer) {
                 celda.setCellValue((Integer) valor);
+            } else if (valor instanceof Long) {
+                celda.setCellValue((Long) valor);
             } else {
                 celda.setCellValue(valor != null ? valor.toString() : "");
             }
@@ -433,13 +454,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
         // Trazas de depuración (Logs)
 
-        // 4. Trazas de depuración con prints normales
-        System.out.println("--- DEBUG KPIs EXCEL ---");
-        System.out.println("Total Tareas Proyecto: " + totalTareas);
-        System.out.println("Tareas en GitLab: " + tareasVinculadasGitlab);
-        System.out.println("Porcentaje GitLab Calculado: " + porcentajeGitlab + "%");
-        System.out.println("Imputaciones Inválidas: " + imputacionesInvalidas);
-        System.out.println("------------------------");
+     
 
         // 4. Construir y retornar el DTO
         CabeceraDTO cabecera = new CabeceraDTO();
@@ -508,12 +523,10 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
     @Override
     public List<FilaGitLabTareaDTO> obtenerTareasEstructuradas(Long idProyecto, Integer idExcel) {
-        // Filtra las tareas del proyecto para conservar únicamente las asociadas al Excel indicado
         List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
                 .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
                 .collect(Collectors.toList());
 
-        // Mapea la lista de entidades procesadas hacia la estructura del nuevo DTO
         return tareas.stream()
                 .map(t -> {
                     FilaGitLabTareaDTO dto = new FilaGitLabTareaDTO();
@@ -521,32 +534,42 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                     dto.setFase(t.getFase());
                     dto.setTarea(t.getTarea());
                     dto.setDepartamento(t.getDepartamento());
-                    dto.setEstimacionMinima((int) Math.round(t.getEstimacionMinima()));
-                    dto.setEstimacionMaxima((int) Math.round(t.getEstimacionMaxima()));
-                    dto.setHorasReales((int) Math.round(t.getHorasReales()));
-                    dto.setDesviacionHoras((int) Math.round(t.getDesviacionHoras()));
+
+                    if (t.getEstimacionMinima() != null) {
+                        dto.setEstimacionMinima((int) Math.round(t.getEstimacionMinima()));
+                    } else {
+                        dto.setEstimacionMinima(0);
+                    }
+
+                    if (t.getEstimacionMaxima() != null) {
+                        dto.setEstimacionMaxima((int) Math.round(t.getEstimacionMaxima()));
+                    } else {
+                        dto.setEstimacionMaxima(0);
+                    }
+
+                    if (t.getHorasReales() != null) {
+                        dto.setHorasReales((int) Math.round(t.getHorasReales()));
+                    } else {
+                        dto.setHorasReales(0);
+                    }
+
+                    if (t.getDesviacionHoras() != null) {
+                        dto.setDesviacionHoras((int) Math.round(t.getDesviacionHoras()));
+                    } else {
+                        dto.setDesviacionHoras(0);
+                    }
+
+                    if (t.getDesviacionPorcentaje() != null) {
+                        dto.setDesviacionPorcentaje(t.getDesviacionPorcentaje());
+                    } else {
+                        dto.setDesviacionPorcentaje(0.0);
+                    }
+
                     dto.setEstadoGitlab(t.getEstadoGitlab() != null ? t.getEstadoGitlab() : "-");
+                    
                     return dto;
                 })
-                .collect(Collectors.toList());}
-    public ResumenValidacionDTO obtenerResumenValidacion(Long idProyecto) {
-
-        // --- GitLab ---
-        int totalGitlab = gitLabTareaRepository.findByIdProyecto(idProyecto).size();
-
-        // Cambiamos esto: usamos findByValidaAndIdProyecto_Id en lugar de
-        // contarTareasVinculadasPorProyecto
-        int gitlabOk = gitLabTareaRepository.findByValidaAndIdProyecto(true, idProyecto).size();
-        int gitlabHuerfanas = totalGitlab - gitlabOk;
-
-        // --- Clockify ---
-        int totalClockify = imputacionClockifyRepository.findByIdProyecto(idProyecto).size();
-        int clockifyErroneas = imputacionClockifyRepository.countByIdProyectoAndValidaFalse(idProyecto);
-        int clockifyOk = totalClockify - clockifyErroneas;
-
-        return new ResumenValidacionDTO(
-                totalGitlab, gitlabOk, gitlabHuerfanas,
-                totalClockify, clockifyOk, clockifyErroneas);
+                .collect(Collectors.toList());
     }
 
     public List<FilaValidacionGitlabDTO> obtenerFilasValidacionGitlab(Long idProyecto) {
@@ -579,4 +602,83 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         }).collect(Collectors.toList());
     }
 
+    private void generarHojaValidaciones(Workbook workbook, Long idProyecto) {
+    Sheet sheet = workbook.getSheetAt(2);
+
+    // 1. KPIs Resumen Superior
+    ResumenValidacionDTO resumen = obtenerResumenValidacion(idProyecto);
+    if (resumen != null) {
+        escribirCeldaPorNombre(workbook, sheet, "RES_GIT_TOTAL", resumen.getTotalTareasGitlab());
+        escribirCeldaPorNombre(workbook, sheet, "RES_GIT_OK", resumen.getTareasGitlabOk());
+        escribirCeldaPorNombre(workbook, sheet, "RES_GIT_HUERFANAS", resumen.getTareasGitlabHuerfanas());
+        escribirCeldaPorNombre(workbook, sheet, "RES_CLK_TOTAL", resumen.getTotalImputacionesClockify());
+        escribirCeldaPorNombre(workbook, sheet, "RES_CLK_OK", resumen.getImputacionesClockifyOk());
+        escribirCeldaPorNombre(workbook, sheet, "RES_CLK_ERRONEAS", resumen.getImputacionesClockifyErroneas());
+    }
+
+    // 2. Tabla de Validación GitLab
+    Name anclaGitlab = workbook.getName("TABLA_VAL_GITLAB_INICIO");
+    if (anclaGitlab != null) {
+        org.apache.poi.ss.util.AreaReference refGit = new org.apache.poi.ss.util.AreaReference(anclaGitlab.getRefersToFormula(), workbook.getSpreadsheetVersion());
+        org.apache.poi.ss.util.CellReference cellRefGit = refGit.getFirstCell();
+        int rowNumGit = cellRefGit.getRow();
+        int colStartGit = cellRefGit.getCol();
+
+        List<FilaValidacionGitlabDTO> tareasGitlab = obtenerFilasValidacionGitlab(idProyecto);
+        
+        if (tareasGitlab != null) {
+            for (FilaValidacionGitlabDTO fila : tareasGitlab) {
+                Row row = sheet.getRow(rowNumGit);
+                if (row == null) {
+                    row = sheet.createRow(rowNumGit);
+                }
+                
+                row.createCell(colStartGit + 0).setCellValue(fila.getIdGitlab() != null ? fila.getIdGitlab() : "-");
+                row.createCell(colStartGit + 1).setCellValue(fila.getNombreGitlab() != null ? fila.getNombreGitlab() : "");
+                row.createCell(colStartGit + 2).setCellValue(fila.getNombreProyecto() != null ? fila.getNombreProyecto() : "");
+                row.createCell(colStartGit + 3).setCellValue(fila.getEstado() != null ? fila.getEstado() : "");
+                
+                String iconoVinculada = "❌";
+                if (fila.isVinculada()) {
+                    iconoVinculada = "✅";
+                }
+                row.createCell(colStartGit + 4).setCellValue(iconoVinculada);
+                
+                rowNumGit++;
+            }
+        }
+    }
+
+    // 3. Tabla de Auditoría Clockify
+    Name anclaClockify = workbook.getName("TABLA_AUD_CLOCKIFY_INICIO");
+    if (anclaClockify != null) {
+        org.apache.poi.ss.util.AreaReference refClk = new org.apache.poi.ss.util.AreaReference(anclaClockify.getRefersToFormula(), workbook.getSpreadsheetVersion());
+        org.apache.poi.ss.util.CellReference cellRefClk = refClk.getFirstCell();
+        int rowNumClk = cellRefClk.getRow();
+        int colStartClk = cellRefClk.getCol();
+
+        List<FilaAuditoriaClockifyDTO> erroresClockify = obtenerFilasAuditoriaClockify(idProyecto);
+        
+        if (erroresClockify != null) {
+            for (FilaAuditoriaClockifyDTO fila : erroresClockify) {
+                Row row = sheet.getRow(rowNumClk);
+                if (row == null) {
+                    row = sheet.createRow(rowNumClk);
+                }
+                
+                row.createCell(colStartClk + 0).setCellValue(fila.getFecha() != null ? fila.getFecha() : "");
+                row.createCell(colStartClk + 1).setCellValue(fila.getDescripcion() != null ? fila.getDescripcion() : "");
+                row.createCell(colStartClk + 2).setCellValue(fila.getHoras() != null ? fila.getHoras() : "");
+                
+                rowNumClk++;
+            }
+        }
+    }
+}
+
+    @Override
+    public ResumenValidacionDTO obtenerResumenValidacion(Long idProyecto) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'obtenerResumenValidacion'");
+    }
 }

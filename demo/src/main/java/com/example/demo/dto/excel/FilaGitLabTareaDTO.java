@@ -10,6 +10,7 @@ public class FilaGitLabTareaDTO {
     private int horasReales;
     private int desviacionHoras;
     private String estadoGitlab;
+    private double desviacionPorcentaje;
 
     // Getters y Setters
     public String getIdGitlab() { return idGitlab; }
@@ -38,4 +39,7 @@ public class FilaGitLabTareaDTO {
 
     public String getEstadoGitlab() { return estadoGitlab; }
     public void setEstadoGitlab(String estadoGitlab) { this.estadoGitlab = estadoGitlab; }
+
+    public double getDesviacionPorcentaje() { return desviacionPorcentaje; }
+    public void setDesviacionPorcentaje(double desviacionPorcentaje) { this.desviacionPorcentaje = desviacionPorcentaje; }
 }
