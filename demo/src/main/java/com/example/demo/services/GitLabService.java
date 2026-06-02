@@ -442,22 +442,37 @@ public class GitLabService {
      * @return La entidad GitLabTarea modificada.
      */
     public GitLabTarea modificarVinculacion(String issueId, Long nuevoIdTareaProyecto) {
-        GitLabTarea tarea = gitLabTareaRepository.findByIssueId(issueId)
-                .orElseThrow(() -> new RuntimeException(
-                        "La tarea de GitLab con issue_id " + issueId + " no está registrada."));
-
+        GitLabTarea tareaOrigen = gitLabTareaRepository.findByIssueId(issueId)
+                .orElseThrow(() -> new RuntimeException("La tarea de GitLab con issue_id " + issueId + " no está registrada."));
         TareaProyecto nuevaTareaProyecto = tareaProyectoRepository.findById(nuevoIdTareaProyecto)
-                .orElseThrow(() -> new RuntimeException(
-                        "El nuevo id_tarea_proyecto " + nuevoIdTareaProyecto + " no existe."));
-
-        liberarVinculacionesPrevias(nuevaTareaProyecto.getIdTareaProyecto(), tarea.getIssueId());
-
-        tarea.setTareaProyecto(nuevaTareaProyecto.getIdTareaProyecto());
-        tarea.setIdProyecto(nuevaTareaProyecto.getIdProyecto());
-        // proyectoRepository.findById(nuevaTareaProyecto.getIdProyecto()).ifPresent(tarea::setIdProyecto);
-        tarea.setValida(true); // Se fuerza a true al ser una edición manual correcta
-
-        return gitLabTareaRepository.save(tarea);
+                .orElseThrow(() -> new RuntimeException("El nuevo id_tarea_proyecto " + nuevoIdTareaProyecto + " no existe."));
+        // Guarda el id de la tarea local de la que venías (puede ser null si venía huérfana)
+        Long idTareaVieja = tareaOrigen.getTareaProyecto();
+        // Busca si ya hay alguna issue de GitLab ocupando el nuevo hueco de destino
+        List<GitLabTarea> issuesEnDestino = gitLabTareaRepository.findByTareaProyectoAndValidaTrue(nuevoIdTareaProyecto);
+        //  Lógica de Intercambio (Swap)
+        if (issuesEnDestino != null && !issuesEnDestino.isEmpty()) {
+            for (GitLabTarea issueDestino : issuesEnDestino) {
+                // Evita hacernos swap a nosotros mismos si el front manda un ID repetido
+                if (!issueDestino.getIssueId().equals(issueId)) {
+                    if (idTareaVieja != null) {
+                        // Si veníamos de otro sitio, mandamos a la issue estorbando a ese hueco libre
+                        issueDestino.setTareaProyecto(idTareaVieja);
+                        issueDestino.setValida(true);
+                    } else {
+                        // Si nosotros veníamos huérfanos, la issue estorbando se queda huérfana
+                        issueDestino.setTareaProyecto(null);
+                        issueDestino.setValida(false);
+                    }
+                    gitLabTareaRepository.save(issueDestino);
+                }
+            }
+        }
+        // Finalmente, asignamos la nueva tarea a la nuestra (Origen) en todos sus campos correspondientes
+        tareaOrigen.setTareaProyecto(nuevaTareaProyecto.getIdTareaProyecto());
+        tareaOrigen.setIdProyecto(nuevaTareaProyecto.getIdProyecto());
+        tareaOrigen.setValida(true); // Se fuerza a true al ser una edición manual correcta
+        return gitLabTareaRepository.save(tareaOrigen);
     }
 
     /**
@@ -515,6 +530,23 @@ public class GitLabService {
                         () -> new RuntimeException("No se encontró ninguna vinculación para la issue: " + issueId));
 
         gitLabTareaRepository.delete(tarea);
+    }
+
+    /**
+     * Anula la relación entre una issue de GitLab y su tarea de proyecto actual.
+     * Cambia el estado de la issue a huérfana (valida = false y tareaProyecto = null) 
+     * sin borrar su registro de la base de datos.
+     *
+     * @param issueId ID único global de la issue de GitLab a desvincular.
+     * @return La entidad GitLabTarea actualizada y guardada.
+     * @throws RuntimeException Si la issue no se encuentra registrada en el sistema.
+     */
+    public GitLabTarea desvincularTarea(String issueId) {
+        GitLabTarea tarea = gitLabTareaRepository.findByIssueId(issueId)
+                .orElseThrow(() -> new RuntimeException("No se encontró ninguna issue registrada con ID: " + issueId));
+        tarea.setTareaProyecto(null);
+        tarea.setValida(false);
+        return gitLabTareaRepository.save(tarea);
     }
 
 }

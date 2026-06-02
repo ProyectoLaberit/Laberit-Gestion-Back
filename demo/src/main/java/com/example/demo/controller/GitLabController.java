@@ -178,7 +178,15 @@ public class GitLabController {
         }
     }
 
-    @DeleteMapping("/vincular/{issueId}")
+    /**
+     * Elimina definitivamente una vinculación de la base de datos local.
+     * La issue dejará de existir en el sistema local y volverá a descargarse 
+     * en la siguiente sincronización si sigue existiendo en GitLab.
+     *
+     * @param issueId ID único global de la issue en GitLab.
+     * @return ResponseEntity con ApiResponse indicando el resultado del borrado.
+     */
+    @DeleteMapping("/borrar/{issueId}")
     public ResponseEntity<ApiResponse> eliminarVinculacion(@PathVariable String issueId) {
         try {
             gitLabService.eliminarVinculacion(issueId);
@@ -186,6 +194,25 @@ public class GitLabController {
         } catch (Exception e) {
             return ResponseEntity.status(500)
                     .body(new ApiResponse("Error al eliminar vinculación: " + e.getMessage(), false, null));
+        }
+    }
+
+    /**
+     * Desvincula una issue de GitLab de su tarea de proyecto actual sin borrarla de la base de datos.
+     * La issue quedará como "inválida" o huérfana, estando disponible para ser vinculada
+     * a otra tarea estructural más adelante.
+     *
+     * @param issueId ID único global de la issue en GitLab a desvincular.
+     * @return ResponseEntity con ApiResponse conteniendo la tarea desvinculada.
+     */
+    @PutMapping("/desvincular/{issueId}")
+    public ResponseEntity<ApiResponse> desvincularTarea(@PathVariable String issueId) {
+        try {
+            GitLabTarea desvinculada = gitLabService.desvincularTarea(issueId);
+            return ResponseEntity.ok(new ApiResponse("Tarea desvinculada correctamente", true, desvinculada));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse("Error al desvincular tarea: " + e.getMessage(), false, null));
         }
     }
 }
