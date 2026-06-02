@@ -678,7 +678,22 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
     @Override
     public ResumenValidacionDTO obtenerResumenValidacion(Long idProyecto) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'obtenerResumenValidacion'");
+        List<GitLabTarea> tareasGitlab = gitLabTareaRepository.findTodasByProyectoIncluyendoVinculacion(idProyecto);
+        int totalGitlab = tareasGitlab != null ? tareasGitlab.size() : 0;
+        int gitlabOk = tareasGitlab != null
+                ? (int) tareasGitlab.stream().filter(t -> Boolean.TRUE.equals(t.getValida())).count()
+                : 0;
+        int gitlabHuerfanas = totalGitlab - gitlabOk;
+
+        List<ImputacionClockify> imputacionesClockify = imputacionClockifyRepository.findByIdProyecto(idProyecto);
+        int totalClockify = imputacionesClockify != null ? imputacionesClockify.size() : 0;
+        int clockifyOk = imputacionesClockify != null
+                ? (int) imputacionesClockify.stream().filter(i -> Boolean.TRUE.equals(i.getValida())).count()
+                : 0;
+        int clockifyErroneas = totalClockify - clockifyOk;
+
+        return new ResumenValidacionDTO(
+                totalGitlab, gitlabOk, gitlabHuerfanas,
+                totalClockify, clockifyOk, clockifyErroneas);
     }
 }
