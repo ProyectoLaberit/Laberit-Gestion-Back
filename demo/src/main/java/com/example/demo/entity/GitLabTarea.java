@@ -1,10 +1,10 @@
 package com.example.demo.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 /**
- * Entidad que representa las tareas de gitlab de la base de datos
+ * Entidad que representa las tareas de GitLab sincronizadas y persistidas en la
+ * base de datos.
  */
 @Entity
 @Table(name = "tarea_gitlab")
@@ -24,6 +24,9 @@ public class GitLabTarea {
     @Column(name = "titulo", nullable = false)
     private String titulo;
 
+    @Column(name = "departamento", length = 100)
+    private String departamento;
+
     @Column(name = "estado", nullable = false, length = 50)
     private String estado;
 
@@ -36,25 +39,26 @@ public class GitLabTarea {
     @Column(name = "id_proyecto")
     private Long idProyecto;
 
-
-    
+    // Constructor vacío requerido por JPA
     public GitLabTarea() {
     }
 
-    
-    public GitLabTarea(Long id, String issueId, Long numeroGitLab, String titulo, String estado, Boolean valida,
-            Long idProyecto, Long tareaProyecto) {
+    // Constructor completo para pruebas y factorías
+    public GitLabTarea(Long id, String issueId, Long numeroGitlab, String titulo, String departamento,
+            String estado, Boolean valida, Long idProyecto, Long tareaProyecto) {
         this.id = id;
         this.issueId = issueId;
         this.numeroGitlab = numeroGitlab;
         this.titulo = titulo;
+        this.departamento = departamento;
         this.estado = estado;
         this.valida = valida;
-        this.tareaProyecto = tareaProyecto;
         this.idProyecto = idProyecto;
+        this.tareaProyecto = tareaProyecto;
     }
 
     // --- GETTERS Y SETTERS ---
+
     public Long getId() {
         return id;
     }
@@ -87,6 +91,14 @@ public class GitLabTarea {
         this.titulo = titulo;
     }
 
+    public String getDepartamento() {
+        return departamento;
+    }
+
+    public void setDepartamento(String departamento) {
+        this.departamento = departamento;
+    }
+
     public String getEstado() {
         return estado;
     }
@@ -103,12 +115,10 @@ public class GitLabTarea {
         this.valida = valida;
     }
 
-    
     public Long getIdProyecto() {
         return idProyecto;
     }
 
-   
     public void setIdProyecto(Long idProyecto) {
         this.idProyecto = idProyecto;
     }
@@ -120,7 +130,4 @@ public class GitLabTarea {
     public void setTareaProyecto(Long tareaProyecto) {
         this.tareaProyecto = tareaProyecto;
     }
-
-
-    
 }

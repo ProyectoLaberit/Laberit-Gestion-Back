@@ -291,6 +291,12 @@ public class GitLabService {
             }
             nueva.setIdProyecto(proyectoIdLocal);
 
+            if (tarea.getLabels() != null && !tarea.getLabels().isEmpty()) {
+                nueva.setDepartamento(tarea.getLabels().get(0));
+            } else {
+                nueva.setDepartamento("Sin Departamento");
+            }
+
             System.out.println("DEBUG id a guardar: " + proyectoIdLocal);
             System.out.println("DEBUG valor en entidad: " + nueva.getIdProyecto());
 
@@ -389,7 +395,7 @@ public class GitLabService {
         tarea.setEstado(dto.getEstado());
         tarea.setTareaProyecto(idTareaProyecto); // Establece la relación de clave foránea (FK)
         tarea.setIdProyecto(tareaProy.getIdProyecto());
-        //proyectoRepository.findById(tareaProy.getIdProyecto()).ifPresent(tarea::setIdProyecto);
+        // proyectoRepository.findById(tareaProy.getIdProyecto()).ifPresent(tarea::setIdProyecto);
 
         tarea.setValida(true);
 
@@ -419,6 +425,13 @@ public class GitLabService {
         return gitLabTareaRepository.findTodasByProyectoIncluyendoVinculacion(idProyecto);
     }
 
+    public List<GitLabTarea> obtenerTareasPorDepartamento(Long idProyecto, String departamento) {
+        if (departamento == null || departamento.trim().isEmpty()) {
+            return new ArrayList<>(); // Devuelve vacío directamente si el parámetro llega mal
+        }
+        return gitLabTareaRepository.findByIdProyectoAndDepartamento(idProyecto, departamento.trim());
+    }
+
     /**
      * Modifica una vinculación existente asociándola a un nuevo
      * idDetalleEstimacion.
@@ -438,18 +451,12 @@ public class GitLabService {
 
         tarea.setTareaProyecto(nuevaTareaProyecto.getIdTareaProyecto());
         tarea.setIdProyecto(nuevaTareaProyecto.getIdProyecto());
-        //proyectoRepository.findById(nuevaTareaProyecto.getIdProyecto()).ifPresent(tarea::setIdProyecto);
+        // proyectoRepository.findById(nuevaTareaProyecto.getIdProyecto()).ifPresent(tarea::setIdProyecto);
         tarea.setValida(true); // Se fuerza a true al ser una edición manual correcta
 
         return gitLabTareaRepository.save(tarea);
     }
 
-    /**
-     * Elimina de la base de datos la relación de una tarea de GitLab
-     * (Desvincular).
-     *
-     * @param idGitlab ID único global de la issue a eliminar.
-     */
     public GitLabTarea actualizarTituloIssue(String issueId, String titulo) {
         if (titulo == null || titulo.trim().isEmpty()) {
             throw new RuntimeException("El titulo de la issue no puede estar vacio.");
@@ -463,6 +470,12 @@ public class GitLabService {
         return gitLabTareaRepository.save(tarea);
     }
 
+    /**
+     * Elimina de la base de datos la relación de una tarea de GitLab
+     * (Desvincular).
+     *
+     * @param idGitlab ID único global de la issue a eliminar.
+     */
     public void eliminarVinculacion(String issueId) {
         GitLabTarea tarea = gitLabTareaRepository.findByIssueId(issueId)
                 .orElseThrow(
