@@ -275,7 +275,7 @@ public class GitLabService {
 
             GitLabTarea nueva = new GitLabTarea();
             nueva.setIssueId(tarea.getId());
-            nueva.setNumeroGitLab(tarea.getNumeroGitLab());
+            nueva.setNumeroGitlab(tarea.getNumeroGitLab());
             nueva.setTitulo(tarea.getTitle());
             nueva.setEstado(tarea.getEstado());
 
@@ -384,7 +384,7 @@ public class GitLabService {
 
         // 3. Sincronizar estado y mapear el grafo de dependencias
         tarea.setIssueId(dto.getId());
-        tarea.setNumeroGitLab(dto.getNumeroGitLab());
+        tarea.setNumeroGitlab(dto.getNumeroGitLab());
         tarea.setTitulo(dto.getTitle());
         tarea.setEstado(dto.getEstado());
         tarea.setTareaProyecto(idTareaProyecto); // Establece la relación de clave foránea (FK)

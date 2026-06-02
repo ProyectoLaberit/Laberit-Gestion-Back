@@ -19,7 +19,7 @@ public class GitLabTarea {
     private String issueId;
 
     @Column(name = "numero_gitlab", nullable = false)
-    private Long numeroGitLab;
+    private Long numeroGitlab;
 
     @Column(name = "titulo", nullable = false)
     private String titulo;
@@ -37,16 +37,16 @@ public class GitLabTarea {
     private Long idProyecto;
 
 
-    // --- CONSTRUCTORES ---
+    
     public GitLabTarea() {
     }
 
-    // Constructor actualizado con el nuevo campo idProyecto
+    
     public GitLabTarea(Long id, String issueId, Long numeroGitLab, String titulo, String estado, Boolean valida,
             Long idProyecto, Long tareaProyecto) {
         this.id = id;
         this.issueId = issueId;
-        this.numeroGitLab = numeroGitLab;
+        this.numeroGitlab = numeroGitlab;
         this.titulo = titulo;
         this.estado = estado;
         this.valida = valida;
@@ -71,12 +71,12 @@ public class GitLabTarea {
         this.issueId = issueId;
     }
 
-    public Long getNumeroGitLab() {
-        return numeroGitLab;
+    public Long getNumeroGitlab() {
+        return numeroGitlab;
     }
 
-    public void setNumeroGitLab(Long numeroGitLab) {
-        this.numeroGitLab = numeroGitLab;
+    public void setNumeroGitlab(Long numeroGitlab) {
+        this.numeroGitlab = numeroGitlab;
     }
 
     public String getTitulo() {

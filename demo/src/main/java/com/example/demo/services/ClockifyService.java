@@ -576,12 +576,21 @@ public class ClockifyService {
                                 imputacion.setSubfaseExtraida(detalleEstimacionService.normalizarTexto(subfase));
                         }
 
-                        if (description.contains("#")) {
+                       if (description.contains("#")) {
                                 int start = description.indexOf("#");
                                 int firstSpace = description.indexOf(" ", start);
                                 if (firstSpace != -1) {
-                                String titulo = description.substring(firstSpace + 1).trim();
-                                imputacion.setTareaExtraida(detalleEstimacionService.normalizarTexto(titulo));
+                                        // 1. Extraer y guardar el número de GitLab como pivote numérico
+                                        String numeroStr = description.substring(start + 1, firstSpace).trim();
+                                        try {
+                                                imputacion.setNumeroGitlab(Long.parseLong(numeroStr));
+                                        } catch (NumberFormatException e) {
+                                                imputacion.setNumeroGitlab(null);
+                                        }
+                                        
+                                        // 2. Extraer y guardar el nombre de la tarea (Mantiene intacta la auditoría visual)
+                                        String titulo = description.substring(firstSpace + 1).trim();
+                                        imputacion.setTareaExtraida(detalleEstimacionService.normalizarTexto(titulo));
                                 }
                         }
 

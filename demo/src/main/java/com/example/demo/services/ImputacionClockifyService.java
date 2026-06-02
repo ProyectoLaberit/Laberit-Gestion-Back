@@ -19,6 +19,9 @@ public class ImputacionClockifyService {
     @Autowired
     private TareaProyectoRepository tareaProyectoRepository;
 
+    @Autowired
+    private com.example.demo.repository.GitLabTareaRepository gitLabTareaRepository;
+
     /**
      * Calcula y devuelve la suma total de horas trabajadas que están marcadas como válidas 
      * para una tarea (detalle de estimación) específica. Si el resultado es nulo, devuelve 0.0.
@@ -100,23 +103,25 @@ public class ImputacionClockifyService {
      * Filtra y devuelve las imputaciones que coinciden con un proyecto, 
      * una tarea y un departamento específicos.
      */
-    public List<ImputacionClockify> obtenerPorDepartamentoYTarea(Long idProyecto, Long idTareaProyecto, Integer idDepartamento, String subfase) {
+   public List<ImputacionClockify> obtenerPorDepartamentoYTarea(Long idProyecto, Long idTareaProyecto, Integer idDepartamento, String subfase) {
         Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
 
-        System.out.println("DEBUG: Buscando imputaciones -> Proyecto: " + idProyecto + ", Tarea: " + idTareaProyecto + ", Depto: " + idDepartamentoReal);
-        // Obtenemos los datos brutos del repo
+        Long numeroGitlab = null;
+        if (idTareaProyecto != null) {
+            numeroGitlab = gitLabTareaRepository.findNumeroGitlabByTareaProyectoId(idTareaProyecto);
+        }
+
+        if (numeroGitlab != null) {
+            return repository.findByNumeroGitlabAndIdProyecto(numeroGitlab, idProyecto);
+        }
+
         List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamento(idProyecto, idTareaProyecto, idDepartamentoReal);
-        
         String subfaseLimpia = normalizar(subfase);
 
-        System.out.println("DEBUG: El repositorio devolvió " + listaBruta.size() + " registros.");
-        
-        // Filtramos en memoria (ultra rápido y a prueba de tildes)
         return listaBruta.stream().filter(imp -> {
             if (Boolean.TRUE.equals(imp.getValida())) {
-                return true; // Las correctas pasan siempre
+                return true; 
             }
-            // Las huérfanas solo pasan si coinciden las subfases normalizadas
             return normalizar(imp.getSubfaseExtraida()).equals(subfaseLimpia);
         }).collect(java.util.stream.Collectors.toList());
     }
@@ -240,14 +245,23 @@ public class ImputacionClockifyService {
     /**
      * Filtra las imputaciones por fechas asegurándose de que el rango sea válido.
      */
-    public List<ImputacionClockify> filtrarPorFechas(Long idProyecto, Long idTareaProyecto, Integer idDepartamento, String subfase, java.time.LocalDate desde, java.time.LocalDate hasta) {
+   public List<ImputacionClockify> filtrarPorFechas(Long idProyecto, Long idTareaProyecto, Integer idDepartamento, String subfase, java.time.LocalDate desde, java.time.LocalDate hasta) {
         if (desde.isAfter(hasta)) {
             return java.util.Collections.emptyList();
         }
         
         Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
-        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamentoFechas(idProyecto, idTareaProyecto, idDepartamentoReal, desde, hasta);
         
+        Long numeroGitlab = null;
+        if (idTareaProyecto != null) {
+            numeroGitlab = gitLabTareaRepository.findNumeroGitlabByTareaProyectoId(idTareaProyecto);
+        }
+
+        if (numeroGitlab != null) {
+            return repository.findByNumeroGitlabAndIdProyectoAndFechaBetween(numeroGitlab, idProyecto, desde, hasta);
+        }
+
+        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamentoFechas(idProyecto, idTareaProyecto, idDepartamentoReal, desde, hasta);
         String subfaseLimpia = normalizar(subfase);
         
         return listaBruta.stream().filter(imp -> {

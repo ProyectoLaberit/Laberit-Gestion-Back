@@ -27,12 +27,11 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
         List<GitLabTarea> findByIdProyecto(Long idProyecto);
 
         @Query("""
-                            SELECT g.numeroGitLab
+                            SELECT g.numeroGitlab
                             FROM GitLabTarea g
                             WHERE g.tareaProyecto = :idTareaProyecto
                         """)
-        Long findNumeroGitLabByTareaProyectoId(
-                        @Param("idTareaProyecto") Long idTareaProyecto);
+        Long findNumeroGitlabByTareaProyectoId(@Param("idTareaProyecto") Long idTareaProyecto);
 
         @Query(value = "SELECT COUNT(*) FROM tarea_gitlab g " +
                         "JOIN tarea_proyecto t ON g.id_tarea_proyecto = t.id_tarea_proyecto " +
