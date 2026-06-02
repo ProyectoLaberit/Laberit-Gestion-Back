@@ -87,4 +87,8 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
     List<ErrorVinculacionClockifyDTO> obtenerErroresClockify(@Param("idProyecto") Long idProyecto);
 
     Integer countByIdProyectoAndValidaFalse(Long idProyecto);
+
+    List<ImputacionClockify> findByNumeroGitlabAndIdProyecto(Long numeroGitlab, Long idProyecto);
+    
+    List<ImputacionClockify> findByNumeroGitlabAndIdProyectoAndFechaBetween(Long numeroGitlab, Long idProyecto, java.time.LocalDate desde, java.time.LocalDate hasta);
 }

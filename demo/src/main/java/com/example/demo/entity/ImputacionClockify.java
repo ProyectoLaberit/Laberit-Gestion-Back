@@ -24,6 +24,9 @@ public class ImputacionClockify {
     @Column(name = "subfase_extraida")
     private String subfaseExtraida;
 
+    @Column(name = "numero_gitlab")
+    private Long numeroGitlab;
+
     @Column(name = "tarea_extraida")
     private String tareaExtraida;
 
@@ -92,5 +95,7 @@ public class ImputacionClockify {
 
     public Long getIdTareaProyecto() { return idTareaProyecto; }
     public void setIdTareaProyecto(Long idTareaProyecto) { this.idTareaProyecto = idTareaProyecto; }
-
+    
+    public Long getNumeroGitlab() { return numeroGitlab; }
+    public void setNumeroGitlab(Long numeroGitlab) { this.numeroGitlab = numeroGitlab; }
 }

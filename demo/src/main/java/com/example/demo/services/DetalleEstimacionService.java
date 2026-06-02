@@ -656,7 +656,7 @@ public class DetalleEstimacionService {
                 tiempoClockify != null ? Math.round(tiempoClockify * 10.0) / 10.0 : 0.0,
                 tp != null ? tp.getCompletada() : false,
                 gitLabTitulos.get(entidad.getIdTareaProyecto()),
-                gitLabTareaRepository.findNumeroGitLabByTareaProyectoId(tp.getIdTareaProyecto()),
+                gitLabTareaRepository.findNumeroGitlabByTareaProyectoId(tp.getIdTareaProyecto()),
                 tp.getIdDepartamento(),
                 departamentoRepository.findNombreById(tp.getIdDepartamento())
             );
