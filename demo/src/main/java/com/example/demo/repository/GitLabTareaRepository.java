@@ -90,6 +90,17 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
       List<GitLabTarea> findTodasByProyectoIncluyendoVinculacion(
                   @Param("idProyecto") Long idProyecto);
 
-      List<GitLabTarea> findByIdProyectoAndDepartamento(Long idProyecto, String departamento);
+      @Query(value = """
+                  SELECT g.*
+                  FROM tarea_gitlab g
+                  JOIN tarea_proyecto t ON g.id_tarea_proyecto = t.id_tarea_proyecto
+                  JOIN departamento d ON t.id_departamento = d.id_departamento
+                  WHERE t.id_proyecto = :idProyecto
+                    AND LOWER(TRIM(d.nombre)) = LOWER(TRIM(:departamento))
+                  ORDER BY g.numero_gitlab ASC
+                  """, nativeQuery = true)
+      List<GitLabTarea> findByIdProyectoAndDepartamento(
+                  @Param("idProyecto") Long idProyecto,
+                  @Param("departamento") String departamento);
 
 }
