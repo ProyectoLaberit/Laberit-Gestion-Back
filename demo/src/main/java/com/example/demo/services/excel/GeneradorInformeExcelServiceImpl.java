@@ -388,16 +388,18 @@ private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos
         }
     }
 
-    private void escribirListaDesdeAncla(Workbook workbook, Sheet sheet, String nombreRango, List<Object[]> datos) {
+   private void escribirListaDesdeAncla(Workbook workbook, Sheet sheet, String nombreRango, List<Object[]> datos) {
         Name nombre = workbook.getName(nombreRango);
-        if (nombre == null) {
-            return; // Si no encuentra el ancla, no hace nada
+        if (nombre == null || datos == null || datos.isEmpty()) {
+            return; 
         }
 
         AreaReference ref = new AreaReference(nombre.getRefersToFormula(), workbook.getSpreadsheetVersion());
         CellReference ancla = ref.getFirstCell();
-        int filaActual = ancla.getRow();
+        int filaAnclaIdx = ancla.getRow();
         int colInicial = ancla.getCol();
+
+        int filaActual = filaAnclaIdx;
 
         for (Object[] filaDatos : datos) {
             Row row = sheet.getRow(filaActual);
@@ -407,8 +409,14 @@ private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos
 
             for (int i = 0; i < filaDatos.length; i++) {
                 Cell cell = row.getCell(colInicial + i);
+                
+                // Si la celda no existe en la plantilla, la creamos y le pasamos el estilo de tu columna
                 if (cell == null) {
                     cell = row.createCell(colInicial + i);
+                    CellStyle estiloColumna = sheet.getColumnStyle(colInicial + i);
+                    if (estiloColumna != null) {
+                        cell.setCellStyle(estiloColumna);
+                    }
                 }
 
                 Object valor = filaDatos[i];
@@ -422,7 +430,7 @@ private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos
                     cell.setCellValue(valor != null ? valor.toString() : "");
                 }
             }
-            filaActual++; // Bajamos una fila para el siguiente registro
+            filaActual++; 
         }
     }
 
@@ -596,11 +604,17 @@ public List<FilaValidacionGitlabDTO> obtenerFilasValidacionGitlab(Long idProyect
         
         return tareas.stream().map(t -> {
             FilaValidacionGitlabDTO fila = new FilaValidacionGitlabDTO();
-            fila.setIdGitlab(t.getIssueId());
+            
+            // Formatear el número corto de GitLab con la almohadilla
+            String idFormateado = "-";
+            if (t.getNumeroGitlab() != null) {
+                idFormateado = "#" + t.getNumeroGitlab();
+            }
+            fila.setIdGitlab(idFormateado);
+            
             fila.setNombreGitlab(t.getTitulo());
             fila.setVinculada(t.getValida());
             
-            // Adaptación estricta a la BD: getTareaProyecto() devuelve un Long
             Long idTareaInterna = t.getTareaProyecto();
             
             if (idTareaInterna != null) {
@@ -610,12 +624,10 @@ public List<FilaValidacionGitlabDTO> obtenerFilasValidacionGitlab(Long idProyect
                     fila.setNombreTareaProyecto(tareaInterna.getTarea());
                     fila.setTareaInternaCompletada(tareaInterna.getCompletada());
                 } else {
-                    // Tarea borrada de BD
                     fila.setNombreTareaProyecto("-");
                     fila.setTareaInternaCompletada(null);
                 }
             } else {
-                // Tarea sin vincular
                 fila.setNombreTareaProyecto("-");
                 fila.setTareaInternaCompletada(null);
             }
@@ -654,72 +666,47 @@ public List<FilaValidacionGitlabDTO> obtenerFilasValidacionGitlab(Long idProyect
         }
 
         // 2. Tabla de Validación GitLab
-        Name anclaGitlab = workbook.getName("TABLA_VAL_GITLAB_INICIO");
-        if (anclaGitlab != null) {
-            org.apache.poi.ss.util.AreaReference refGit = new org.apache.poi.ss.util.AreaReference(anclaGitlab.getRefersToFormula(), workbook.getSpreadsheetVersion());
-            org.apache.poi.ss.util.CellReference cellRefGit = refGit.getFirstCell();
-            int rowNumGit = cellRefGit.getRow();
-            int colStartGit = cellRefGit.getCol();
-
-            List<FilaValidacionGitlabDTO> tareasGitlab = obtenerFilasValidacionGitlab(idProyecto);
-            
-            if (tareasGitlab != null) {
-                for (FilaValidacionGitlabDTO fila : tareasGitlab) {
-                    Row row = sheet.getRow(rowNumGit);
-                    if (row == null) {
-                        row = sheet.createRow(rowNumGit);
+        List<FilaValidacionGitlabDTO> tareasGitlab = obtenerFilasValidacionGitlab(idProyecto);
+        if (tareasGitlab != null && !tareasGitlab.isEmpty()) {
+            List<Object[]> filasGitlab = tareasGitlab.stream().map(fila -> {
+                String textoEstado = "-";
+                if (fila.getTareaInternaCompletada() != null) {
+                    if (fila.getTareaInternaCompletada()) {
+                        textoEstado = "Terminada";
+                    } else {
+                        textoEstado = "En proceso";
                     }
-                    
-                    row.createCell(colStartGit + 0).setCellValue(fila.getIdGitlab() != null ? fila.getIdGitlab() : "-");
-                    row.createCell(colStartGit + 1).setCellValue(fila.getNombreGitlab() != null ? fila.getNombreGitlab() : "");
-                    row.createCell(colStartGit + 2).setCellValue(fila.getNombreTareaProyecto() != null ? fila.getNombreTareaProyecto() : "");
-                    
-                    // Traducción del booleano a los textos solicitados
-                    String textoEstado = "-";
-                    if (fila.getTareaInternaCompletada() != null) {
-                        if (fila.getTareaInternaCompletada()) {
-                            textoEstado = "Terminada";
-                        } else {
-                            textoEstado = "En proceso";
-                        }
-                    }
-                    row.createCell(colStartGit + 3).setCellValue(textoEstado);
-                    
-                    String iconoVinculada = "❌";
-                    if (fila.isVinculada()) {
-                        iconoVinculada = "✅";
-                    }
-                    row.createCell(colStartGit + 4).setCellValue(iconoVinculada);
-                    
-                    rowNumGit++;
                 }
-            }
+                
+                String iconoVinculada = "❌";
+                if (fila.isVinculada()) {
+                    iconoVinculada = "✅";
+                }
+
+                return new Object[]{
+                    fila.getIdGitlab() != null ? fila.getIdGitlab() : "-",
+                    fila.getNombreGitlab() != null ? fila.getNombreGitlab() : "",
+                    fila.getNombreTareaProyecto() != null ? fila.getNombreTareaProyecto() : "",
+                    textoEstado,
+                    iconoVinculada
+                };
+            }).collect(Collectors.toList());
+
+            escribirListaDesdeAncla(workbook, sheet, "TABLA_VAL_GITLAB_INICIO", filasGitlab);
         }
 
         // 3. Tabla de Auditoría Clockify
-        Name anclaClockify = workbook.getName("TABLA_AUD_CLOCKIFY_INICIO");
-        if (anclaClockify != null) {
-            org.apache.poi.ss.util.AreaReference refClk = new org.apache.poi.ss.util.AreaReference(anclaClockify.getRefersToFormula(), workbook.getSpreadsheetVersion());
-            org.apache.poi.ss.util.CellReference cellRefClk = refClk.getFirstCell();
-            int rowNumClk = cellRefClk.getRow();
-            int colStartClk = cellRefClk.getCol();
+        List<FilaAuditoriaClockifyDTO> erroresClockify = obtenerFilasAuditoriaClockify(idProyecto);
+        if (erroresClockify != null && !erroresClockify.isEmpty()) {
+            List<Object[]> filasClockify = erroresClockify.stream().map(fila -> {
+                return new Object[]{
+                    fila.getFecha() != null ? fila.getFecha() : "",
+                    fila.getDescripcion() != null ? fila.getDescripcion() : "",
+                    fila.getHoras() != null ? fila.getHoras() : ""
+                };
+            }).collect(Collectors.toList());
 
-            List<FilaAuditoriaClockifyDTO> erroresClockify = obtenerFilasAuditoriaClockify(idProyecto);
-            
-            if (erroresClockify != null) {
-                for (FilaAuditoriaClockifyDTO fila : erroresClockify) {
-                    Row row = sheet.getRow(rowNumClk);
-                    if (row == null) {
-                        row = sheet.createRow(rowNumClk);
-                    }
-                    
-                    row.createCell(colStartClk + 0).setCellValue(fila.getFecha() != null ? fila.getFecha() : "");
-                    row.createCell(colStartClk + 1).setCellValue(fila.getDescripcion() != null ? fila.getDescripcion() : "");
-                    row.createCell(colStartClk + 2).setCellValue(fila.getHoras() != null ? fila.getHoras() : "");
-                    
-                    rowNumClk++;
-                }
-            }
+            escribirListaDesdeAncla(workbook, sheet, "TABLA_AUD_CLOCKIFY_INICIO", filasClockify);
         }
     }
 

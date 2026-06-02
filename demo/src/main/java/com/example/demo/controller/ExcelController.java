@@ -11,7 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.annotation.Auditable;
@@ -66,10 +66,7 @@ public class ExcelController {
      * @param idExcelElegido ID del Excel del historial (opcional).
      * @return byte[] El contenido del archivo Excel generado.
      */
-    @Auditable(accion = "DESCARGAR_REPORTE_ANALITICO", tabla = "proyecto", entidad = Excel.class, // Ajusta si la
-                                                                                                  // entidad auditada
-                                                                                                  // principal debe ser
-                                                                                                  // Proyecto.class
+    @Auditable(accion = "DESCARGAR_REPORTE_ANALITICO", tabla = "proyecto", entidad = Excel.class, 
             descripcion = "Se descargó el Reporte Analítico del Proyecto ID: #idProyecto")
     @GetMapping("/exportar-analitico/{idProyecto}/{idExcel}")
     public ResponseEntity<byte[]> exportarExcelAnalitico(@PathVariable Long idProyecto, @PathVariable Integer idExcel) {
