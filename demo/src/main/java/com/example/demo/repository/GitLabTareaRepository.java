@@ -22,15 +22,29 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
 
         List<GitLabTarea> findByTareaProyectoIn(List<Long> idsTareaProyecto);
 
+        List<GitLabTarea> findByTareaProyectoAndValidaTrue(Long tareaProyecto);
+
+        @Query("""
+                            SELECT g
+                            FROM GitLabTarea g
+                            WHERE g.valida = true
+                              AND g.tareaProyecto IN :idsTareaProyecto
+                            ORDER BY g.id ASC
+                        """)
+        List<GitLabTarea> findValidasByTareaProyectoIn(@Param("idsTareaProyecto") List<Long> idsTareaProyecto);
+
         List<GitLabTarea> findByValidaAndIdProyecto(Boolean valida, Long idProyecto);
 
         List<GitLabTarea> findByIdProyecto(Long idProyecto);
 
-        @Query("""
-                            SELECT g.numeroGitlab
-                            FROM GitLabTarea g
-                            WHERE g.tareaProyecto = :idTareaProyecto
-                        """)
+        @Query(value = """
+                            SELECT g.numero_gitlab
+                            FROM tarea_gitlab g
+                            WHERE g.id_tarea_proyecto = :idTareaProyecto
+                              AND g.valida = true
+                            ORDER BY g.id DESC
+                            LIMIT 1
+                        """, nativeQuery = true)
         Long findNumeroGitlabByTareaProyectoId(@Param("idTareaProyecto") Long idTareaProyecto);
 
         @Query(value = "SELECT COUNT(*) FROM tarea_gitlab g " +

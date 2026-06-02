@@ -628,7 +628,7 @@ public class DetalleEstimacionService {
 
     final Map<Long, String> gitLabTitulos = new HashMap<>();
     if (!idsTareaProyecto.isEmpty()) {
-        List<GitLabTarea> tareasGitLab = gitLabTareaRepository.findByTareaProyectoIn(idsTareaProyecto);
+        List<GitLabTarea> tareasGitLab = gitLabTareaRepository.findValidasByTareaProyectoIn(idsTareaProyecto);
         for (GitLabTarea g : tareasGitLab) {
             if (g.getTareaProyecto() != null && g.getTareaProyecto() != null) {
                 gitLabTitulos.put(g.getTareaProyecto(), g.getTitulo());

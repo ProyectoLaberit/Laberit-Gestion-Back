@@ -382,6 +382,8 @@ public class GitLabService {
         GitLabTarea tarea = gitLabTareaRepository.findByIssueId(dto.getId())
                 .orElse(new GitLabTarea());
 
+        liberarVinculacionesPrevias(idTareaProyecto, tarea.getIssueId());
+
         // 3. Sincronizar estado y mapear el grafo de dependencias
         tarea.setIssueId(dto.getId());
         tarea.setNumeroGitlab(dto.getNumeroGitLab());
@@ -436,6 +438,8 @@ public class GitLabService {
                 .orElseThrow(() -> new RuntimeException(
                         "El nuevo id_tarea_proyecto " + nuevoIdTareaProyecto + " no existe."));
 
+        liberarVinculacionesPrevias(nuevaTareaProyecto.getIdTareaProyecto(), tarea.getIssueId());
+
         tarea.setTareaProyecto(nuevaTareaProyecto.getIdTareaProyecto());
         tarea.setIdProyecto(nuevaTareaProyecto.getIdProyecto());
         //proyectoRepository.findById(nuevaTareaProyecto.getIdProyecto()).ifPresent(tarea::setIdProyecto);
@@ -450,6 +454,30 @@ public class GitLabService {
      *
      * @param idGitlab ID único global de la issue a eliminar.
      */
+    // Mantiene una sola issue valida por tarea local.
+    private void liberarVinculacionesPrevias(Long idTareaProyecto, String issueIdActual) {
+        if (idTareaProyecto == null) {
+            return;
+        }
+
+        List<GitLabTarea> vinculacionesPrevias = gitLabTareaRepository
+                .findByTareaProyectoAndValidaTrue(idTareaProyecto);
+
+        List<GitLabTarea> vinculacionesALiberar = vinculacionesPrevias.stream()
+                .filter(vinculacion -> !Objects.equals(vinculacion.getIssueId(), issueIdActual))
+                .collect(Collectors.toList());
+
+        if (vinculacionesALiberar.isEmpty()) {
+            return;
+        }
+
+        vinculacionesALiberar.forEach(vinculacion -> {
+            vinculacion.setValida(false);
+            vinculacion.setTareaProyecto(null);
+        });
+        gitLabTareaRepository.saveAll(vinculacionesALiberar);
+    }
+
     public GitLabTarea actualizarTituloIssue(String issueId, String titulo) {
         if (titulo == null || titulo.trim().isEmpty()) {
             throw new RuntimeException("El titulo de la issue no puede estar vacio.");

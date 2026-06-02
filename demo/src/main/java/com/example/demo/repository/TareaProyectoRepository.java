@@ -57,7 +57,7 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
             "LEFT JOIN detalle_estimacion e ON e.id_tarea_proyecto = t.id_tarea_proyecto " +
             "LEFT JOIN excel ex ON e.id_excel = ex.id_excel AND ex.vigente = true " +
             "LEFT JOIN imputacion_clockify c ON c.id_tarea_proyecto = t.id_tarea_proyecto AND c.valida = true " +
-            "LEFT JOIN tarea_gitlab g ON g.id_tarea_proyecto = t.id_tarea_proyecto " +
+            "LEFT JOIN tarea_gitlab g ON g.id_tarea_proyecto = t.id_tarea_proyecto AND g.valida = true " +
             "WHERE t.id_proyecto = :idProyecto " +
             "GROUP BY t.id_tarea_proyecto, e.id_excel, g.numero_gitlab, fp.nombre, f.nombre, t.tarea, d.nombre, e.tiempo_min, e.tiempo_max, g.estado", 
             nativeQuery = true)
