@@ -6,6 +6,7 @@ import com.example.demo.dto.GitLabTareaDTO; // [NUEVO] Importamos el nuevo DTO
 import com.example.demo.entity.GitLabTarea;
 import com.example.demo.services.GitLabService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -123,6 +124,21 @@ public class GitLabController {
         } catch (Exception e) {
             return ResponseEntity.status(500)
                     .body(new ApiResponse("Error al leer el historial: " + e.getMessage(), false, null));
+        }
+    }
+
+    @GetMapping("/vinculadas/departamento/{idProyecto}/{departamento}")
+    public ResponseEntity<?> obtenerTareasPorDepartamento(
+            @PathVariable Long idProyecto,
+            @PathVariable String departamento) {
+        try {
+            // Pasamos el departamento limpio de espacios al servicio
+            List<GitLabTarea> tareas = gitLabService.obtenerTareasPorDepartamento(idProyecto, departamento.trim());
+
+            return ResponseEntity.ok(tareas);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
         }
     }
 
