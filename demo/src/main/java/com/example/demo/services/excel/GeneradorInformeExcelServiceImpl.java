@@ -148,7 +148,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         }
     }
 
-    private Map<String, CellStyle> crearEstilosCorporativos(Workbook workbook) {
+private Map<String, CellStyle> crearEstilosCorporativos(Workbook workbook) {
         Map<String, CellStyle> estilos = new java.util.HashMap<>();
         DataFormat format = workbook.createDataFormat();
 
@@ -195,7 +195,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
         // 5. Desviación Negativa / Buena (Verde)
         CellStyle estiloDesvBuena = workbook.createCellStyle();
-        estiloDesvBuena.setDataFormat(format.getFormat("-#,##0.00")); 
+        estiloDesvBuena.setDataFormat(format.getFormat("- #,##0.00")); // Espacio añadido
         estiloDesvBuena.setAlignment(HorizontalAlignment.CENTER);
         estiloDesvBuena.setVerticalAlignment(VerticalAlignment.CENTER);
         estiloDesvBuena.setBorderBottom(BorderStyle.THIN);
@@ -209,7 +209,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
         // 6. Desviación Positiva / Mala (Rojo con +)
         CellStyle estiloDesvMala = workbook.createCellStyle();
-        estiloDesvMala.setDataFormat(format.getFormat("+#,##0.00")); // El + fuerza el símbolo
+        estiloDesvMala.setDataFormat(format.getFormat("+ #,##0.00")); // Espacio añadido
         estiloDesvMala.setAlignment(HorizontalAlignment.CENTER);
         estiloDesvMala.setVerticalAlignment(VerticalAlignment.CENTER);
         estiloDesvMala.setBorderBottom(BorderStyle.THIN);
@@ -220,6 +220,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         fontRoja.setColor(IndexedColors.RED.getIndex());
         estiloDesvMala.setFont(fontRoja);
         estilos.put("desviacionMala", estiloDesvMala);
+
         // Cabecera Azul Oscuro (Hoja Tareas)
         CellStyle estiloCabeceraAzul = workbook.createCellStyle();
         estiloCabeceraAzul.setFillForegroundColor(IndexedColors.DARK_BLUE.getIndex());
@@ -272,10 +273,27 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         kpiMala.setFont(fuenteKpiMala);
         estilos.put("kpiDesviacionMala", kpiMala);
 
+        // Estilos para el porcentaje total
+        CellStyle estiloPorcentajeVerde = workbook.createCellStyle();
+        estiloPorcentajeVerde.setDataFormat(format.getFormat("0%"));
+        Font fontPorcentajeVerde = workbook.createFont();
+        fontPorcentajeVerde.setColor(IndexedColors.GREEN.getIndex());
+        fontPorcentajeVerde.setBold(true);
+        estiloPorcentajeVerde.setFont(fontPorcentajeVerde);
+        estilos.put("porcentajeVerde", estiloPorcentajeVerde);
+
+        CellStyle estiloPorcentajeRojo = workbook.createCellStyle();
+        estiloPorcentajeRojo.setDataFormat(format.getFormat("0%"));
+        Font fontPorcentajeRojo = workbook.createFont();
+        fontPorcentajeRojo.setColor(IndexedColors.RED.getIndex());
+        fontPorcentajeRojo.setBold(true);
+        estiloPorcentajeRojo.setFont(fontPorcentajeRojo);
+        estilos.put("porcentajeRojo", estiloPorcentajeRojo);
+
         return estilos;
     }
 
-  private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto, Integer idExcel) {
+private void generarHojaTareas(Workbook workbook, Map<String, CellStyle> estilos, Long idProyecto, Integer idExcel) {
         Sheet sheet = workbook.getSheetAt(1);
 
         List<FilaGitLabTareaDTO> tareas = obtenerTareasEstructuradas(idProyecto, idExcel);
@@ -283,14 +301,14 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         List<Object[]> filasTabla = tareas.stream()
             .map(tarea -> {
                 String estadoOriginal = tarea.getEstadoGitlab() != null ? tarea.getEstadoGitlab().toLowerCase() : "";
-                String estadoTraducido = "Sin issue";
+                
+                // Texto por defecto para tareas sin issue asociada
+                String estadoTraducido = "No vinculada";
                 
                 if (estadoOriginal.equals("opened")) {
                     estadoTraducido = "En proceso";
-                } else {
-                    if (estadoOriginal.equals("closed")) {
-                        estadoTraducido = "Completada";
-                    }
+                } else if (estadoOriginal.equals("closed")) {
+                    estadoTraducido = "Completada";
                 }
 
                 String idFormateado = "-";
@@ -329,7 +347,8 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
         double porcentajeTotal = 0.0;
         if (totalEstMax > 0) {
-            porcentajeTotal = (totalDesv / totalEstMax) * 100;
+            // Pasamos el decimal puro (ej: -0.7246)
+            porcentajeTotal = totalDesv / totalEstMax;
         }
 
         escribirCeldaPorNombre(workbook, sheet, "TOTAL_MIN", totalEstMin);
@@ -369,16 +388,18 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         }
     }
 
-    private void escribirListaDesdeAncla(Workbook workbook, Sheet sheet, String nombreRango, List<Object[]> datos) {
+   private void escribirListaDesdeAncla(Workbook workbook, Sheet sheet, String nombreRango, List<Object[]> datos) {
         Name nombre = workbook.getName(nombreRango);
-        if (nombre == null) {
-            return; // Si no encuentra el ancla, no hace nada
+        if (nombre == null || datos == null || datos.isEmpty()) {
+            return; 
         }
 
         AreaReference ref = new AreaReference(nombre.getRefersToFormula(), workbook.getSpreadsheetVersion());
         CellReference ancla = ref.getFirstCell();
-        int filaActual = ancla.getRow();
+        int filaAnclaIdx = ancla.getRow();
         int colInicial = ancla.getCol();
+
+        int filaActual = filaAnclaIdx;
 
         for (Object[] filaDatos : datos) {
             Row row = sheet.getRow(filaActual);
@@ -388,8 +409,14 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
             for (int i = 0; i < filaDatos.length; i++) {
                 Cell cell = row.getCell(colInicial + i);
+                
+                // Si la celda no existe en la plantilla, la creamos y le pasamos el estilo de tu columna
                 if (cell == null) {
                     cell = row.createCell(colInicial + i);
+                    CellStyle estiloColumna = sheet.getColumnStyle(colInicial + i);
+                    if (estiloColumna != null) {
+                        cell.setCellStyle(estiloColumna);
+                    }
                 }
 
                 Object valor = filaDatos[i];
@@ -403,7 +430,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                     cell.setCellValue(valor != null ? valor.toString() : "");
                 }
             }
-            filaActual++; // Bajamos una fila para el siguiente registro
+            filaActual++; 
         }
     }
 
@@ -520,8 +547,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                 .sorted((e1, e2) -> Long.compare((Long) e2[1], (Long) e1[1]))
                 .collect(Collectors.toList());
     }
-
-    @Override
+@Override
     public List<FilaGitLabTareaDTO> obtenerTareasEstructuradas(Long idProyecto, Integer idExcel) {
         List<FilaComparativaDTO> tareas = tareaProyectoRepository.obtenerComparativaTareas(idProyecto).stream()
                 .filter(t -> t.getIdExcel() != null && t.getIdExcel().equals(idExcel))
@@ -572,17 +598,40 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
                 .collect(Collectors.toList());
     }
 
-    public List<FilaValidacionGitlabDTO> obtenerFilasValidacionGitlab(Long idProyecto) {
-
+    // Reemplaza el método existente por este
+public List<FilaValidacionGitlabDTO> obtenerFilasValidacionGitlab(Long idProyecto) {
         List<GitLabTarea> tareas = gitLabTareaRepository.findByIdProyecto(idProyecto);
+        
         return tareas.stream().map(t -> {
             FilaValidacionGitlabDTO fila = new FilaValidacionGitlabDTO();
-            fila.setIdGitlab(t.getIssueId());
+            
+            // Formatear el número corto de GitLab con la almohadilla
+            String idFormateado = "-";
+            if (t.getNumeroGitlab() != null) {
+                idFormateado = "#" + t.getNumeroGitlab();
+            }
+            fila.setIdGitlab(idFormateado);
+            
             fila.setNombreGitlab(t.getTitulo());
-            fila.setNombreProyecto(
-                    t.getIdProyecto() != null ? proyectoRepository.findById(t.getIdProyecto()).get().getNombre() : "No vinculada");
-            fila.setEstado(t.getEstado());
             fila.setVinculada(t.getValida());
+            
+            Long idTareaInterna = t.getTareaProyecto();
+            
+            if (idTareaInterna != null) {
+                TareaProyecto tareaInterna = tareaProyectoRepository.findById(idTareaInterna).orElse(null);
+                
+                if (tareaInterna != null) {
+                    fila.setNombreTareaProyecto(tareaInterna.getTarea());
+                    fila.setTareaInternaCompletada(tareaInterna.getCompletada());
+                } else {
+                    fila.setNombreTareaProyecto("-");
+                    fila.setTareaInternaCompletada(null);
+                }
+            } else {
+                fila.setNombreTareaProyecto("-");
+                fila.setTareaInternaCompletada(null);
+            }
+            
             return fila;
         }).collect(Collectors.toList());
     }
@@ -602,98 +651,115 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         }).collect(Collectors.toList());
     }
 
-    private void generarHojaValidaciones(Workbook workbook, Long idProyecto) {
-    Sheet sheet = workbook.getSheetAt(2);
+ private void generarHojaValidaciones(Workbook workbook, Long idProyecto) {
+        Sheet sheet = workbook.getSheetAt(2);
 
-    // 1. KPIs Resumen Superior
-    ResumenValidacionDTO resumen = obtenerResumenValidacion(idProyecto);
-    if (resumen != null) {
-        escribirCeldaPorNombre(workbook, sheet, "RES_GIT_TOTAL", resumen.getTotalTareasGitlab());
-        escribirCeldaPorNombre(workbook, sheet, "RES_GIT_OK", resumen.getTareasGitlabOk());
-        escribirCeldaPorNombre(workbook, sheet, "RES_GIT_HUERFANAS", resumen.getTareasGitlabHuerfanas());
-        escribirCeldaPorNombre(workbook, sheet, "RES_CLK_TOTAL", resumen.getTotalImputacionesClockify());
-        escribirCeldaPorNombre(workbook, sheet, "RES_CLK_OK", resumen.getImputacionesClockifyOk());
-        escribirCeldaPorNombre(workbook, sheet, "RES_CLK_ERRONEAS", resumen.getImputacionesClockifyErroneas());
-    }
+        // 1. KPIs Resumen Superior
+        ResumenValidacionDTO resumen = obtenerResumenValidacion(idProyecto);
+        if (resumen != null) {
+            escribirCeldaPorNombre(workbook, sheet, "RES_GIT_TOTAL", resumen.getTotalTareasGitlab());
+            escribirCeldaPorNombre(workbook, sheet, "RES_GIT_OK", resumen.getTareasGitlabOk());
+            escribirCeldaPorNombre(workbook, sheet, "RES_GIT_HUERFANAS", resumen.getTareasGitlabHuerfanas());
+            escribirCeldaPorNombre(workbook, sheet, "RES_CLK_TOTAL", resumen.getTotalImputacionesClockify());
+            escribirCeldaPorNombre(workbook, sheet, "RES_CLK_OK", resumen.getImputacionesClockifyOk());
+            escribirCeldaPorNombre(workbook, sheet, "RES_CLK_ERRONEAS", resumen.getImputacionesClockifyErroneas());
+        }
 
-    // 2. Tabla de Validación GitLab
-    Name anclaGitlab = workbook.getName("TABLA_VAL_GITLAB_INICIO");
-    if (anclaGitlab != null) {
-        org.apache.poi.ss.util.AreaReference refGit = new org.apache.poi.ss.util.AreaReference(anclaGitlab.getRefersToFormula(), workbook.getSpreadsheetVersion());
-        org.apache.poi.ss.util.CellReference cellRefGit = refGit.getFirstCell();
-        int rowNumGit = cellRefGit.getRow();
-        int colStartGit = cellRefGit.getCol();
-
+        // 2. Tabla de Validación GitLab
         List<FilaValidacionGitlabDTO> tareasGitlab = obtenerFilasValidacionGitlab(idProyecto);
-        
-        if (tareasGitlab != null) {
-            for (FilaValidacionGitlabDTO fila : tareasGitlab) {
-                Row row = sheet.getRow(rowNumGit);
-                if (row == null) {
-                    row = sheet.createRow(rowNumGit);
+        if (tareasGitlab != null && !tareasGitlab.isEmpty()) {
+            List<Object[]> filasGitlab = tareasGitlab.stream().map(fila -> {
+                String textoEstado = "-";
+                if (fila.getTareaInternaCompletada() != null) {
+                    if (fila.getTareaInternaCompletada()) {
+                        textoEstado = "Terminada";
+                    } else {
+                        textoEstado = "En proceso";
+                    }
                 }
-                
-                row.createCell(colStartGit + 0).setCellValue(fila.getIdGitlab() != null ? fila.getIdGitlab() : "-");
-                row.createCell(colStartGit + 1).setCellValue(fila.getNombreGitlab() != null ? fila.getNombreGitlab() : "");
-                row.createCell(colStartGit + 2).setCellValue(fila.getNombreProyecto() != null ? fila.getNombreProyecto() : "");
-                row.createCell(colStartGit + 3).setCellValue(fila.getEstado() != null ? fila.getEstado() : "");
                 
                 String iconoVinculada = "❌";
                 if (fila.isVinculada()) {
                     iconoVinculada = "✅";
                 }
-                row.createCell(colStartGit + 4).setCellValue(iconoVinculada);
-                
-                rowNumGit++;
-            }
+
+                return new Object[]{
+                    fila.getIdGitlab() != null ? fila.getIdGitlab() : "-",
+                    fila.getNombreGitlab() != null ? fila.getNombreGitlab() : "",
+                    fila.getNombreTareaProyecto() != null ? fila.getNombreTareaProyecto() : "",
+                    textoEstado,
+                    iconoVinculada
+                };
+            }).collect(Collectors.toList());
+
+            escribirListaDesdeAncla(workbook, sheet, "TABLA_VAL_GITLAB_INICIO", filasGitlab);
         }
-    }
 
-    // 3. Tabla de Auditoría Clockify
-    Name anclaClockify = workbook.getName("TABLA_AUD_CLOCKIFY_INICIO");
-    if (anclaClockify != null) {
-        org.apache.poi.ss.util.AreaReference refClk = new org.apache.poi.ss.util.AreaReference(anclaClockify.getRefersToFormula(), workbook.getSpreadsheetVersion());
-        org.apache.poi.ss.util.CellReference cellRefClk = refClk.getFirstCell();
-        int rowNumClk = cellRefClk.getRow();
-        int colStartClk = cellRefClk.getCol();
-
+        // 3. Tabla de Auditoría Clockify
         List<FilaAuditoriaClockifyDTO> erroresClockify = obtenerFilasAuditoriaClockify(idProyecto);
-        
-        if (erroresClockify != null) {
-            for (FilaAuditoriaClockifyDTO fila : erroresClockify) {
-                Row row = sheet.getRow(rowNumClk);
-                if (row == null) {
-                    row = sheet.createRow(rowNumClk);
-                }
-                
-                row.createCell(colStartClk + 0).setCellValue(fila.getFecha() != null ? fila.getFecha() : "");
-                row.createCell(colStartClk + 1).setCellValue(fila.getDescripcion() != null ? fila.getDescripcion() : "");
-                row.createCell(colStartClk + 2).setCellValue(fila.getHoras() != null ? fila.getHoras() : "");
-                
-                rowNumClk++;
-            }
+        if (erroresClockify != null && !erroresClockify.isEmpty()) {
+            List<Object[]> filasClockify = erroresClockify.stream().map(fila -> {
+                return new Object[]{
+                    fila.getFecha() != null ? fila.getFecha() : "",
+                    fila.getDescripcion() != null ? fila.getDescripcion() : "",
+                    fila.getHoras() != null ? fila.getHoras() : ""
+                };
+            }).collect(Collectors.toList());
+
+            escribirListaDesdeAncla(workbook, sheet, "TABLA_AUD_CLOCKIFY_INICIO", filasClockify);
         }
     }
-}
 
-    @Override
+   @Override
     public ResumenValidacionDTO obtenerResumenValidacion(Long idProyecto) {
-        List<GitLabTarea> tareasGitlab = gitLabTareaRepository.findTodasByProyectoIncluyendoVinculacion(idProyecto);
-        int totalGitlab = tareasGitlab != null ? tareasGitlab.size() : 0;
-        int gitlabOk = tareasGitlab != null
-                ? (int) tareasGitlab.stream().filter(t -> Boolean.TRUE.equals(t.getValida())).count()
-                : 0;
-        int gitlabHuerfanas = totalGitlab - gitlabOk;
+        ResumenValidacionDTO resumen = new ResumenValidacionDTO();
 
+        // 1. Cálculos de GitLab
+        List<GitLabTarea> tareasGitlab = gitLabTareaRepository.findByIdProyecto(idProyecto);
+        int totalGitlab = 0;
+        if (tareasGitlab != null) {
+            totalGitlab = tareasGitlab.size();
+        }
+        
+        List<GitLabTarea> okGitlabLista = gitLabTareaRepository.findByValidaAndIdProyecto(true, idProyecto);
+        int okGitlab = 0;
+        if (okGitlabLista != null) {
+            okGitlab = okGitlabLista.size();
+        }
+
+        List<GitLabTarea> huerfanasGitlabLista = gitLabTareaRepository.findByValidaAndIdProyecto(false, idProyecto);
+        int huerfanasGitlab = 0;
+        if (huerfanasGitlabLista != null) {
+            huerfanasGitlab = huerfanasGitlabLista.size();
+        }
+
+        resumen.setTotalTareasGitlab(totalGitlab);
+        resumen.setTareasGitlabOk(okGitlab);
+        resumen.setTareasGitlabHuerfanas(huerfanasGitlab);
+
+        // 2. Cálculos de Clockify
         List<ImputacionClockify> imputacionesClockify = imputacionClockifyRepository.findByIdProyecto(idProyecto);
-        int totalClockify = imputacionesClockify != null ? imputacionesClockify.size() : 0;
-        int clockifyOk = imputacionesClockify != null
-                ? (int) imputacionesClockify.stream().filter(i -> Boolean.TRUE.equals(i.getValida())).count()
-                : 0;
-        int clockifyErroneas = totalClockify - clockifyOk;
+        int totalClockify = 0;
+        if (imputacionesClockify != null) {
+            totalClockify = imputacionesClockify.size();
+        }
 
-        return new ResumenValidacionDTO(
-                totalGitlab, gitlabOk, gitlabHuerfanas,
-                totalClockify, clockifyOk, clockifyErroneas);
+        List<ImputacionClockify> okClockifyLista = imputacionClockifyRepository.findByIdProyectoAndValida(idProyecto, true);
+        int okClockify = 0;
+        if (okClockifyLista != null) {
+            okClockify = okClockifyLista.size();
+        }
+
+        List<ImputacionClockify> erroneasClockifyLista = imputacionClockifyRepository.findByIdProyectoAndValida(idProyecto, false);
+        int erroneasClockify = 0;
+        if (erroneasClockifyLista != null) {
+            erroneasClockify = erroneasClockifyLista.size();
+        }
+
+        resumen.setTotalImputacionesClockify(totalClockify);
+        resumen.setImputacionesClockifyOk(okClockify);
+        resumen.setImputacionesClockifyErroneas(erroneasClockify);
+
+        return resumen;
     }
 }
