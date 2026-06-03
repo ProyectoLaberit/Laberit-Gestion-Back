@@ -98,14 +98,11 @@ public class GitLabController {
     @GetMapping("/vinculadas/validas/{idProyecto}")
     public ResponseEntity<ApiResponse> getSoloValidadas(@PathVariable Long idProyecto) {
         try {
-            // Llamamos a la función de lectura limpia de Neon
             List<GitLabTarea> validas = gitLabService.obtenerSoloValidasDeBaseDatos(idProyecto);
-
-            return ResponseEntity.ok(
-                    new ApiResponse("Tareas válidas recuperadas de Neon con éxito", true, validas));
+            List<GitLabTareaDTO> dtos = validas.stream().map(GitLabTareaDTO::new).toList();
+            return ResponseEntity.ok(new ApiResponse("Tareas válidas recuperadas de Neon con éxito", true, dtos));
         } catch (Exception e) {
-            return ResponseEntity.status(500)
-                    .body(new ApiResponse("Error al leer válidas: " + e.getMessage(), false, null));
+            return ResponseEntity.status(500).body(new ApiResponse("Error al leer válidas: " + e.getMessage(), false, null));
         }
     }
 
@@ -116,29 +113,25 @@ public class GitLabController {
     @GetMapping("/vinculadas/todas/{idProyecto}")
     public ResponseEntity<ApiResponse> getTodasRegistradas(@PathVariable Long idProyecto) {
         try {
-            // Llamamos a la función que mezcla las vinculadas y las huérfanas
             List<GitLabTarea> todas = gitLabService.obtenerTodasDeBaseDatos(idProyecto);
-
-            return ResponseEntity.ok(
-                    new ApiResponse("Historial completo recuperado de Neon con éxito", true, todas));
+            List<GitLabTareaDTO> dtos = todas.stream().map(GitLabTareaDTO::new).toList();
+            return ResponseEntity.ok(new ApiResponse("Historial completo recuperado de Neon con éxito", true, dtos));
         } catch (Exception e) {
-            return ResponseEntity.status(500)
-                    .body(new ApiResponse("Error al leer el historial: " + e.getMessage(), false, null));
+            return ResponseEntity.status(500).body(new ApiResponse("Error al leer el historial: " + e.getMessage(), false, null));
         }
     }
 
-    @GetMapping("/vinculadas/departamento/{idProyecto}/{departamento}")
-    public ResponseEntity<?> obtenerTareasPorDepartamento(
+    @GetMapping("/vinculadas/departamento/{idProyecto}/{idDepartamento}")
+    public ResponseEntity<ApiResponse> obtenerTareasPorDepartamento(
             @PathVariable Long idProyecto,
-            @PathVariable String departamento) {
+            @PathVariable Integer idDepartamento) {
         try {
-            // Pasamos el departamento limpio de espacios al servicio
-            List<GitLabTarea> tareas = gitLabService.obtenerTareasPorDepartamento(idProyecto, departamento.trim());
-
-            return ResponseEntity.ok(tareas);
+            // El servicio también tiene que cambiar su firma para recibir Integer
+            List<GitLabTarea> tareas = gitLabService.obtenerTareasPorDepartamento(idProyecto, idDepartamento);
+            List<GitLabTareaDTO> dtos = tareas.stream().map(GitLabTareaDTO::new).toList();
+            return ResponseEntity.ok(new ApiResponse("Tareas por departamento recuperadas", true, dtos));
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error: " + e.getMessage());
+            return ResponseEntity.status(500).body(new ApiResponse("Error: " + e.getMessage(), false, null));
         }
     }
 
@@ -213,6 +206,20 @@ public class GitLabController {
         } catch (Exception e) {
             return ResponseEntity.status(500)
                     .body(new ApiResponse("Error al desvincular tarea: " + e.getMessage(), false, null));
+        }
+    }
+
+    /**
+     * Obtiene el listado de tareas de GitLab que aún no han sido vinculadas a ninguna tarea estructural (huérfanas).
+     */
+    @GetMapping("/vinculadas/invalidas/{idProyecto}")
+    public ResponseEntity<ApiResponse> getSoloInvalidas(@PathVariable Long idProyecto) {
+        try {
+            List<GitLabTarea> invalidas = gitLabService.obtenerSoloInvalidasDeBaseDatos(idProyecto);
+            List<GitLabTareaDTO> dtos = invalidas.stream().map(GitLabTareaDTO::new).toList();
+            return ResponseEntity.ok(new ApiResponse("Tareas inválidas recuperadas de Neon con éxito", true, dtos));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(new ApiResponse("Error al leer inválidas: " + e.getMessage(), false, null));
         }
     }
 }
