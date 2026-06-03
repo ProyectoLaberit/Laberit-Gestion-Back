@@ -93,14 +93,12 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
       @Query(value = """
                   SELECT g.*
                   FROM tarea_gitlab g
-                  JOIN tarea_proyecto t ON g.id_tarea_proyecto = t.id_tarea_proyecto
-                  JOIN departamento d ON t.id_departamento = d.id_departamento
-                  WHERE t.id_proyecto = :idProyecto
-                    AND LOWER(TRIM(d.nombre)) = LOWER(TRIM(:departamento))
-                  ORDER BY g.numero_gitlab ASC
+                  WHERE g.id_proyecto = :idProyecto
+                  AND g.id_departamento = :idDepartamento
+                  ORDER BY g.valida DESC, g.numero_gitlab ASC
                   """, nativeQuery = true)
-      List<GitLabTarea> findByIdProyectoAndDepartamento(
+      List<GitLabTarea> findByIdProyectoAndIdDepartamento(
                   @Param("idProyecto") Long idProyecto,
-                  @Param("departamento") String departamento);
+                  @Param("idDepartamento") Integer idDepartamento);
 
 }

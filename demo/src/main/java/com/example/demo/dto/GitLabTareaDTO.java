@@ -13,13 +13,13 @@ public class GitLabTareaDTO {
     private String title; // Título de la tarea
     private List<String> labels; // Etiquetas asociadas a la tarea
     private String estado; // Estado de la tarea (ej: "opened", "closed")
-    private boolean vinculada; // true = Nombre bien y guardada en DB (o corregida). false = Nombre mal y fuera
-                               // de la DB
-
+    private boolean vinculada; // true = Nombre bien y guardada en DB (o corregida). false = Nombre mal y fuera de la DB
+    private Long tareaProyecto; // id de tareaProyecto
+    private Integer idDepartamento; //Id del Departamento asociado
     public GitLabTareaDTO() {
     }
 
-    // Constructor para mapear fácilmente desde el Map de GitLab
+    // Constructor 1: Usado al descargar datos crudos directamente desde la API de GitLab
     public GitLabTareaDTO(String id, Long numeroGitLab, String title, List<String> labels, String estado) {
         this.id = id;
         this.numeroGitLab = numeroGitLab;
@@ -29,54 +29,64 @@ public class GitLabTareaDTO {
         this.vinculada = false; // Por defecto nace en false hasta que el servicio verifique la DB
     }
 
+    // Constructor 2: Usado para enviar datos al Frontend desde nuestra Base de Datos local
+    public GitLabTareaDTO(com.example.demo.entity.GitLabTarea entidad) {
+        this.id = entidad.getIssueId();
+        this.numeroGitLab = entidad.getNumeroGitlab();
+        this.title = entidad.getTitulo();
+        this.estado = entidad.getEstado();
+        this.vinculada = entidad.getValida() != null ? entidad.getValida() : false;
+        this.tareaProyecto = entidad.getTareaProyecto();
+        this.idDepartamento = entidad.getIdDepartamento();
+    }
     // Getters y Setters
     public String getId() {
         return id;
     }
-
     public void setId(String id) {
         this.id = id;
     }
-
-    // 🛠️ Corregido a CamelCase (getNumeroGitLab) para evitar errores de mapeo en
-    // Spring/Jackson
     public Long getNumeroGitLab() {
         return numeroGitLab;
     }
-
     public void setNumeroGitLab(Long numeroGitLab) {
         this.numeroGitLab = numeroGitLab;
     }
-
     public String getTitle() {
         return title;
     }
-
     public void setTitle(String title) {
         this.title = title;
     }
-
     public List<String> getLabels() {
         return labels;
     }
-
     public void setLabels(List<String> labels) {
         this.labels = labels;
     }
-
     public String getEstado() {
         return estado;
     }
-
     public void setEstado(String estado) {
         this.estado = estado;
     }
-
     public boolean isVinculada() {
         return vinculada;
     }
-
     public void setVinculada(boolean vinculada) {
         this.vinculada = vinculada;
+    }
+    public Long getTareaProyecto() {
+        return tareaProyecto;
+    }
+    public void setTareaProyecto(Long tareaProyecto) {
+        this.tareaProyecto = tareaProyecto;
+    }
+    public Integer getIdDepartamento() { 
+        return idDepartamento; 
+    }
+
+    public void setIdDepartamento(Integer idDepartamento) { 
+        this.idDepartamento = idDepartamento; 
     }
 }

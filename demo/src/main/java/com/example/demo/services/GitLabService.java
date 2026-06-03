@@ -35,6 +35,9 @@ public class GitLabService {
     @Autowired
     private TareaProyectoRepository tareaProyectoRepository;
 
+    @Autowired
+    private com.example.demo.repository.DepartamentoRepository departamentoRepository;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
@@ -211,10 +214,10 @@ public class GitLabService {
     }
 
     /**
-     * [NUEVO] Recupera todas las tareas de GitLab y calcula su estado de
+     * Recupera todas las tareas de GitLab y calcula su estado de
      * vinculación.
      * Si la tarea es nueva y tiene el nombre correcto, la guarda automáticamente en
-     * Neon.
+     * la base.
      * Si está mal escrita, la marca como no vinculada para que el front la
      * gestione.
      * * @param proyectoIdLocal ID del proyecto local.
@@ -223,63 +226,58 @@ public class GitLabService {
      */
     /**
      * Recupera todas las tareas de GitLab, calcula su estado de vinculación
-     * y las persiste TODAS en Neon clasificándolas como válidas o inválidas.
+     * y las persiste TODAS en la base clasificándolas como válidas o inválidas.
      * * @param proyectoIdLocal ID del proyecto local.
      * 
      * @return Lista unificada de DTOs con el campo vinculada actualizado.
      */
     /**
-     * Sincroniza las tareas desde GitLab y las persiste en Neon.
+     * Sincroniza las tareas desde GitLab y las persiste en la abse.
      * * @param proyectoIdLocal ID del proyecto local.
      * 
      * @return El número total de tareas NUEVAS que se han guardado en la base de
      *         datos.
      */
     public int sincronizarYContarNuevasTareas(Long proyectoIdLocal) {
-        // 1. Descarga bruta desde GitLab
         List<GitLabTareaDTO> tareasGitLab = obtenerTareasPorProyecto(proyectoIdLocal);
-
-        // 2. IDs ya persistidos en Neon para saber cuáles son viejas
         Set<String> idsEnBD = gitLabTareaRepository.findByIdProyecto(proyectoIdLocal).stream()
                 .map(GitLabTarea::getIssueId)
                 .collect(Collectors.toSet());
-        // Contador para las tareas que guardemos nuevas
         int tareasNuevasGuardadas = 0;
-
-        // 3. Precalculamos las colas de tareas locales en memoria por título
-        Map<String, Queue<TareaProyecto>> colasPorTitulo = new HashMap<>();
-
-        for (GitLabTareaDTO tarea : tareasGitLab) {
-            if (idsEnBD.contains(tarea.getId()))
-                continue;
-
-            String titulo = (tarea.getTitle() != null) ? tarea.getTitle().trim() : "";
-            if (titulo.isEmpty())
-                continue;
-
-            if (!colasPorTitulo.containsKey(titulo)) {
-                List<TareaProyecto> coincidencias = tareaProyectoRepository.findByTarea(titulo);
-                colasPorTitulo.put(titulo, new LinkedList<>(coincidencias));
-            }
+        List<TareaProyecto> tareasDelProyecto = tareaProyectoRepository.findByIdProyecto(proyectoIdLocal);
+        List<com.example.demo.entity.Departamento> todosLosDepartamentos = departamentoRepository.findAll();
+        // Ahora la clave del mapa es: "titulo_tarea|idDepartamento" -> Mucho más seguro
+        Map<String, java.util.Queue<TareaProyecto>> colasDisponibles = new HashMap<>();
+        for (TareaProyecto tp : tareasDelProyecto) {
+            String clave = tp.getTarea().trim().toLowerCase() + "|" + tp.getIdDepartamento();
+            colasDisponibles.putIfAbsent(clave, new java.util.LinkedList<>());
+            colasDisponibles.get(clave).add(tp);
         }
-
-        // 4. Procesamos la lista y guardamos SOLO las que no existían
         for (GitLabTareaDTO tarea : tareasGitLab) {
-
             if (idsEnBD.contains(tarea.getId())) {
                 continue;
             }
-
             String titulo = (tarea.getTitle() != null) ? tarea.getTitle().trim() : "";
-
+            if (titulo.isEmpty()) continue;
+            // Extraer la etiqueta en texto de GitLab
+            String deptoGitLabString = (tarea.getLabels() != null && !tarea.getLabels().isEmpty()) 
+                                    ? tarea.getLabels().get(0) : "";
+            // Traducir el nombre de la etiqueta al ID numérico de nuestra base de datos
+            Integer idDepartamentoLocal = todosLosDepartamentos.stream()
+                .filter(d -> d.getNombre().equalsIgnoreCase(deptoGitLabString.trim()))
+                .map(com.example.demo.entity.Departamento::getId)
+                .findFirst()
+                .orElse(null); // Si no encuentra el departamento, será null
             GitLabTarea nueva = new GitLabTarea();
             nueva.setIssueId(tarea.getId());
             nueva.setNumeroGitlab(tarea.getNumeroGitLab());
             nueva.setTitulo(tarea.getTitle());
             nueva.setEstado(tarea.getEstado());
-
-            Queue<TareaProyecto> cola = titulo.isEmpty() ? null : colasPorTitulo.get(titulo);
-
+            nueva.setIdProyecto(proyectoIdLocal);
+            nueva.setIdDepartamento(idDepartamentoLocal); // ¡Guardamos la ID!
+            // Buscar en nuestras tareas pre-cargadas si existe un hueco con el mismo nombre y el mismo ID
+            String claveBusqueda = titulo.toLowerCase() + "|" + idDepartamentoLocal;
+            java.util.Queue<TareaProyecto> cola = colasDisponibles.get(claveBusqueda);
             if (cola != null && !cola.isEmpty()) {
                 TareaProyecto tareaLocal = cola.poll();
                 nueva.setTareaProyecto(tareaLocal.getIdTareaProyecto());
@@ -288,22 +286,9 @@ public class GitLabService {
                 nueva.setTareaProyecto(null);
                 nueva.setValida(false);
             }
-            nueva.setIdProyecto(proyectoIdLocal);
-
-            if (tarea.getLabels() != null && !tarea.getLabels().isEmpty()) {
-                nueva.setDepartamento(tarea.getLabels().get(0));
-            } else {
-                nueva.setDepartamento("Sin Departamento");
-            }
-
-            System.out.println("DEBUG id a guardar: " + proyectoIdLocal);
-            System.out.println("DEBUG valor en entidad: " + nueva.getIdProyecto());
-
             gitLabTareaRepository.save(nueva);
             tareasNuevasGuardadas++;
         }
-
-        // 5. Devolvemos el número total de inserciones
         return tareasNuevasGuardadas;
     }
 
@@ -426,11 +411,8 @@ public class GitLabService {
         return gitLabTareaRepository.findTodasByProyectoIncluyendoVinculacion(idProyecto);
     }
 
-    public List<GitLabTarea> obtenerTareasPorDepartamento(Long idProyecto, String departamento) {
-        if (departamento == null || departamento.trim().isEmpty()) {
-            return new ArrayList<>(); // Devuelve vacío directamente si el parámetro llega mal
-        }
-        return gitLabTareaRepository.findByIdProyectoAndDepartamento(idProyecto, departamento.trim());
+    public List<GitLabTarea> obtenerTareasPorDepartamento(Long idProyecto, Integer idDepartamento) {
+        return gitLabTareaRepository.findByIdProyectoAndIdDepartamento(idProyecto, idDepartamento);
     }
 
     /**

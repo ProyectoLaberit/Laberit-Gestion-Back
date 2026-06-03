@@ -24,8 +24,8 @@ public class GitLabTarea {
     @Column(name = "titulo", nullable = false)
     private String titulo;
 
-    @Column(name = "departamento", length = 100)
-    private String departamento;
+    @Column(name = "id_departamento")
+    private Integer idDepartamento;
 
     @Column(name = "estado", nullable = false, length = 50)
     private String estado;
@@ -44,13 +44,13 @@ public class GitLabTarea {
     }
 
     // Constructor completo para pruebas y factorías
-    public GitLabTarea(Long id, String issueId, Long numeroGitlab, String titulo, String departamento,
+    public GitLabTarea(Long id, String issueId, Long numeroGitlab, String titulo, Integer idDepartamento,
             String estado, Boolean valida, Long idProyecto, Long tareaProyecto) {
         this.id = id;
         this.issueId = issueId;
         this.numeroGitlab = numeroGitlab;
         this.titulo = titulo;
-        this.departamento = departamento;
+        this.idDepartamento = idDepartamento;
         this.estado = estado;
         this.valida = valida;
         this.idProyecto = idProyecto;
@@ -91,12 +91,12 @@ public class GitLabTarea {
         this.titulo = titulo;
     }
 
-    public String getDepartamento() {
-        return departamento;
+    public Integer getIdDepartamento() {
+        return idDepartamento;
     }
 
-    public void setDepartamento(String departamento) {
-        this.departamento = departamento;
+    public void setIdDepartamento(Integer idDepartamento) {
+        this.idDepartamento = idDepartamento;
     }
 
     public String getEstado() {
