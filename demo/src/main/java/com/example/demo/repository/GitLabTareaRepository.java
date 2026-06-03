@@ -3,6 +3,7 @@ package com.example.demo.repository;
 import com.example.demo.entity.GitLabTarea;
 import com.example.demo.entity.Proyecto;
 
+import org.antlr.v4.runtime.atn.SemanticContext.AND;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -96,11 +97,13 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
                   LEFT JOIN tarea_proyecto t ON g.id_tarea_proyecto = t.id_tarea_proyecto
                   LEFT JOIN departamento d ON t.id_departamento = d.id_departamento
                   WHERE g.id_proyecto = :idProyecto
-                    AND (
-                        LOWER(TRIM(d.nombre)) = LOWER(TRIM(:departamento))
-                        OR g.valida = false
-                        OR g.id_tarea_proyecto IS NULL
-                    )
+                        AND (
+                              LOWER(TRIM(d.nombre)) = LOWER(TRIM(:departamento))
+                        OR (
+                              (g.valida = false OR g.id_tarea_proyecto IS NULL)
+                              AND LOWER(TRIM(g.departamento)) = LOWER(TRIM(:departamento))
+                        )
+                  )
                   ORDER BY g.valida DESC, g.numero_gitlab ASC
                   """, nativeQuery = true)
       List<GitLabTarea> findByIdProyectoAndDepartamento(
