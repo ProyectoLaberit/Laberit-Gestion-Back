@@ -517,4 +517,30 @@ public class GitLabService {
         gitLabTareaRepository.delete(tarea);
     }
 
+    /**
+     * Anula la relación entre una issue de GitLab y su tarea de proyecto actual.
+     * Cambia el estado de la issue a huérfana (valida = false y tareaProyecto = null) 
+     * sin borrar su registro de la base de datos.
+     *
+     * @param issueId ID único global de la issue de GitLab a desvincular.
+     * @return La entidad GitLabTarea actualizada y guardada.
+     * @throws RuntimeException Si la issue no se encuentra registrada en el sistema.
+     */
+    public GitLabTarea desvincularTarea(String issueId) {
+        GitLabTarea tarea = gitLabTareaRepository.findByIssueId(issueId)
+                .orElseThrow(() -> new RuntimeException("No se encontró ninguna issue registrada con ID: " + issueId));
+        tarea.setTareaProyecto(null);
+        tarea.setValida(false);
+        return gitLabTareaRepository.save(tarea);
+    }
+
+    /**
+     * Recupera de Neon únicamente las tareas de GitLab huérfanas o inválidas.
+     * @param idProyecto ID del proyecto local para filtrar.
+     * @return Lista de entidades GitLabTarea donde valida = false.
+     */
+    public List<GitLabTarea> obtenerSoloInvalidasDeBaseDatos(Long idProyecto) {
+        return gitLabTareaRepository.findByValidaAndIdProyecto(false, idProyecto);
+    }
+
 }

@@ -188,4 +188,38 @@ public class GitLabController {
                     .body(new ApiResponse("Error al eliminar vinculación: " + e.getMessage(), false, null));
         }
     }
+
+    /**
+     * Desvincula una issue de GitLab de su tarea de proyecto actual sin borrarla de la base de datos.
+     * La issue quedará como "inválida" o huérfana, estando disponible para ser vinculada
+     * a otra tarea estructural más adelante.
+     *
+     * @param issueId ID único global de la issue en GitLab a desvincular.
+     * @return ResponseEntity con ApiResponse conteniendo la tarea desvinculada.
+     */
+    @PutMapping("/desvincular/{issueId}")
+    public ResponseEntity<ApiResponse> desvincularTarea(@PathVariable String issueId) {
+        try {
+            GitLabTarea desvinculada = gitLabService.desvincularTarea(issueId);
+            return ResponseEntity.ok(new ApiResponse("Tarea desvinculada correctamente", true, desvinculada));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse("Error al desvincular tarea: " + e.getMessage(), false, null));
+        }
+    }
+
+    /**
+     * Obtiene el listado de tareas de GitLab que aún no han sido vinculadas a ninguna tarea estructural (huérfanas).
+     */
+    @GetMapping("/vinculadas/invalidas/{idProyecto}")
+    public ResponseEntity<ApiResponse> getSoloInvalidas(@PathVariable Long idProyecto) {
+        try {
+            List<GitLabTarea> invalidas = gitLabService.obtenerSoloInvalidasDeBaseDatos(idProyecto);
+            return ResponseEntity.ok(
+                    new ApiResponse("Tareas inválidas recuperadas de Neon con éxito", true, invalidas));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(new ApiResponse("Error al leer inválidas: " + e.getMessage(), false, null));
+        }
+    }
 }
