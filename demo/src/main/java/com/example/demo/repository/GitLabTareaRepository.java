@@ -23,16 +23,16 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
 
       List<GitLabTarea> findByTareaProyectoIn(List<Long> idsTareaProyecto);
 
-        List<GitLabTarea> findByTareaProyectoAndValidaTrue(Long tareaProyecto);
+      List<GitLabTarea> findByTareaProyectoAndValidaTrue(Long tareaProyecto);
 
-        @Query("""
-                            SELECT g
-                            FROM GitLabTarea g
-                            WHERE g.valida = true
-                              AND g.tareaProyecto IN :idsTareaProyecto
-                            ORDER BY g.id ASC
-                        """)
-        List<GitLabTarea> findValidasByTareaProyectoIn(@Param("idsTareaProyecto") List<Long> idsTareaProyecto);
+      @Query("""
+                      SELECT g
+                      FROM GitLabTarea g
+                      WHERE g.valida = true
+                        AND g.tareaProyecto IN :idsTareaProyecto
+                      ORDER BY g.id ASC
+                  """)
+      List<GitLabTarea> findValidasByTareaProyectoIn(@Param("idsTareaProyecto") List<Long> idsTareaProyecto);
 
       List<GitLabTarea> findByValidaAndIdProyecto(Boolean valida, Long idProyecto);
 
@@ -68,16 +68,6 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
       List<GitLabTarea> findValidasByProyectoIncluyendoVinculacion(
                   @Param("idProyecto") Long idProyecto);
 
-      /*
-       * @Query("SELECT g FROM GitLabTarea g " +
-       * "LEFT JOIN g.idProyecto p " +
-       * "LEFT JOIN g.tareaProyecto t " +
-       * "WHERE p.id = :idProyecto OR t.idProyecto = :idProyecto")
-       * List<GitLabTarea>
-       * findTodasByProyectoIncluyendoVinculacion(@Param("idProyecto") Long
-       * idProyecto);
-       */
-
       @Query("""
                   SELECT g
                   FROM GitLabTarea g
@@ -92,18 +82,10 @@ public interface GitLabTareaRepository extends JpaRepository<GitLabTarea, Long> 
                   @Param("idProyecto") Long idProyecto);
 
       @Query(value = """
-                  SELECT DISTINCT g.*
+                  SELECT g.*
                   FROM tarea_gitlab g
-                  LEFT JOIN tarea_proyecto t ON g.id_tarea_proyecto = t.id_tarea_proyecto
-                  LEFT JOIN departamento d ON t.id_departamento = d.id_departamento
                   WHERE g.id_proyecto = :idProyecto
-                        AND (
-                              LOWER(TRIM(d.nombre)) = LOWER(TRIM(:departamento))
-                        OR (
-                              (g.valida = false OR g.id_tarea_proyecto IS NULL)
-                              AND LOWER(TRIM(g.departamento)) = LOWER(TRIM(:departamento))
-                        )
-                  )
+                  AND LOWER(TRIM(g.departamento)) = LOWER(TRIM(:departamento))
                   ORDER BY g.valida DESC, g.numero_gitlab ASC
                   """, nativeQuery = true)
       List<GitLabTarea> findByIdProyectoAndDepartamento(
