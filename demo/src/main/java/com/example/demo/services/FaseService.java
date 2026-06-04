@@ -1,5 +1,6 @@
 package com.example.demo.services;
 
+import com.example.demo.repository.TareaProyectoRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -17,11 +18,17 @@ import com.example.demo.repository.FaseRepository;
 @Service
 public class FaseService {
 
+    private final TareaProyectoRepository tareaProyectoRepository;
+
     @Autowired
     private FaseRepository faseRepository;
 
     @Autowired
     private ExcelService excelService;
+
+    FaseService(TareaProyectoRepository tareaProyectoRepository) {
+        this.tareaProyectoRepository = tareaProyectoRepository;
+    }
 
     /**
      * Devuelve la jerarquía completa de Fases y sus Subfases para el Excel VIGENTE del proyecto.
@@ -68,5 +75,10 @@ public class FaseService {
         }
 
         return jerarquiaFinal;
+    }
+
+    public boolean faseCompleta(Long idProyecto, int idFase){
+        boolean completadas = tareaProyectoRepository.estanTodasCompletadasPorProyectoYFase(idProyecto, idFase);
+        return completadas;
     }
 }

@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import com.example.demo.entity.Fase;
 import com.example.demo.repository.FaseRepository;
+import org.springframework.web.bind.annotation.RequestParam;
+
 
 @RestController
 @RequestMapping("/api/fases")
@@ -176,4 +178,15 @@ public class FaseController {
             return new ApiResponse("Error al recuperar historial: " + e.getMessage(), false, null);
         }
     }
+
+    @GetMapping("/completa/{idProyecto}/{idSubfase}")
+    public ApiResponse subfasesCompletadas(@PathVariable Long idProyecto, @PathVariable int idSubfase) {
+        boolean completada = faseService.faseCompleta(idProyecto, idSubfase);
+        if(completada){
+                return new ApiResponse("Subfase completada", true, null);
+            }else{
+                return new ApiResponse("Subfase incompleta", false, null);
+            }
+    }
+    
 }

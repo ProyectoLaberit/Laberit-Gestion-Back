@@ -64,4 +64,12 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
     List<FilaComparativaDTO> obtenerComparativaTareas(@Param("idProyecto") Long idProyecto);
 
     int countByIdProyecto(Long idProyecto);
+
+    @Query("SELECT CASE WHEN COUNT(t) = 0 THEN true ELSE false END FROM TareaProyecto t " +
+           "WHERE t.tarea = :tarea AND t.idProyecto = :idProyecto AND t.idFase = :idFase AND t.completada = false")
+    boolean estanTodasCompletadas(@Param("tarea") String tarea, @Param("idProyecto") Long idProyecto, @Param("idFase") Integer idFase);
+
+    @Query("SELECT CASE WHEN COUNT(t) = 0 THEN true ELSE false END FROM TareaProyecto t " +
+           "WHERE t.idProyecto = :idProyecto AND t.idFase = :idFase AND t.completada = false")
+    boolean estanTodasCompletadasPorProyectoYFase(@Param("idProyecto") Long idProyecto, @Param("idFase") Integer idFase);
 }
