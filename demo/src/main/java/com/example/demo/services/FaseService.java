@@ -81,4 +81,9 @@ public class FaseService {
         boolean completadas = tareaProyectoRepository.estanTodasCompletadasPorProyectoYFase(idProyecto, idFase);
         return completadas;
     }
+
+    public int[] numeroCompletadas(Long idProyecto, int idFase){
+        int[] result = {tareaProyectoRepository.countByIdProyectoAndIdFaseAndCompletadaTrue(idProyecto, idFase), tareaProyectoRepository.countByIdProyectoAndIdFase(idProyecto, idFase)};
+        return result;
+    }
 }

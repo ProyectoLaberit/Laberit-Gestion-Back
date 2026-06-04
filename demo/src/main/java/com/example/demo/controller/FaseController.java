@@ -182,10 +182,12 @@ public class FaseController {
     @GetMapping("/completa/{idProyecto}/{idSubfase}")
     public ApiResponse subfasesCompletadas(@PathVariable Long idProyecto, @PathVariable int idSubfase) {
         boolean completada = faseService.faseCompleta(idProyecto, idSubfase);
+        int[] numeros = faseService.numeroCompletadas(idProyecto, idSubfase);
+
         if(completada){
-                return new ApiResponse("Subfase completada", true, null);
+                return new ApiResponse("Subfase completada", true, numeros);
             }else{
-                return new ApiResponse("Subfase incompleta", false, null);
+                return new ApiResponse("Subfase incompleta", false, numeros);
             }
     }
     
