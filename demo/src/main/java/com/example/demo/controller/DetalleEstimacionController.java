@@ -352,6 +352,20 @@ public class DetalleEstimacionController {
     /**
      * Elimina una estimación por su ID. Estandarizado a ApiResponse.
      */
+    @DeleteMapping("/por-tarea-proyecto/{idTareaProyecto}")
+    public ApiResponse eliminarEstimacionesPorIdTareaProyecto(@PathVariable Long idTareaProyecto) {
+        if (!esAdmin()) {
+            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
+        }
+
+        try {
+            int eliminadas = detalleEstimacionService.eliminarEstimacionesPorTareaProyecto(idTareaProyecto);
+            return new ApiResponse("Estimaciones eliminadas correctamente", true, eliminadas);
+        } catch (Exception e) {
+            return new ApiResponse(e.getMessage(), false, null);
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ApiResponse eliminarEstimacion(@PathVariable Long id) {
         if (!esAdmin()) {
@@ -361,6 +375,20 @@ public class DetalleEstimacionController {
         try {
             detalleEstimacionService.eliminarTarea(id);
             return new ApiResponse("Estimación eliminada correctamente", true, null);
+        } catch (Exception e) {
+            return new ApiResponse(e.getMessage(), false, null);
+        }
+    }
+
+    @DeleteMapping("/tarea-proyecto/{idTareaProyecto}")
+    public ApiResponse eliminarEstimacionesPorTareaProyecto(@PathVariable Long idTareaProyecto) {
+        if (!esAdmin()) {
+            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
+        }
+
+        try {
+            int eliminadas = detalleEstimacionService.eliminarEstimacionesPorTareaProyecto(idTareaProyecto);
+            return new ApiResponse("Estimaciones eliminadas correctamente", true, eliminadas);
         } catch (Exception e) {
             return new ApiResponse(e.getMessage(), false, null);
         }

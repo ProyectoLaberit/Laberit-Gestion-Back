@@ -878,6 +878,31 @@ public class DetalleEstimacionService {
         );
         return detalle;
     }
+
+    @Transactional
+    public int eliminarEstimacionesPorTareaProyecto(Long idTareaProyecto) {
+        if (idTareaProyecto == null) {
+            throw new RuntimeException("Falta el ID de la tarea del proyecto.");
+        }
+
+        List<DetalleEstimacion> detallesAEliminar = detalleEstimacionRepository.findByIdTareaProyecto(idTareaProyecto);
+        if (detallesAEliminar == null || detallesAEliminar.isEmpty()) {
+            throw new RuntimeException("No se encontraron estimaciones para la tarea con ID: " + idTareaProyecto);
+        }
+
+        List<TareaProyecto> tareasProyecto = tareaProyectoRepository.findAllById(
+            java.util.Collections.singletonList(idTareaProyecto)
+        );
+
+        detalleEstimacionRepository.deleteAll(detallesAEliminar);
+        limpiarReferenciasHuerfanasTareaProyecto(
+            java.util.Collections.singletonList(idTareaProyecto),
+            tareasProyecto
+        );
+
+        return detallesAEliminar.size();
+    }
+
     @Auditable(
         accion = "BORRAR_TAREA", 
         tabla = "detalle_estimacion", 
