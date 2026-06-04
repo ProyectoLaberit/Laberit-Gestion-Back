@@ -121,16 +121,16 @@ public class ProyectoService {
         Proyecto proyecto = proyectoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
 
-        if(proyectoDTO.getNombre() != "" || proyectoDTO.getNombre() != null){
+        if(proyectoDTO.getNombre() != "" && proyectoDTO.getNombre() != null){
             proyecto.setNombre(proyectoDTO.getNombre());
         }
-        if(proyectoDTO.getDescripcion() != "" || proyectoDTO.getDescripcion() != null){
+        if(proyectoDTO.getDescripcion() != "" && proyectoDTO.getDescripcion() != null){
             proyecto.setDescripcion(proyectoDTO.getDescripcion());
         }
-        if(proyectoDTO.getClockifyId() != "" || proyectoDTO.getClockifyId() != null){
+        if(proyectoDTO.getClockifyId() != "" && proyectoDTO.getClockifyId() != null){
             proyecto.setClockifyId(proyectoDTO.getClockifyId());
         }
-        if(proyectoDTO.getGitlabId() != "" || proyectoDTO.getGitlabId() != null){
+        if(proyectoDTO.getGitlabId() != "" && proyectoDTO.getGitlabId() != null){
             proyecto.setGitlabId(proyectoDTO.getGitlabId());
         }
         if(proyectoDTO.getFechaInicio() != null){
@@ -145,7 +145,6 @@ public class ProyectoService {
         if(proyectoDTO.getExcels() != null){
             proyecto.setExcels(proyectoDTO.getExcels());
         }
-
         Proyecto actualizado = proyectoRepository.save(proyecto);
 
         return new ProyectoDTO(
