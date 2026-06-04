@@ -121,14 +121,30 @@ public class ProyectoService {
         Proyecto proyecto = proyectoRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
 
-        proyecto.setNombre(proyectoDTO.getNombre());
-        proyecto.setDescripcion(proyectoDTO.getDescripcion());
-        proyecto.setClockifyId(proyectoDTO.getClockifyId());
-        proyecto.setGitlabId(proyectoDTO.getGitlabId());
-        proyecto.setFechaInicio(proyectoDTO.getFechaInicio());
-        proyecto.setFechaFin(proyectoDTO.getFechaFin());
-        proyecto.setActivo(proyectoDTO.isActivo());
-        proyecto.setExcels(proyectoDTO.getExcels());
+        if(proyectoDTO.getNombre() != "" || proyectoDTO.getNombre() != null){
+            proyecto.setNombre(proyectoDTO.getNombre());
+        }
+        if(proyectoDTO.getDescripcion() != "" || proyectoDTO.getDescripcion() != null){
+            proyecto.setDescripcion(proyectoDTO.getDescripcion());
+        }
+        if(proyectoDTO.getClockifyId() != "" || proyectoDTO.getClockifyId() != null){
+            proyecto.setClockifyId(proyectoDTO.getClockifyId());
+        }
+        if(proyectoDTO.getGitlabId() != "" || proyectoDTO.getGitlabId() != null){
+            proyecto.setGitlabId(proyectoDTO.getGitlabId());
+        }
+        if(proyectoDTO.getFechaInicio() != null){
+            proyecto.setFechaInicio(proyectoDTO.getFechaInicio());
+        }
+        if(proyectoDTO.getFechaFin() != null){
+            proyecto.setFechaFin(proyectoDTO.getFechaFin());
+        }
+        if(proyectoDTO.isActivo() != null){
+            proyecto.setActivo(proyectoDTO.isActivo());
+        }
+        if(proyectoDTO.getExcels() != null){
+            proyecto.setExcels(proyectoDTO.getExcels());
+        }
 
         Proyecto actualizado = proyectoRepository.save(proyecto);
 
