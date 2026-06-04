@@ -878,6 +878,12 @@ public class DetalleEstimacionService {
         );
         return detalle;
     }
+    @Auditable(
+        accion = "BORRAR_TAREA", 
+        tabla = "detalle_estimacion", 
+        entidad = DetalleEstimacion.class,
+        descripcion = "Se eliminó la tarea: #{#nombreTarea}"
+    )
     @Transactional
     public int eliminarTareaCompleta(Long idProyecto, Integer idSubfase, String nombreTarea, Integer idExcelElegido) {
         String nombreTareaLimpio = nombreTarea != null ? nombreTarea.trim() : "";
