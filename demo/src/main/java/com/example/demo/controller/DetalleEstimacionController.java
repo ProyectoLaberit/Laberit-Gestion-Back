@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
+
 @RestController
 @RequestMapping("/api/estimaciones")
 @CrossOrigin(origins = "*")
@@ -365,4 +366,17 @@ public class DetalleEstimacionController {
             return new ApiResponse(e.getMessage(), false, null);
         }
     }
+
+    @GetMapping("/tarea/completa/{nombre}/{idProyecto}/{idSubfase}")
+    public ApiResponse tareaCompletada(@PathVariable String nombre,
+            @PathVariable Long idProyecto,
+            @PathVariable int idSubfase) {
+            boolean completada = detalleEstimacionService.tareaCompletada(nombre, idProyecto, idSubfase);
+            if(completada){
+                return new ApiResponse("tarea completada", true, null);
+            }else{
+                return new ApiResponse("tarea incompleta", false, null);
+            }
+    }
+    
 }

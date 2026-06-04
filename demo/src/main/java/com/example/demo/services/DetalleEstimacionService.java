@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -764,8 +765,14 @@ public class DetalleEstimacionService {
         descripcion = "Se actualizaron los datos numéricos de la estimación."
     )
     public DetalleEstimacion actualizarDetalle(Long id, DetalleEstimacionDTO detalleDTO) {
-        DetalleEstimacion detalle = detalleEstimacionRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("No se encontró la tarea con ID: " + id));
+        List<DetalleEstimacion> detalleBD = detalleEstimacionRepository.findByIdTareaProyecto(id);
+
+        if(detalleBD.isEmpty()){
+           throw new RuntimeException("No se encontró la tarea con ID: " + id);
+        }
+
+        DetalleEstimacion detalle = detalleBD.get(0);
+            
 
         if (detalleDTO.getTiempoMax() != null) { 
             detalle.setTiempoMax(detalleDTO.getTiempoMax()); 
@@ -777,15 +784,7 @@ public class DetalleEstimacionService {
         TareaProyecto tp = tareaProyectoRepository.findById(detalle.getIdTareaProyecto())
             .orElseThrow(() -> new RuntimeException("No se localizó la tarea global pivote asociada."));
 
-        if (detalleDTO.getTarea() != null) { 
-            tp.setTarea(detalleDTO.getTarea().trim()); 
-        }
-        if (detalleDTO.getIdDepartamento() != null) { 
-            tp.setIdDepartamento(detalleDTO.getIdDepartamento()); 
-        }
-        if (detalleDTO.getIdSubFase() != null) { 
-            tp.setIdFase(detalleDTO.getIdSubFase()); 
-        }
+        tp.setCompletada(detalleDTO.getCompletada());
         
         tareaProyectoRepository.save(tp);
         return detalleEstimacionRepository.save(detalle);
@@ -967,5 +966,9 @@ public class DetalleEstimacionService {
         if (!tareasProyectoAEliminar.isEmpty()) {
             tareaProyectoRepository.deleteAll(tareasProyectoAEliminar);
         }
+    }
+
+    public boolean tareaCompletada(String nombreTarea, Long idProyecto, int idSubfase){
+        return tareaProyectoRepository.estanTodasCompletadas(nombreTarea, idProyecto, idSubfase);
     }
 }
