@@ -65,6 +65,15 @@ public class FaseController {
         }
     }
 
+    @GetMapping("/jerarquia/todas")
+    public ApiResponse obtenerJerarquiaCompleta() {
+        try {
+            return new ApiResponse("Fases y subfases recuperadas", true, faseService.obtenerJerarquiaCompleta());
+        } catch (Exception e) {
+            return new ApiResponse("Error al recuperar fases y subfases: " + e.getMessage(), false, null);
+        }
+    }
+
     /**
      * Metodo que crea una nueva fase 
      * @param dto Objeto tipo FaseDTO que contiene la informacion de la fase a crear
