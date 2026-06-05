@@ -12,6 +12,7 @@ import com.example.demo.services.DetalleEstimacionService;
 import com.example.demo.services.ExcelService;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,23 +34,7 @@ public class DetalleEstimacionController {
     @Autowired
     private ExcelService excelService;
 
-    private boolean esAdmin() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            return false;
-        }
-
-        return auth.getAuthorities().stream()
-            .map(GrantedAuthority::getAuthority)
-            .map(authority -> authority == null ? "" : authority.trim().toUpperCase())
-            .map(authority -> authority.startsWith("ROLE_") ? authority.substring(5) : authority)
-            .anyMatch(authority -> {
-                return authority.equals("ADMINISTRADOR")
-                    || authority.equals("SUPERADMINISTRADOR")
-                    || authority.equals("ADMIN")
-                    || authority.equals("SUPERADMIN");
-            });
-    }
+    
     
     /**
      * Recupera la tabla de estimaciones del Excel VIGENTE (el más reciente o
@@ -60,6 +45,7 @@ public class DetalleEstimacionController {
      * @return ApiResponse con la lista de DetalleEstimacionDTO.
      */
     @GetMapping("/proyecto/{idProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerTareasPorProyecto(@PathVariable Long idProyecto) {
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
 
@@ -79,6 +65,7 @@ public class DetalleEstimacionController {
      * @return ApiResponse con el número total de registros importados.
      */
     @PostMapping("/importar")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse importarExcel(@RequestParam("archivo") MultipartFile archivo, @RequestParam("proyectoId") long proyectoId, @RequestParam("usuarioId") Integer usuarioId) {
         if (archivo.isEmpty()) {
             return new ApiResponse("El archivo está vacío.", false, null);
@@ -101,6 +88,7 @@ public class DetalleEstimacionController {
      * @return ApiResponse confirmando la actualización.
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse actualizarDetalle(@PathVariable Long id, @RequestBody DetalleEstimacionDTO detalleDTO) {
         try {
             detalleEstimacionService.actualizarDetalle(id, detalleDTO);
@@ -116,6 +104,7 @@ public class DetalleEstimacionController {
      * @return ApiResponse indicando si el archivo se generó correctamente.
      */
     @GetMapping("/exportar/{idProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse exportarExcel(@PathVariable Long idProyecto) {
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
 
@@ -148,6 +137,7 @@ public class DetalleEstimacionController {
      * @return ApiResponse con el DTO de la estimación encontrada.
      */
     @PostMapping("/proyecto/{idProyecto}/especifica")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerEstimacionEspecifica(
         @PathVariable Long idProyecto,
         @RequestParam Integer idSubfase,
@@ -173,6 +163,7 @@ public class DetalleEstimacionController {
      *         legibles.
      */
     @GetMapping("/excel/{idExcel}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerEstimacionesPorExcel(@PathVariable Integer idExcel) {
         try {
             List<DetalleEstimacionDTO> detalles = detalleEstimacionService.obtenerDetallesPorExcel(idExcel);
@@ -199,6 +190,7 @@ public class DetalleEstimacionController {
      *         estimaciones totales
      */
     @PostMapping("/subfase/tareas")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerTareasSubfase(
             @RequestParam Long idProyecto,
             @RequestParam Integer idSubfase,
@@ -229,6 +221,7 @@ public class DetalleEstimacionController {
      *         subida.
      */
     @GetMapping("/{id}/historial-excels")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerHistorialExcels(@PathVariable("id") Long id) {
         List<HistorialExcelDTO> historial = excelService.obtenerHistorialExcels(id);
         return new ApiResponse("Historial recuperado con éxito", true, historial);
@@ -242,10 +235,9 @@ public class DetalleEstimacionController {
      *         false si hubo algun problema
      */
     @PostMapping("/tarea")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse crearTarea(@RequestBody DetalleEstimacionDTO dto) {
-        if (!esAdmin()) {
-            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
-        }
+        
 
         try {
             detalleEstimacionService.crearTarea(dto);
@@ -266,10 +258,9 @@ public class DetalleEstimacionController {
      * @return ApiResponse con un boolean a true si la creacion ha tenido exito y false si no
      */
     @PostMapping("/proyecto/{idProyecto}/manual")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse crearTareaManual(@PathVariable Long idProyecto, @RequestBody DetalleEstimacionDTO dto) {
-        if (!esAdmin()) {
-            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
-        }
+       
 
         try {
             Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
@@ -286,14 +277,13 @@ public class DetalleEstimacionController {
     }
 
     @DeleteMapping("/proyecto/{idProyecto}/subfase/{idSubfase}/tarea")
+    @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ApiResponse eliminarTareaCompleta(
             @PathVariable Long idProyecto,
             @PathVariable Integer idSubfase,
             @RequestParam String nombreTarea,
             @RequestParam(required = false) Integer idExcelElegido) {
-        if (!esAdmin()) {
-            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
-        }
+       
 
         try {
             int eliminadas = detalleEstimacionService.eliminarTareaCompleta(idProyecto, idSubfase, nombreTarea, idExcelElegido);
@@ -309,6 +299,7 @@ public class DetalleEstimacionController {
      * @return ApiResponse json que contiene el resumen de los tiempos de todas las subfases del proyecto 
      */
     @GetMapping("/resumen/subfases/{idProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerResumenTodasSubfases(
             @PathVariable Long idProyecto,
             @RequestParam(required = false) Integer idExcelElegido) {
@@ -326,6 +317,7 @@ public class DetalleEstimacionController {
      * @return ApiResponse json que contiene lso tiempos totales del proyecto
      */
     @GetMapping("/resumen/proyecto/{idProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerResumenProyecto(@PathVariable Long idProyecto) {
         try {
             ResumenTiemposDTO resumen = detalleEstimacionService.obtenerResumenProyecto(idProyecto);
@@ -340,6 +332,7 @@ public class DetalleEstimacionController {
      * @return ApiResponse json que contiene la lista de resumenes de los tiempos de los proyectos solicitados
      */
     @PostMapping("/proyectos/resumen")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerResumenProyectos(@RequestBody List<Long> idsProyectos) {
         try {
             Map<Long, ResumenTiemposDTO> resumenes = detalleEstimacionService
@@ -354,10 +347,9 @@ public class DetalleEstimacionController {
      * Elimina una estimación por su ID. Estandarizado a ApiResponse.
      */
     @DeleteMapping("/por-tarea-proyecto/{idTareaProyecto}")
+    @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ApiResponse eliminarEstimacionesPorIdTareaProyecto(@PathVariable Long idTareaProyecto) {
-        if (!esAdmin()) {
-            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
-        }
+       
 
         try {
             int eliminadas = detalleEstimacionService.eliminarEstimacionesPorTareaProyecto(idTareaProyecto);
@@ -367,36 +359,33 @@ public class DetalleEstimacionController {
         }
     }
 
-    @DeleteMapping("/{id}")
+   /*  @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ApiResponse eliminarEstimacion(@PathVariable Long id) {
-        if (!esAdmin()) {
-            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
-        }
-
+        
         try {
             detalleEstimacionService.eliminarTarea(id);
             return new ApiResponse("Estimación eliminada correctamente", true, null);
         } catch (Exception e) {
             return new ApiResponse(e.getMessage(), false, null);
         }
-    }
+    }*/
 
 
-    @DeleteMapping("/tarea-proyecto/{idTareaProyecto}")
+   /*  @DeleteMapping("/tarea-proyecto/{idTareaProyecto}")
+    @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ApiResponse eliminarEstimacionesPorTareaProyecto(@PathVariable Long idTareaProyecto) {
-        if (!esAdmin()) {
-            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
-        }
-
+       
         try {
             int eliminadas = detalleEstimacionService.eliminarEstimacionesPorTareaProyecto(idTareaProyecto);
             return new ApiResponse("Estimaciones eliminadas correctamente", true, eliminadas);
         } catch (Exception e) {
             return new ApiResponse(e.getMessage(), false, null);
         }
-    }
+    }*/
 
     @GetMapping("/tarea/completa/{nombre}/{idProyecto}/{idSubfase}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse tareaCompletada(@PathVariable String nombre,
             @PathVariable Long idProyecto,
             @PathVariable int idSubfase) {

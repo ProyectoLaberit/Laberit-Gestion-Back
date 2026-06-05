@@ -37,6 +37,7 @@ public class DepartamentoController {
      * @return ApiResponse json con los departamentos existentes en la base de datos
      */
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse listarDepartamentos() {
         try {
             List<DepartamentoDTO> departamentos = departamentoService.listarTodos();
@@ -51,7 +52,7 @@ public class DepartamentoController {
      * @return ApiResponse con un boolean true si el departamento de crea sin problemas y false si hubo algun problema a la hora de crearlo
      */
     @PostMapping
-    @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')") // <--- Seguridad
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse crearDepartamento(@RequestBody DepartamentoDTO dto) {
         try {
             departamentoService.crear(dto);
@@ -68,7 +69,7 @@ public class DepartamentoController {
      * @return ApiResponse con un booleano true si la actuaizacion ha tenido exito y false si hubo algun problema
      */
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse actualizarDepartamento(@PathVariable int id, @RequestBody DepartamentoDTO dto) {
         try {
             departamentoService.actualizar(id, dto);
