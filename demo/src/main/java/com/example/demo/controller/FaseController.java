@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,21 +40,13 @@ public class FaseController {
     @Autowired
     private FaseRepository faseRepository;
 
-    private boolean esAdmin() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) {
-            return false;
-        }
-
-        return auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(a -> a.equals("ROLE_ADMINISTRADOR") || a.equals("ROLE_SUPERADMINISTRADOR"));
-    }
+   
     /**
      * Metodo que devuelve todas las fases existentes
      * @return ApiResponse json que contiene una lista de todas las fases existentes
      */
     @GetMapping("/todas")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerTodasLasFases() {
         try {
             List<Fase> fases = faseRepository.findAll().stream()
@@ -64,8 +57,14 @@ public class FaseController {
             return new ApiResponse("Error: " + e.getMessage(), false, null);
         }
     }
-
+    
+    /**
+     * Metodo que devuelve las fases y subfases de un excel en concreto
+     * @param idExcel id del excel a consultar
+     * @return ApiResponse json que contiene las fases y subfases del excel
+     */
     @GetMapping("/jerarquia/todas")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerJerarquiaCompleta() {
         try {
             return new ApiResponse("Fases y subfases recuperadas", true, faseService.obtenerJerarquiaCompleta());
@@ -80,10 +79,9 @@ public class FaseController {
      * @return ApiResponse con un boolean a true si la creacion a tenido exito o false si no
     */
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse crearFase(@RequestBody FaseDTO dto) {
-        if (!esAdmin()) {
-            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
-        }
+        
 
         try {
             if (dto.getNombre() == null || dto.getNombre().trim().isEmpty()) {
@@ -106,10 +104,9 @@ public class FaseController {
      * @return ApiResponse con un boolean a true si la creacion a tenido exito o false si no 
      */
     @PostMapping("/subfase")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse crearSubfase(@RequestBody FaseDTO dto) {
-        if (!esAdmin()) {
-            return new ApiResponse("No tienes permisos para realizar esta accion.", false, null);
-        }
+        
 
         try {
             if (dto.getNombre() == null || dto.getNombre().trim().isEmpty()) {
@@ -138,6 +135,7 @@ public class FaseController {
      * @return ApiResponse json que contiene las fases y subfases correspondientes
      */
     @GetMapping("/{idProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerJerarquiaFases(@PathVariable Long idProyecto) {
         try {
             List<FaseDTO> jerarquia = faseService.obtenerJerarquiaFasesPorProyecto(idProyecto);
@@ -158,6 +156,7 @@ public class FaseController {
      * @return ApiResponse json que contiene las fases y subfases del excel
      */
     @GetMapping("/por-excel/{idExcel}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerJerarquiaPorExcel(@PathVariable Integer idExcel) {
         try {
             List<FaseDTO> jerarquia = faseService.obtenerJerarquiaPorIdExcel(idExcel);
@@ -178,6 +177,7 @@ public class FaseController {
      * @return ApiResponse json que contiene los excel que tienen asociados al proyecto en la base de datos
      */
     @GetMapping("/historial/{idProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerHistorialExcels(@PathVariable Long idProyecto) {
         try {
             List<HistorialExcelDTO> historial = excelService.obtenerHistorialExcels(idProyecto);
@@ -187,7 +187,14 @@ public class FaseController {
         }
     }
 
+    /**
+     * Metodo para comprobar el estado de finalización de una subfase dentro de un proyecto específico.
+     * @param idProyecto id del proyecto a evaluar.
+     * @param idSubfase id de la subfase a consultar.
+     * @return ApiResponse con un booleano (true si está completa, false si no) y el conteo de tareas completadas vs totales.
+     */
     @GetMapping("/completa/{idProyecto}/{idSubfase}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse subfasesCompletadas(@PathVariable Long idProyecto, @PathVariable int idSubfase) {
         boolean completada = faseService.faseCompleta(idProyecto, idSubfase);
         int[] numeros = faseService.numeroCompletadas(idProyecto, idSubfase);

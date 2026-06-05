@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +38,7 @@ public class ExcelController {
      */
     @Auditable(accion = "DESCARGAR_EXCEL", tabla = "excel", entidad = Excel.class, descripcion = "Se descargó el Excel con ID: #idExcel (Proyecto ID: #{#antiguo != null ? #antiguo.idProyecto : 'Desconocido'})")
     @GetMapping("/exportar/{idExcel}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<byte[]> exportarExcel(@PathVariable Integer idExcel) {
         try {
             byte[] archivoExcel = excelService.exportarExcelCompleto(idExcel);
@@ -64,6 +66,7 @@ public class ExcelController {
     @Auditable(accion = "DESCARGAR_REPORTE_ANALITICO", tabla = "proyecto", entidad = Excel.class, 
             descripcion = "Se descargó el Reporte Analítico del Proyecto ID: #idProyecto")
     @GetMapping("/exportar-analitico/{idProyecto}/{idExcel}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<byte[]> exportarExcelAnalitico(@PathVariable Long idProyecto, @PathVariable Integer idExcel) {
         try {
             // Llamamos a nuestro nuevo servicio

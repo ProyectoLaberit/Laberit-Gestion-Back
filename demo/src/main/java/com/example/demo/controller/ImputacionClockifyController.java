@@ -8,6 +8,7 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,6 +27,7 @@ public class ImputacionClockifyController {
      * @return ApiResponse json que contiene la lista de las imputaciones del departamento en la tarea
      */
     @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> obtenerPorDepartamento(
             @PathVariable Long idProyecto, 
             @PathVariable Long idTareaProyecto, 
@@ -46,6 +48,7 @@ public class ImputacionClockifyController {
      * @return ApiResponse json que contiene el numero de imputaciones escritas correctamente
      */
     @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}/validas/count")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> contarValidasDepartamento(
             @PathVariable Long idProyecto, 
             @PathVariable Long idTareaProyecto, 
@@ -66,6 +69,7 @@ public class ImputacionClockifyController {
      * @return ApiResponse json que contiene el numero de imputaciones escritas incorrectamente
      */
     @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}/invalidas/count")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> contarInvalidasDepartamento(
             @PathVariable Long idProyecto, 
             @PathVariable Long idTareaProyecto, 
@@ -84,6 +88,7 @@ public class ImputacionClockifyController {
      * @return ApiResponse con un boolean a true si el cambio se realiza correctamente y a false si no
      */
     @PutMapping("/alternar-validacion/{idImputacion}/{idTareaProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> alternarValidacion(
             @PathVariable Long idImputacion, 
             @PathVariable Long idTareaProyecto) {
@@ -105,6 +110,7 @@ public class ImputacionClockifyController {
      * @return ApiResponse con un boolean a true si el cambio se realiza correctamente y false si no
      */
     @PutMapping("/editar-tarea/{idImputacion}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> editarTarea(
             @PathVariable Long idImputacion, 
             @RequestBody java.util.Map<String, String> body) {
@@ -138,6 +144,7 @@ public class ImputacionClockifyController {
      * @return ApiResponse con un boolean a true si el cambio se elimina correctamente y false si no
      */
     @DeleteMapping("/borrar/{idImputacion}")
+    @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ResponseEntity<ApiResponse> borrarImputacion(@PathVariable Long idImputacion) {
         try {
             boolean borrado = service.borrarImputacion(idImputacion);
@@ -161,6 +168,7 @@ public class ImputacionClockifyController {
      * @return ApiResponse json que contiene la lista de imputaciones obtenidas
      */
     @GetMapping("/departamento/{idProyecto}/{idTareaProyecto}/{idDepartamento}/fechas")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> obtenerPorFechas(
             @PathVariable Long idProyecto, 
             @PathVariable Long idTareaProyecto, 

@@ -4,6 +4,7 @@ import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.RolDTO;
 import com.example.demo.services.RolService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,6 +25,7 @@ public class RolController {
      * @return ApiResponse json que contiene los roles existentes en la base de datos
      */
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse obtenerRoles() {
         List<RolDTO> listaRoles = rolService.obtenerTodosLosRoles();
         return new ApiResponse("Listado de roles recuperado", true, listaRoles);

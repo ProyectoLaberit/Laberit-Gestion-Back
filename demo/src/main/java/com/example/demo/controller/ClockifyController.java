@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.demo.dto.ApiResponse;
@@ -27,6 +28,7 @@ public class ClockifyController {
      * @return ApiResponse json que contiene una lista de las tareas de esa subfase
     */
     @GetMapping("/{id}/{subfase}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerTareas(@PathVariable Long id, @PathVariable String subfase) {
 
         List<ClockifyTareaDTO> todasLasTareas = clockifyService.obtenerTareasPorSubfase(id, subfase);
@@ -42,6 +44,7 @@ public class ClockifyController {
      * @return ApiResponse json que contiene los proyectos de clockify sin ningun proyecto asociado en la base de datos
      */
     @GetMapping("/externos")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerProyectosClockifyNoBD() {
 
         List<ProyectoClockifyDTO> proyectosClockify = clockifyService.obtenerProyectosNuevosDTO();
@@ -56,6 +59,7 @@ public class ClockifyController {
      * @return ApiResponse json que contiene las imputaciones del proyecto mal escritas, se comprueban por las tareas en la base de datos, el id de gitlab y las subfases e nla base de datos
      */
     @GetMapping("/fallos/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse getFallidos(@PathVariable Long id) {
 
         List<ClockifyTareaDTO> tareasFallidas = clockifyService.obtenerEntradasInvalidas(id);
@@ -69,6 +73,7 @@ public class ClockifyController {
      * @return ApiResopnse con un boolean a true si no hubo fallos en la sincronizacion y false si hubo problemas
      */
     @PostMapping("/sincronizar/{idProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse sincronizarConClockify(@PathVariable Long idProyecto) {
         try {
             int cantidad = clockifyService.sincronizarImputaciones(idProyecto);

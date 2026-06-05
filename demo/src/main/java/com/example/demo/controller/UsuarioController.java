@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -131,6 +132,7 @@ public class UsuarioController {
      * @return ApiResponse json que contiene la lista de usuarios y su informacion
      */
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse listarUsuarios() {
         if (!esAdmin()) {
             return new ApiResponse("No tienes permisos para ver la lista de usuarios.", false, null);
@@ -155,6 +157,7 @@ public class UsuarioController {
      * @return ApiResponse json que contiene la informacion del usuario consultado
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse obtenerUsuarioPorId(@PathVariable Integer id) {
         String emailAuth = getEmailAutenticado();
         UsuarioDTO propio = usuarioService.obtenerUsuarioPorEmail(emailAuth);
@@ -179,6 +182,7 @@ public class UsuarioController {
      *         correctamente
      */
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse crearUsuario(@RequestBody UsuarioDTO usuarioDTO) {
         if (!esAdmin()) {
             return new ApiResponse("No tienes permisos para crear usuarios. Se requiere rol ADMIN.", false, null);
@@ -206,6 +210,7 @@ public class UsuarioController {
      *         false si no
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ApiResponse eliminarUsuario(@PathVariable Integer id) {
         try {
             String emailAuth = getEmailAutenticado();
@@ -236,6 +241,7 @@ public class UsuarioController {
      * @return ApiResponse con el resultado de la operación.
      */
     @PutMapping("/{id}/password")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse cambiarContrasena(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
         try {
             // Valida que se hayan proporcionado obligatoriamente ambas contraseñas
@@ -276,6 +282,7 @@ public class UsuarioController {
      *         false si no
      */
     @PutMapping(value = "/{id}/foto", consumes = "multipart/form-data")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse cambiarFoto(
             @PathVariable Integer id,
             @RequestParam(value = "archivo", required = false) MultipartFile archivo) {
@@ -306,6 +313,7 @@ public class UsuarioController {
      *         false si no
      */
     @PutMapping("/{id}/rol")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ApiResponse cambiarRol(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
         if (!esAdmin()) {
             return new ApiResponse("No tienes permisos para cambiar roles. Se requiere rol ADMIN.", false, null);
@@ -347,6 +355,7 @@ public class UsuarioController {
      *         y un json con la informacion nueva del usuario o false si no
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ApiResponse actualizarUsuario(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
         try {
             String emailAuth = getEmailAutenticado();
