@@ -2,6 +2,7 @@ package com.example.demo.services;
 
 import com.example.demo.repository.TareaProyectoRepository;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -76,6 +77,28 @@ public class FaseService {
         }
 
         return jerarquiaFinal;
+    }
+
+    public List<FaseDTO> obtenerJerarquiaCompleta() {
+        List<Fase> todasLasFases = faseRepository.findAll();
+
+        Map<Integer, List<SubFaseDTO>> subfasesPorPadre = todasLasFases.stream()
+                .filter(fase -> fase.getFasePadre() != null)
+                .collect(Collectors.groupingBy(
+                        Fase::getFasePadre,
+                        Collectors.mapping(fase -> new SubFaseDTO(fase.getId(), fase.getNombre()), Collectors.toList())));
+
+        return todasLasFases.stream()
+                .filter(fase -> fase.getFasePadre() == null)
+                .sorted(Comparator.comparing(Fase::getId))
+                .map(fase -> {
+                    FaseDTO dto = new FaseDTO(fase.getId(), fase.getNombre());
+                    List<SubFaseDTO> subfases = subfasesPorPadre.getOrDefault(fase.getId(), new ArrayList<>());
+                    subfases.sort(Comparator.comparing(SubFaseDTO::getId));
+                    dto.setSubfases(subfases);
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     public boolean faseCompleta(Long idProyecto, int idFase) {
