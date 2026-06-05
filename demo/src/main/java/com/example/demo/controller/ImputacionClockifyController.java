@@ -117,17 +117,9 @@ public class ImputacionClockifyController {
         try {
             // 1. Recogemos los datos del JSON
             String nuevaTarea = body.get("tareaExtraida");
-            String nuevaSubfase = body.get("subfaseExtraida");
-            String idFaseStr = body.get("idFase");
 
-            // 2. Convertimos el ID de la fase a Integer (si nos lo han enviado)
-            Integer idFase = null;
-            if (idFaseStr != null && !idFaseStr.trim().isEmpty()) {
-                idFase = Integer.parseInt(idFaseStr);
-            }
-
-            // 3. Se lo pasamos todo al Service
-            ImputacionClockify actualizada = service.editarTareaExtraida(idImputacion, nuevaTarea, nuevaSubfase, idFase);
+            // 2. Se lo pasamos todo al Service
+            ImputacionClockify actualizada = service.editarTareaExtraida(idImputacion, nuevaTarea);
             
             if (actualizada != null) {
                 return ResponseEntity.ok(new ApiResponse("Tarea editada correctamente", true, actualizada));
