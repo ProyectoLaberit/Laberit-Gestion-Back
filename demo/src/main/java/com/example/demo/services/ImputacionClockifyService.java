@@ -23,8 +23,10 @@ public class ImputacionClockifyService {
     private com.example.demo.repository.GitLabTareaRepository gitLabTareaRepository;
 
     /**
-     * Calcula y devuelve la suma total de horas trabajadas que están marcadas como válidas 
-     * para una tarea (detalle de estimación) específica. Si el resultado es nulo, devuelve 0.0.
+     * Calcula y devuelve la suma total de horas trabajadas que están marcadas como
+     * válidas
+     * para una tarea (detalle de estimación) específica. Si el resultado es nulo,
+     * devuelve 0.0.
      */
     public Double obtenerSumaHorasValidas(Long idTareaProyecto) {
         Double suma = repository.sumarHorasValidas(idTareaProyecto);
@@ -36,21 +38,16 @@ public class ImputacionClockifyService {
     }
 
     /**
-     * Asigna manualmente una imputación huérfana a una tarea específica, 
+     * Asigna manualmente una imputación huérfana a una tarea específica,
      * cambiando su estado a válido (true).
      * Vincula manualmente una imputación y "enseña" al Excel el número de GitLab
      * para que las próximas se validen solas.
      */
-    @Auditable(
-        accion = "VINCULAR_IMPUTACION", 
-        tabla = "imputacion_clockify", 
-        entidad = ImputacionClockify.class,
-        descripcion = "Se vinculó manualmente la imputación con ID '#{#idImputacionClockify}' a la tarea con ID '#{#idTareaProyecto}'"
-    )
+    @Auditable(accion = "VINCULAR_IMPUTACION", tabla = "imputacion_clockify", entidad = ImputacionClockify.class, descripcion = "Se vinculó manualmente la imputación con ID '#{#idImputacionClockify}' a la tarea con ID '#{#idTareaProyecto}'")
     public ImputacionClockify vincularImputacionManual(Long idImputacionClockify, Long idTareaProyecto) {
         // 1. Buscamos la imputación en la base de datos
         ImputacionClockify imputacion = repository.findById(idImputacionClockify).orElse(null);
-        
+
         if (imputacion != null && !imputacion.getValida()) {
             // 2. Marcamos como válida y enlazamos a la tarea
             imputacion.setValida(true);
@@ -59,26 +56,27 @@ public class ImputacionClockifyService {
 
             return imputacion;
         }
-        return null; 
+        return null;
     }
 
     /**
-     * Comprueba si ya existe un registro de imputación en la base de datos 
+     * Comprueba si ya existe un registro de imputación en la base de datos
      * utilizando su identificador original proveniente de Clockify.
      */
     public boolean existeImputacion(String idClockifyOriginal) {
         return repository.existsByIdClockifyOriginal(idClockifyOriginal);
     }
-    
+
     /**
-     * Guarda una lista completa de nuevas imputaciones en la base de datos de una sola vez.
+     * Guarda una lista completa de nuevas imputaciones en la base de datos de una
+     * sola vez.
      */
     public List<ImputacionClockify> guardarImputaciones(List<ImputacionClockify> nuevasImputaciones) {
         return repository.saveAll(nuevasImputaciones);
     }
 
     /**
-     * Busca y devuelve un registro de imputación específico basándose en su 
+     * Busca y devuelve un registro de imputación específico basándose en su
      * identificador original de Clockify.
      */
     public ImputacionClockify obtenerPorIdClockify(String idClockifyOriginal) {
@@ -86,24 +84,20 @@ public class ImputacionClockifyService {
     }
 
     /**
-     * Guarda los cambios realizados en un objeto de imputación ya existente 
+     * Guarda los cambios realizados en un objeto de imputación ya existente
      * en la base de datos.
      */
-    @Auditable(
-        accion = "ACTUALIZAR_IMPUTACION", 
-        tabla = "imputacion_clockify", 
-        entidad = ImputacionClockify.class,
-        descripcion = "Se actualizaron los datos de la imputación (Clockify ID original: '#{#imputacion.idClockifyOriginal}')"
-    )
+    @Auditable(accion = "ACTUALIZAR_IMPUTACION", tabla = "imputacion_clockify", entidad = ImputacionClockify.class, descripcion = "Se actualizaron los datos de la imputación (Clockify ID original: '#{#imputacion.idClockifyOriginal}')")
     public ImputacionClockify actualizarImputacion(ImputacionClockify imputacion) {
         return repository.save(imputacion);
     }
 
     /**
-     * Filtra y devuelve las imputaciones que coinciden con un proyecto, 
+     * Filtra y devuelve las imputaciones que coinciden con un proyecto,
      * una tarea y un departamento específicos.
      */
-   public List<ImputacionClockify> obtenerPorDepartamentoYTarea(Long idProyecto, Long idTareaProyecto, Integer idDepartamento, String subfase) {
+    public List<ImputacionClockify> obtenerPorDepartamentoYTarea(Long idProyecto, Long idTareaProyecto,
+            Integer idDepartamento, String subfase) {
         Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
 
         Long numeroGitlab = null;
@@ -115,52 +109,50 @@ public class ImputacionClockifyService {
             return repository.findByNumeroGitlabAndIdProyecto(numeroGitlab, idProyecto);
         }
 
-        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamento(idProyecto, idTareaProyecto, idDepartamentoReal);
+        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamento(idProyecto, idTareaProyecto,
+                idDepartamentoReal);
         String subfaseLimpia = normalizar(subfase);
 
         return listaBruta.stream().filter(imp -> {
             if (Boolean.TRUE.equals(imp.getValida())) {
-                return true; 
+                return true;
             }
             return normalizar(imp.getSubfaseExtraida()).equals(subfaseLimpia);
         }).collect(java.util.stream.Collectors.toList());
     }
 
     /**
-     * Cuenta el número total de imputaciones que están validadas para una tarea 
+     * Cuenta el número total de imputaciones que están validadas para una tarea
      * y un departamento concretos dentro de un proyecto.
      */
     public Integer contarValidasPorDepartamento(Long idProyecto, Long idTareaProyecto, Integer idDepartamento) {
         Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
-        return repository.countByIdProyectoAndIdTareaProyectoAndIdDepartamentoAndValidaTrue(idProyecto, idTareaProyecto, idDepartamentoReal);
+        return repository.countByIdProyectoAndIdTareaProyectoAndIdDepartamentoAndValidaTrue(idProyecto, idTareaProyecto,
+                idDepartamentoReal);
     }
 
     /**
-     * Cuenta el número total de imputaciones inválidas (huérfanas) para una tarea 
+     * Cuenta el número total de imputaciones inválidas (huérfanas) para una tarea
      * y un departamento específicos en un proyecto.
      */
     public Integer contarInvalidasPorDepartamento(Long idProyecto, Long idTareaProyecto, Integer idDepartamento) {
         Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
-        return repository.countByIdProyectoAndIdTareaProyectoAndIdDepartamentoAndValidaFalse(idProyecto, idTareaProyecto, idDepartamentoReal);
+        return repository.countByIdProyectoAndIdTareaProyectoAndIdDepartamentoAndValidaFalse(idProyecto,
+                idTareaProyecto, idDepartamentoReal);
     }
 
     /**
-     * Alterna el estado de validación de una imputación. 
-     * Si pasa a ser válida, se le asigna el ID de la tarea indicada. 
+     * Alterna el estado de validación de una imputación.
+     * Si pasa a ser válida, se le asigna el ID de la tarea indicada.
      * Si pasa a ser inválida, se limpia su ID de tarea dejándola huérfana.
      */
-    @Auditable(
-        accion = "ALTERNAR_ESTADO_IMPUTACION", 
-        tabla = "imputacion_clockify", 
-        entidad = ImputacionClockify.class,
-        descripcion = "Se cambió el estado de la imputación con ID '#{#idImputacion}' (Nueva tarea asociada: #{#idTareaProyecto})"
-    )
+    @Auditable(accion = "ALTERNAR_ESTADO_IMPUTACION", tabla = "imputacion_clockify", entidad = ImputacionClockify.class, descripcion = "Se cambió el estado de la imputación con ID '#{#idImputacion}' (Nueva tarea asociada: #{#idTareaProyecto})")
     public ImputacionClockify alternarEstadoValidacion(Long idImputacion, Long idTareaProyecto) {
         ImputacionClockify imputacion = repository.findById(idImputacion).orElse(null);
         if (imputacion != null) {
             boolean nuevoEstado = !imputacion.getValida();
             imputacion.setValida(nuevoEstado);
-            
+
             if (nuevoEstado) {
                 // Si la activamos (true), le ponemos el ID de la tarea que nos llega
                 imputacion.setIdTareaProyecto(idTareaProyecto);
@@ -168,54 +160,52 @@ public class ImputacionClockifyService {
                 // Si la desactivamos (false), limpiamos el ID para que sea una tarea huérfana
                 imputacion.setIdTareaProyecto(null);
             }
-            
+
             return repository.save(imputacion);
         }
         return null;
     }
 
     /**
-     * Modifica el texto descriptivo de una imputación 
+     * Modifica el texto descriptivo de una imputación
      * específica y guarda los cambios.
      */
-    @Auditable(
-        accion = "EDITAR_TAREA_IMPUTACION", 
-        tabla = "imputacion_clockify", 
-        entidad = ImputacionClockify.class,
-        descripcion = "Se editó la descripción extraída a '#{#nuevaTarea}' en la imputación '#{#idImputacion}'"
-    )
-    public ImputacionClockify editarTareaExtraida(Long idImputacion, String nuevaTarea, String nuevaSubfase, Integer idNuevaFase) {
+    @Auditable(accion = "EDITAR_TAREA_IMPUTACION", tabla = "imputacion_clockify", entidad = ImputacionClockify.class, descripcion = "Se editó la descripción extraída a '#{#nuevaTarea}' en la imputación '#{#idImputacion}'")
+    public ImputacionClockify editarTareaExtraida(Long idImputacion, String nuevaTarea, String nuevaSubfase,
+            Integer idNuevaFase) {
         ImputacionClockify imputacion = repository.findById(idImputacion).orElse(null);
-        
-        if (imputacion == null) return null;
+
+        if (imputacion == null)
+            return null;
 
         // 1. Actualizamos los textos (la parte visual)
         if (nuevaTarea != null && !nuevaTarea.trim().isEmpty()) {
             imputacion.setTareaExtraida(nuevaTarea.trim());
         }
-        
+
         if (nuevaSubfase != null && !nuevaSubfase.trim().isEmpty() && !nuevaSubfase.contains("Selecciona")) {
             imputacion.setSubfaseExtraida(nuevaSubfase.trim());
         }
 
-        // 2. Si el usuario cambió la subfase, 
+        // 2. Si el usuario cambió la subfase,
         // buscamos el nuevo ID de tarea_proyecto que corresponde a esta nueva subfase
         if (idNuevaFase != null) {
-            // Buscamos la tarea que encaje con el proyecto, la nueva fase y el departamento de esta imputación
+            // Buscamos la tarea que encaje con el proyecto, la nueva fase y el departamento
+            // de esta imputación
             // Usamos el ID del proyecto y departamento que ya tiene la imputación actual
             var tareaProyecto = tareaProyectoRepository.findByIdProyectoAndIdFaseAndIdDepartamentoAndTarea(
-                    imputacion.getIdProyecto(), 
-                    idNuevaFase, 
-                    imputacion.getIdDepartamento(), 
-                    imputacion.getTareaExtraida()
-            ).orElse(null);
+                    imputacion.getIdProyecto(),
+                    idNuevaFase,
+                    imputacion.getIdDepartamento(),
+                    imputacion.getTareaExtraida()).orElse(null);
 
             if (tareaProyecto != null) {
                 // Si encontramos la tarea destino, movemos la imputación hacia ella
                 imputacion.setIdTareaProyecto(tareaProyecto.getIdTareaProyecto());
                 imputacion.setValida(true); // Al moverla a una tarea existente, asumimos que es correcta
             } else {
-                // Si no existe la tarea en el pivote para esa nueva fase, la dejamos como huérfana
+                // Si no existe la tarea en el pivote para esa nueva fase, la dejamos como
+                // huérfana
                 imputacion.setIdTareaProyecto(null);
                 imputacion.setValida(false);
             }
@@ -225,15 +215,10 @@ public class ImputacionClockifyService {
     }
 
     /**
-     * Elimina permanentemente un registro de imputación de la base de datos 
+     * Elimina permanentemente un registro de imputación de la base de datos
      * si este existe.
      */
-    @Auditable(
-        accion = "BORRAR_IMPUTACION", 
-        tabla = "imputacion_clockify", 
-        entidad = ImputacionClockify.class,
-        descripcion = "Se borró permanentemente la imputación con ID: #{#idImputacion}"
-    )
+    @Auditable(accion = "BORRAR_IMPUTACION", tabla = "imputacion_clockify", entidad = ImputacionClockify.class, descripcion = "Se borró permanentemente la imputación con ID: #{#idImputacion}")
     public boolean borrarImputacion(Long idImputacion) {
         if (repository.existsById(idImputacion)) {
             repository.deleteById(idImputacion);
@@ -245,13 +230,14 @@ public class ImputacionClockifyService {
     /**
      * Filtra las imputaciones por fechas asegurándose de que el rango sea válido.
      */
-   public List<ImputacionClockify> filtrarPorFechas(Long idProyecto, Long idTareaProyecto, Integer idDepartamento, String subfase, java.time.LocalDate desde, java.time.LocalDate hasta) {
+    public List<ImputacionClockify> filtrarPorFechas(Long idProyecto, Long idTareaProyecto, Integer idDepartamento,
+            String subfase, java.time.LocalDate desde, java.time.LocalDate hasta) {
         if (desde.isAfter(hasta)) {
             return java.util.Collections.emptyList();
         }
-        
+
         Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
-        
+
         Long numeroGitlab = null;
         if (idTareaProyecto != null) {
             numeroGitlab = gitLabTareaRepository.findNumeroGitlabByTareaProyectoId(idTareaProyecto);
@@ -261,19 +247,21 @@ public class ImputacionClockifyService {
             return repository.findByNumeroGitlabAndIdProyectoAndFechaBetween(numeroGitlab, idProyecto, desde, hasta);
         }
 
-        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamentoFechas(idProyecto, idTareaProyecto, idDepartamentoReal, desde, hasta);
+        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamentoFechas(idProyecto,
+                idTareaProyecto, idDepartamentoReal, desde, hasta);
         String subfaseLimpia = normalizar(subfase);
-        
+
         return listaBruta.stream().filter(imp -> {
             if (Boolean.TRUE.equals(imp.getValida())) {
-                return true; 
+                return true;
             }
             return normalizar(imp.getSubfaseExtraida()).equals(subfaseLimpia);
         }).collect(java.util.stream.Collectors.toList());
     }
 
     /**
-     * Obtiene el departamento real desde tarea_proyecto para evitar consultas vacias
+     * Obtiene el departamento real desde tarea_proyecto para evitar consultas
+     * vacias
      * cuando el front envia un identificador heredado o incorrecto.
      */
     private Integer resolverDepartamentoReal(Long idProyecto, Long idTareaProyecto, Integer idDepartamentoFallback) {

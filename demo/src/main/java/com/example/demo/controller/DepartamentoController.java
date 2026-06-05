@@ -30,7 +30,7 @@ import com.example.demo.services.DepartamentoService;
 public class DepartamentoController {
 
     @Autowired
-    private DepartamentoService departamentoService; // <--- Usamos el Service, no el Repository
+    private DepartamentoService departamentoService;
 
     /**
      * Metodo que devuelve los departamentos existentes en la base de datos
@@ -39,7 +39,6 @@ public class DepartamentoController {
     @GetMapping
     public ApiResponse listarDepartamentos() {
         try {
-            // El service ya nos devuelve DTOs, evitando el bucle infinito
             List<DepartamentoDTO> departamentos = departamentoService.listarTodos();
             return new ApiResponse("Departamentos recuperados", true, departamentos);
         } catch (Exception e) {

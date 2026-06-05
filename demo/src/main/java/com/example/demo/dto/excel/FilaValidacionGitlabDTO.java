@@ -1,7 +1,5 @@
 package com.example.demo.dto.excel;
 
-
-
 public class FilaValidacionGitlabDTO {
     private String idGitlab;
     private String nombreGitlab;

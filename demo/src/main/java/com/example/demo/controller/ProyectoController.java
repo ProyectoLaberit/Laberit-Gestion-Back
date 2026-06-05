@@ -56,7 +56,6 @@ public class ProyectoController {
      * @return ApiResponse json que contiene el proyecto guardado si el guardado ha tenido exito o nada si el guardado no se ha realizado (sea porqeu el proyecto ya existe o porque no ha pasado los filtros)
      */
     @PostMapping
-    // @RequestBody: Recibe el JSON del formulario y lo convierte en el ProyectoDTO
     @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> crearProyecto(@RequestBody ProyectoDTO proyectoDTO) {
         try {

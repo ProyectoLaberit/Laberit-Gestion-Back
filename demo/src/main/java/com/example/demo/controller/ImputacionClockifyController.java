@@ -17,44 +17,6 @@ public class ImputacionClockifyController {
     @Autowired
     private ImputacionClockifyService service;
 
-    // // GET: Para rellenar la tabla de imputaciones específicas que componen una tarea
-    // @GetMapping("/validas/{idDetalleEstimacion}")
-    // public ResponseEntity<ApiResponse> obtenerValidas(@PathVariable Long idDetalleEstimacion) {
-    //     try {
-    //         List<ImputacionClockify> lista = service.obtenerImputacionesValidas(idDetalleEstimacion);
-    //         return ResponseEntity.ok(new ApiResponse("Lista de imputaciones obtenida", true, lista));
-    //     } catch (Exception e) {
-    //         return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener imputaciones", false, null));
-    //     }
-    // }
-
-    // // GET: Buscar las imputaciones huérfanas por idProyecto
-    // @GetMapping("/huerfanas/{idProyecto}")
-    // public ResponseEntity<ApiResponse> obtenerHuerfanas(@PathVariable Long idProyecto) {
-    //     try {
-    //         List<ImputacionClockify> lista = service.obtenerHuerfanas(idProyecto);
-    //         return ResponseEntity.ok(new ApiResponse("Huérfanas obtenidas", true, lista));
-    //     } catch (Exception e) {
-    //         return ResponseEntity.badRequest().body(new ApiResponse("Error al obtener huérfanas", false, null));
-    //     }
-    // }
-
-    // PUT: Recibimos ambos IDs en la URL para poder hacer la vinculación manual
-    // @PutMapping("/vincular/{idImputacion}/{idDetalleEstimacion}")
-    // public ResponseEntity<ApiResponse> vincularManual(@PathVariable Long idImputacion, @PathVariable Long idDetalleEstimacion) {
-    //     try {
-    //         ImputacionClockify actualizada = service.vincularImputacionManual(idImputacion, idDetalleEstimacion);
-            
-    //         if (actualizada != null) {
-    //             return ResponseEntity.ok(new ApiResponse("Tarea vinculada correctamente", true, actualizada));
-    //         } else {
-    //             return ResponseEntity.badRequest().body(new ApiResponse("La tarea no existe o ya estaba vinculada", false, null));
-    //         }
-    //     } catch (Exception e) {
-    //         return ResponseEntity.badRequest().body(new ApiResponse("Error al procesar la solicitud", false, null));
-    //     }
-    // }
-
     /**
      * Metodo que devuelve las imputaciones de una tarea de cierta subfase de cierto proyecto
      * @param idProyecto id del proyecto

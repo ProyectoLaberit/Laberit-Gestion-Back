@@ -50,7 +50,6 @@ public class VigilanteAuditoria {
             
             entidadAntigua = entityManager.find(auditable.entidad(), idAfectado); // 2. Asignamos a la variable
             if (entidadAntigua != null) {
-                // CORRECCIÓN: Se elimina el detach() para no romper la sesión de Hibernate
                 jsonAntes = convertirAJson(entidadAntigua);
             }
         }
@@ -85,7 +84,6 @@ public class VigilanteAuditoria {
             log.setDatosPrevios(jsonAntes);
             log.setDatosNuevos(jsonDespues);
 
-            // --- MAGIA PARA LA DESCRIPCIÓN DINÁMICA (SpEL) ---
             String descripcionFinal = auditable.descripcion();
 
             if (!descripcionFinal.isEmpty() && descripcionFinal.contains("#{")) {
@@ -124,7 +122,6 @@ public class VigilanteAuditoria {
             }
             
             log.setDescripcion(descripcionFinal);
-            // --- FIN DE LA MAGIA ---
 
             auditLogRepository.save(log);
         } catch (Exception e) {
@@ -135,7 +132,7 @@ public class VigilanteAuditoria {
     }
 
     /**
-     * Herramienta blindada para convertir entidades a JSON.
+     * Herramienta para convertir entidades a JSON.
      */
   
     private String convertirAJson(Object objeto) {

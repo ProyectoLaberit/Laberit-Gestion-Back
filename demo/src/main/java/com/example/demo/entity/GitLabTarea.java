@@ -39,11 +39,11 @@ public class GitLabTarea {
     @Column(name = "id_proyecto")
     private Long idProyecto;
 
-    // Constructor vacío requerido por JPA
+    // Constructor vacío
     public GitLabTarea() {
     }
 
-    // Constructor completo para pruebas y factorías
+    // Constructor completo
     public GitLabTarea(Long id, String issueId, Long numeroGitlab, String titulo, Integer idDepartamento,
             String estado, Boolean valida, Long idProyecto, Long tareaProyecto) {
         this.id = id;

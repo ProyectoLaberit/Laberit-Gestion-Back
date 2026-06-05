@@ -142,10 +142,10 @@ public class GitLabService {
         // 5. Transformación de modelo externo a DTO interno (Versión ultra-segura)
         return rawIssues.stream()
                 .map(issue -> {
-                    // 🛡️ CONTROL DE SEGURIDAD PARA EL ID GLOBAL
+                    // CONTROL DE SEGURIDAD PARA EL ID GLOBAL
                     String idStr = issue.get("id") != null ? String.valueOf(issue.get("id")) : "0";
 
-                    // 🛡️ CONTROL DE SEGURIDAD PARA EL NUMERO INTERNO (Evita el "For input string:
+                    // CONTROL DE SEGURIDAD PARA EL NUMERO INTERNO (Evita el "For input string:
                     // null")
                     Object iidObj = issue.get("iid");
                     Long numeroGitLabVal = 0L; // Valor por defecto si viene roto o vacío
@@ -154,7 +154,7 @@ public class GitLabService {
                         numeroGitLabVal = Long.valueOf(String.valueOf(iidObj).trim());
                     }
 
-                    // 🛡️ CONTROL DE SEGURIDAD PARA TEXTOS
+                    // CONTROL DE SEGURIDAD PARA TEXTOS
                     String titleStr = issue.get("title") != null ? String.valueOf(issue.get("title")) : "Sin título";
                     String stateStr = issue.get("state") != null ? String.valueOf(issue.get("state")) : "unknown";
                     List<String> labelsList = (List<String>) issue.get("labels");
@@ -332,11 +332,6 @@ public class GitLabService {
                         String.valueOf(proy.get("name")).trim()))
                 .collect(Collectors.toList());
     }
-
-    // =========================================================================
-    // Lógica para interactuar con la nueva tabla de Neon
-    // "tareas_gitlab"
-    // =========================================================================
 
     /**
      * Vincula de forma persistente una issue de GitLab con una tarea de

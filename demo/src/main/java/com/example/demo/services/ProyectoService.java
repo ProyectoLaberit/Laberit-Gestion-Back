@@ -18,8 +18,6 @@ public class ProyectoService {
     @Autowired
     private ProyectoRepository proyectoRepository;
 
-    // Inyectamos el servicio de Clockify
-
     /**
      * Recupera una lista de todos los proyectos filtrada por su estado de actividad y un rango de fechas.
      * * @param activo Boolean que indica si se buscan proyectos activos (true) o inactivos (false). Puede ser null.

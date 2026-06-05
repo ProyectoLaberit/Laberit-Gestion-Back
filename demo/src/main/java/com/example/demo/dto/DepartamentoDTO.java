@@ -19,7 +19,6 @@ public class DepartamentoDTO {
     public DepartamentoDTO() {
     }
 
-    // Constructor mágico para convertir la Entidad en DTO fácilmente
     public DepartamentoDTO(Departamento d) {
         this.id = d.getId();
         this.nombre = d.getNombre();

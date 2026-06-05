@@ -1,6 +1,7 @@
 package com.example.demo.entity;
 
 import jakarta.persistence.*;
+
 /**
  * Entidad que representa las tareas de un proyecto en la base de datos
  */
@@ -14,19 +15,19 @@ public class TareaProyecto {
     private Long idTareaProyecto;
 
     @Column(name = "id_proyecto", nullable = false)
-    private Long idProyecto; // BIGINT en tu base de datos
+    private Long idProyecto;
 
     @Column(name = "id_fase", nullable = false)
-    private Integer idFase; // INTEGER en tu base de datos
+    private Integer idFase;
 
     @Column(name = "id_departamento", nullable = false)
-    private Integer idDepartamento; // INTEGER en tu base de datos
+    private Integer idDepartamento;
 
-    @Column(name = "tarea", nullable = false, length = 255) // VARCHAR(255) en tu base de datos
+    @Column(name = "tarea", nullable = false, length = 255)
     private String tarea;
 
     @Column(name = "completada", nullable = false)
-    private Boolean completada = false; // BOOLEAN DEFAULT false
+    private Boolean completada = false;
 
     // --- CONSTRUCTORES ---
     public TareaProyecto() {

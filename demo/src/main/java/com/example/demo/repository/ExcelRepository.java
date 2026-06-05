@@ -1,6 +1,5 @@
 package com.example.demo.repository;
 
-
 import com.example.demo.dto.HistorialExcelDTO;
 import com.example.demo.entity.Excel;
 
@@ -19,22 +18,24 @@ public interface ExcelRepository extends JpaRepository<Excel, Integer> {
 
     Excel findFirstByIdProyectoAndVigenteTrue(Long idProyecto);
 
-    /* 
-    Método para desactivar excels anteriores de un proyecto 
-    */
+    /*
+     * Método para desactivar excels anteriores de un proyecto
+     */
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Excel e SET e.vigente = false WHERE e.idProyecto = :idProyecto")
     void desactivarExcelsAnteriores(@Param("idProyecto") Long idProyecto);
-    
-    /*
-    Método para obtener el historial de excels de un proyecto, ordenados por fecha de subida (más reciente primero).
-     * Devuelve una lista de HistorialExcelDTO con la información necesaria para mostrar en el frontend.
-     * Se asume que el DTO tiene campos como idExcel, fechaSubida y nombreUsuario.
-     * El query se puede ajustar según la estructura real de tus entidades y relaciones.
-    */@Query("SELECT new com.example.demo.dto.HistorialExcelDTO(e.idExcel, e.fechaSubida, u.nombre, e.vigente) " +
-       "FROM Excel e, Usuario u " +
-       "WHERE e.idUsuario = u.id AND e.idProyecto = :proyectoId " +
-       "ORDER BY e.fechaSubida DESC")
-List<HistorialExcelDTO> obtenerHistorialDirecto(@Param("proyectoId") Long proyectoId);
-}
 
+    /*
+     * Método para obtener el historial de excels de un proyecto, ordenados por
+     * fecha de subida (más reciente primero).
+     * Devuelve una lista de HistorialExcelDTO con la información necesaria para
+     * mostrar en el frontend.
+     * Se asume que el DTO tiene campos como idExcel, fechaSubida y nombreUsuario.
+     * El query se puede ajustar según la estructura real de tus entidades y
+     * relaciones.
+     */@Query("SELECT new com.example.demo.dto.HistorialExcelDTO(e.idExcel, e.fechaSubida, u.nombre, e.vigente) " +
+            "FROM Excel e, Usuario u " +
+            "WHERE e.idUsuario = u.id AND e.idProyecto = :proyectoId " +
+            "ORDER BY e.fechaSubida DESC")
+    List<HistorialExcelDTO> obtenerHistorialDirecto(@Param("proyectoId") Long proyectoId);
+}

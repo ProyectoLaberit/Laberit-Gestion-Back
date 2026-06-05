@@ -146,7 +146,7 @@ public class AuditService {
                 try {
                     return Integer.parseInt(valor.asText());
                 } catch (NumberFormatException ignored) {
-                    // Seguimos con el siguiente campo.
+                    
                 }
             }
         }

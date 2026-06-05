@@ -96,9 +96,9 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElse(null);
 
-        if (usuario == null){
+        if (usuario == null) {
             return null;
-        } 
+        }
         return mapearADTO(usuario);
     }
 
@@ -107,7 +107,7 @@ public class UsuarioService {
         dto.setId(usuario.getId());
         dto.setNombre(usuario.getNombre());
         dto.setEmail(usuario.getEmail());
-        
+
         dto.setFoto(usuario.getFoto());
 
         if (usuario.getRoles() != null && !usuario.getRoles().isEmpty()) {
@@ -117,12 +117,8 @@ public class UsuarioService {
 
         return dto;
     }
-   @Auditable(
-        accion = "CREAR_USUARIO", 
-        tabla = "usuario", 
-        entidad = Usuario.class,
-        descripcion = "Se creó el usuario '#{#dto.nombre}' con email '#{#dto.email}'"
-    )
+
+    @Auditable(accion = "CREAR_USUARIO", tabla = "usuario", entidad = Usuario.class, descripcion = "Se creó el usuario '#{#dto.nombre}' con email '#{#dto.email}'")
     public UsuarioDTO crearUsuario(UsuarioDTO dto) {
         if (usuarioRepository.findByEmail(dto.getEmail()).isPresent()) {
             throw new RuntimeException("Error: Ya existe un usuario registrado con este email.");
@@ -132,7 +128,6 @@ public class UsuarioService {
         nuevoUsuario.setNombre(dto.getNombre());
         nuevoUsuario.setEmail(dto.getEmail());
         nuevoUsuario.setFoto("default1.png");
-        
 
         // Determinar rol a asignar
         Rol rolAsignado;
@@ -140,11 +135,12 @@ public class UsuarioService {
             try {
                 // Transformamos el String ("1", "2" o "3") a un número entero
                 int idRol = Integer.parseInt(dto.getRol().trim());
-                
+
                 // Buscamos directamente por ese ID
                 rolAsignado = rolRepository.findById(idRol)
-                        .orElseThrow(() -> new RuntimeException("Error: El rol especificado (" + idRol + ") no existe en la base de datos."));
-                        
+                        .orElseThrow(() -> new RuntimeException(
+                                "Error: El rol especificado (" + idRol + ") no existe en la base de datos."));
+
             } catch (NumberFormatException e) {
                 throw new RuntimeException("Error: El rol enviado no es un número válido.");
             }
@@ -163,15 +159,11 @@ public class UsuarioService {
         respuesta.setId(guardado.getId());
         respuesta.setNombre(guardado.getNombre());
         respuesta.setEmail(guardado.getEmail());
-       
+
         return respuesta;
     }
-  @Auditable(
-    accion = "BORRAR_USUARIO", 
-    tabla = "usuario", 
-    entidad = Usuario.class,
-    descripcion = "Se eliminó al usuario '#{#antiguo.nombre}' (Email: #{#antiguo.email})"
-)
+
+    @Auditable(accion = "BORRAR_USUARIO", tabla = "usuario", entidad = Usuario.class, descripcion = "Se eliminó al usuario '#{#antiguo.nombre}' (Email: #{#antiguo.email})")
     public void eliminarUsuario(Integer id) {
         if (!usuarioRepository.existsById(id)) {
             throw new RuntimeException("Error: No se puede eliminar. El usuario con ID " + id + " no existe.");
@@ -179,12 +171,8 @@ public class UsuarioService {
 
         usuarioRepository.deleteById(id);
     }
-    @Auditable(
-        accion = "CAMBIAR_CONTRASENA", 
-        tabla = "usuario", 
-        entidad = Usuario.class,
-        descripcion = "Se actualizó la contraseña del usuario con ID: #{#id}"
-    )
+
+    @Auditable(accion = "CAMBIAR_CONTRASENA", tabla = "usuario", entidad = Usuario.class, descripcion = "Se actualizó la contraseña del usuario con ID: #{#id}")
     public void cambiarContrasena(Integer id, String passwordVieja, String passwordNueva) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado."));
@@ -248,12 +236,8 @@ public class UsuarioService {
         limpiarDatosRecuperacion(usuario);
         usuarioRepository.save(usuario);
     }
-    @Auditable(
-        accion = "CAMBIAR_FOTO", 
-        tabla = "usuario", 
-        entidad = Usuario.class,
-        descripcion = "Se actualizó la foto de perfil del usuario con ID: #{#id}"
-    )
+
+    @Auditable(accion = "CAMBIAR_FOTO", tabla = "usuario", entidad = Usuario.class, descripcion = "Se actualizó la foto de perfil del usuario con ID: #{#id}")
     public void cambiarFoto(Integer id, MultipartFile archivo) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado."));
@@ -280,12 +264,8 @@ public class UsuarioService {
             throw new RuntimeException("Error al procesar la foto: " + e.getMessage());
         }
     }
-    @Auditable(
-        accion = "CAMBIAR_ROL", 
-        tabla = "usuario", 
-        entidad = Usuario.class,
-        descripcion = "Se cambió el rol del usuario con ID #{#idUsuario} al identificador de rol '#{#rolNuevo}'"
-    )
+
+    @Auditable(accion = "CAMBIAR_ROL", tabla = "usuario", entidad = Usuario.class, descripcion = "Se cambió el rol del usuario con ID #{#idUsuario} al identificador de rol '#{#rolNuevo}'")
     public void cambiarRol(Integer idUsuario, String rolNuevo) {
         Usuario usuario = usuarioRepository.findById(idUsuario)
                 .orElseThrow(() -> new RuntimeException("Error: Usuario no encontrado."));
@@ -304,12 +284,8 @@ public class UsuarioService {
         usuario.getRoles().add(nuevoRolObj);
         usuarioRepository.save(usuario);
     }
-   @Auditable(
-        accion = "ACTUALIZAR_USUARIO", 
-        tabla = "usuario", 
-        entidad = Usuario.class,
-        descripcion = "Se actualizó el perfil del usuario '#{#resultado.nombre}' (ID: #{#id})"
-    )
+
+    @Auditable(accion = "ACTUALIZAR_USUARIO", tabla = "usuario", entidad = Usuario.class, descripcion = "Se actualizó el perfil del usuario '#{#resultado.nombre}' (ID: #{#id})")
     public UsuarioDTO actualizarUsuario(Integer id, UsuarioDTO dto) {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));

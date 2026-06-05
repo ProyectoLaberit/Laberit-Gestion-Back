@@ -31,7 +31,8 @@ public class FaseService {
     }
 
     /**
-     * Devuelve la jerarquía completa de Fases y sus Subfases para el Excel VIGENTE del proyecto.
+     * Devuelve la jerarquía completa de Fases y sus Subfases para el Excel VIGENTE
+     * del proyecto.
      */
     public List<FaseDTO> obtenerJerarquiaFasesPorProyecto(Long idProyecto) {
         Excel excel = excelService.obtenerExcelVigentePorProyecto(idProyecto);
@@ -42,7 +43,8 @@ public class FaseService {
     }
 
     /**
-     * Devuelve la jerarquía de Fases y Subfases para un Excel concreto (por idExcel).
+     * Devuelve la jerarquía de Fases y Subfases para un Excel concreto (por
+     * idExcel).
      * Reutilizado tanto por el vigente como por el historial.
      */
     public List<FaseDTO> obtenerJerarquiaPorIdExcel(Integer idExcel) {
@@ -56,8 +58,7 @@ public class FaseService {
         Map<Integer, List<SubFaseDTO>> agrupadasPorPadre = subfasesActivas.stream()
                 .collect(Collectors.groupingBy(
                         Fase::getFasePadre,
-                        Collectors.mapping(f -> new SubFaseDTO(f.getId(), f.getNombre()), Collectors.toList())
-                ));
+                        Collectors.mapping(f -> new SubFaseDTO(f.getId(), f.getNombre()), Collectors.toList())));
 
         List<FaseDTO> jerarquiaFinal = new ArrayList<>();
 
@@ -77,13 +78,14 @@ public class FaseService {
         return jerarquiaFinal;
     }
 
-    public boolean faseCompleta(Long idProyecto, int idFase){
+    public boolean faseCompleta(Long idProyecto, int idFase) {
         boolean completadas = tareaProyectoRepository.estanTodasCompletadasPorProyectoYFase(idProyecto, idFase);
         return completadas;
     }
 
-    public int[] numeroCompletadas(Long idProyecto, int idFase){
-        int[] result = {tareaProyectoRepository.countByIdProyectoAndIdFaseAndCompletadaTrue(idProyecto, idFase), tareaProyectoRepository.countByIdProyectoAndIdFase(idProyecto, idFase)};
+    public int[] numeroCompletadas(Long idProyecto, int idFase) {
+        int[] result = { tareaProyectoRepository.countByIdProyectoAndIdFaseAndCompletadaTrue(idProyecto, idFase),
+                tareaProyectoRepository.countByIdProyectoAndIdFase(idProyecto, idFase) };
         return result;
     }
 }

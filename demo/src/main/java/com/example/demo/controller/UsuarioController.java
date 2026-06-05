@@ -15,7 +15,6 @@ import com.example.demo.dto.ApiResponse;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.UsuarioDTO;
 import com.example.demo.services.UsuarioService;
-import com.example.demo.services.AuditService;
 import com.example.demo.entity.Usuario;
 import com.example.demo.security.JwtUtil;
 
@@ -30,11 +29,6 @@ public class UsuarioController {
     @Autowired
     private JwtUtil jwtUtil;
 
-    @Autowired
-    private AuditService auditService;
-
-    // ── Helpers de autenticación ──────────────────────────────────────────────
-
     private String getEmailAutenticado() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return (auth != null) ? auth.getName() : null;
@@ -42,7 +36,8 @@ public class UsuarioController {
 
     private boolean tieneRol(String rol) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null) return false;
+        if (auth == null)
+            return false;
         return auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(a -> a.equals("ROLE_" + rol));
@@ -51,16 +46,18 @@ public class UsuarioController {
     private boolean esAdmin() {
         return tieneRol("ADMINISTRADOR") || tieneRol("SUPERADMINISTRADOR");
     }
+
     private boolean esSuperAdmin() {
         return tieneRol("SUPERADMINISTRADOR");
     }
 
-    // ── Endpoints ─────────────────────────────────────────────────────────────
-
     /**
      * Metodo para iniciar sesion en la aplicacion
+     * 
      * @param login objeto tipo LoginRequest con los datos de login
-     * @return Apiresponse con un boolean a true si se verifica el inicio de sesion y un json con los datos del usuario y el token de autenticacion o un boolean false si no se pasa la verificacion
+     * @return Apiresponse con un boolean a true si se verifica el inicio de sesion
+     *         y un json con los datos del usuario y el token de autenticacion o un
+     *         boolean false si no se pasa la verificacion
      */
     @PostMapping("/login")
     public ApiResponse verificar(@RequestBody LoginRequest login) {
@@ -87,8 +84,13 @@ public class UsuarioController {
 
     /**
      * metodo para recuperacion de contraseña
-     * @param dto Objeto tipo usuarioDTO que contiene la informacion necesaria para el cambio de contraseña
-     * @return Apiresponse con boolean true si eiste un ususario con ese correo y el mensaje de que vas a recibir un correo electronico para el cambio de contraseña o false si no existe el usuario con ese correo o oçhubo algun fallo en la recuperacion
+     * 
+     * @param dto Objeto tipo usuarioDTO que contiene la informacion necesaria para
+     *            el cambio de contraseña
+     * @return Apiresponse con boolean true si eiste un ususario con ese correo y el
+     *         mensaje de que vas a recibir un correo electronico para el cambio de
+     *         contraseña o false si no existe el usuario con ese correo o oçhubo
+     *         algun fallo en la recuperacion
      */
     @PostMapping("/forgot-password")
     public ApiResponse forgotPassword(@RequestBody UsuarioDTO dto) {
@@ -103,9 +105,12 @@ public class UsuarioController {
     }
 
     /**
-     * Metodo para cambiar la contraseña de un usuario 
-     * @param dto objeto tipo UsuarioDTO que contiene la informacoon del usuario a cambiar la contraseña y la contraseña nueva
-     * @return ApiResponse con boolean true si el cambio se realiza correctamente o false si no
+     * Metodo para cambiar la contraseña de un usuario
+     * 
+     * @param dto objeto tipo UsuarioDTO que contiene la informacoon del usuario a
+     *            cambiar la contraseña y la contraseña nueva
+     * @return ApiResponse con boolean true si el cambio se realiza correctamente o
+     *         false si no
      */
     @PostMapping("/reset-password")
     public ApiResponse resetPassword(@RequestBody UsuarioDTO dto) {
@@ -120,7 +125,9 @@ public class UsuarioController {
     }
 
     /**
-     * Metodo que devuelve todos los usuarios existentes en la base de datos, solo para admin o superadmin
+     * Metodo que devuelve todos los usuarios existentes en la base de datos, solo
+     * para admin o superadmin
+     * 
      * @return ApiResponse json que contiene la lista de usuarios y su informacion
      */
     @GetMapping
@@ -141,8 +148,10 @@ public class UsuarioController {
      */
 
     /**
-     * Metodo para obtener la informacion de un usuario (solo admin o superadmin) o del propio usuario actual
-     * @param id id del usuario a consultar la informacion  
+     * Metodo para obtener la informacion de un usuario (solo admin o superadmin) o
+     * del propio usuario actual
+     * 
+     * @param id id del usuario a consultar la informacion
      * @return ApiResponse json que contiene la informacion del usuario consultado
      */
     @GetMapping("/{id}")
@@ -160,11 +169,14 @@ public class UsuarioController {
         }
     }
 
-
     /**
      * Metodo para crear un usuario
-     * @param usuarioDTO objeto tipo usuarioDTO con la informacion del nuevo usuario a crear
-     * @return ApiResponse con boleano true si el usuario se creo correctamente y un json con la informacion del nuevo usuario o false si no se creao correctamente
+     * 
+     * @param usuarioDTO objeto tipo usuarioDTO con la informacion del nuevo usuario
+     *                   a crear
+     * @return ApiResponse con boleano true si el usuario se creo correctamente y un
+     *         json con la informacion del nuevo usuario o false si no se creao
+     *         correctamente
      */
     @PostMapping
     public ApiResponse crearUsuario(@RequestBody UsuarioDTO usuarioDTO) {
@@ -173,7 +185,7 @@ public class UsuarioController {
         }
         try {
             UsuarioDTO usuarioCreado = usuarioService.crearUsuario(usuarioDTO);
-           
+
             return new ApiResponse("Usuario creado con éxito", true, usuarioCreado);
         } catch (RuntimeException e) {
             return new ApiResponse(e.getMessage(), false, null);
@@ -188,8 +200,10 @@ public class UsuarioController {
      */
     /**
      * Metodo para eliminar un usuario
+     * 
      * @param id id del usuario a eliminar
-     * @return ApiResponse con boleano true si el usuario se elimina correctamente o false si no
+     * @return ApiResponse con boleano true si el usuario se elimina correctamente o
+     *         false si no
      */
     @DeleteMapping("/{id}")
     public ApiResponse eliminarUsuario(@PathVariable Integer id) {
@@ -200,7 +214,7 @@ public class UsuarioController {
                 return new ApiResponse("No puedes eliminarte a ti mismo.", false, null);
             }
             usuarioService.eliminarUsuario(id);
-            
+
             return new ApiResponse("Usuario eliminado correctamente", true, null);
         } catch (RuntimeException e) {
             return new ApiResponse(e.getMessage(), false, null);
@@ -210,39 +224,56 @@ public class UsuarioController {
     }
 
     /**
-     * Cambiar contraseña:
-     * - USER solo puede cambiar la suya propia.
-     * - MANAGER puede cambiar la de usuarios con rol USER.
-     * - ADMIN puede cambiar la de cualquiera.
+     * Endpoint para cambiar la contraseña de un usuario aplicando reglas de control
+     * de acceso por rol.
+     * Permite a un usuario cambiar su propia clave, a un MANAGER modificar las de
+     * usuarios básicos y a un ADMIN cambiar cualquiera.
+     *
+     * @param id  Identificador único del usuario al que se le modificará la
+     *            contraseña.
+     * @param dto Objeto de transferencia que contiene las contraseñas vieja y
+     *            nueva.
+     * @return ApiResponse con el resultado de la operación.
      */
     @PutMapping("/{id}/password")
     public ApiResponse cambiarContrasena(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
         try {
+            // Valida que se hayan proporcionado obligatoriamente ambas contraseñas
             if (dto.getPasswordVieja() == null || dto.getPasswordNueva() == null) {
                 return new ApiResponse("Faltan datos: Debes enviar la contraseña vieja y la nueva.", false, null);
             }
 
+            // Obtiene el email del usuario que ha iniciado sesión actualmente
             String emailAuth = getEmailAutenticado();
+
+            // Comprueba las restricciones y permisos de edición según el rol
             if (!puedeEditarUsuario(id, emailAuth)) {
                 return new ApiResponse("No tienes permisos para modificar este usuario.", false, null);
             }
 
+            // Invoca al servicio para validar la clave actual y persistir el cambio
             usuarioService.cambiarContrasena(id, dto.getPasswordVieja(), dto.getPasswordNueva());
             return new ApiResponse("Contraseña actualizada correctamente.", true, null);
         } catch (RuntimeException e) {
+            // Captura errores controlados de lógica de negocio (ej. la contraseña vieja no
+            // coincide)
             return new ApiResponse(e.getMessage(), false, null);
         } catch (Exception e) {
+            // Captura cualquier otro fallo técnico o imprevisto del sistema
             return new ApiResponse("Error inesperado al cambiar la contraseña: " + e.getMessage(), false, null);
         }
     }
+
     /**
      * metodo para cambiar el icono del perfil del usuario
      * Admin puede cambiar todos los iconos
      * Manager solo los usuarios con rol User
      * Usuarios solo la suya propia
-     * @param id id del usuario del que se quiere cambiar el icono
+     * 
+     * @param id      id del usuario del que se quiere cambiar el icono
      * @param archivo nuevo icono
-     * @return ApiResponse con boleano true si el icono se cambia correctamente o false si no
+     * @return ApiResponse con boleano true si el icono se cambia correctamente o
+     *         false si no
      */
     @PutMapping(value = "/{id}/foto", consumes = "multipart/form-data")
     public ApiResponse cambiarFoto(
@@ -268,9 +299,11 @@ public class UsuarioController {
      */
     /**
      * Metodo para cambiar el rol de un usuario (solo administradores)
-     * @param id id del usuario a cambiar
+     * 
+     * @param id  id del usuario a cambiar
      * @param dto objeto tipo usuarioDTO con el nuevo rol
-     * @return ApiResponse con boleano true si el rol se cambia correctamente o false si no
+     * @return ApiResponse con boleano true si el rol se cambia correctamente o
+     *         false si no
      */
     @PutMapping("/{id}/rol")
     public ApiResponse cambiarRol(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
@@ -289,7 +322,7 @@ public class UsuarioController {
             }
 
             usuarioService.cambiarRol(id, dto.getRol());
-           
+
             return new ApiResponse("Rol actualizado correctamente.", true, null);
         } catch (RuntimeException e) {
             return new ApiResponse(e.getMessage(), false, null);
@@ -307,9 +340,11 @@ public class UsuarioController {
      * Admin puede cambiar todos los usuarios
      * Manager solo los usuarios con rol User
      * Usuarios solo a si mismos
-     * @param id id del usuario a cambiar
+     * 
+     * @param id  id del usuario a cambiar
      * @param dto objeto tipo usuarioDTO con la nueva informacion del usuario
-     * @return ApiResponse con boleano true si el usuario se actualiza correctamente y un json con la informacion nueva del usuario o false si no
+     * @return ApiResponse con boleano true si el usuario se actualiza correctamente
+     *         y un json con la informacion nueva del usuario o false si no
      */
     @PutMapping("/{id}")
     public ApiResponse actualizarUsuario(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
@@ -326,8 +361,6 @@ public class UsuarioController {
         }
     }
 
-    // ── Lógica de permisos ────────────────────────────────────────────────────
-
     /**
      * Determina si el usuario autenticado puede editar al usuario con 'id'.
      * - ADMIN: puede editar a cualquiera.
@@ -335,19 +368,23 @@ public class UsuarioController {
      * - USER: solo puede editarse a sí mismo.
      */
     /**
-     * metodo que determina si el usuario actual puede editar al usuario que se consulta
+     * metodo que determina si el usuario actual puede editar al usuario que se
+     * consulta
      * - ADMIN: puede editar a cualquiera.
      * - MANAGER: solo puede editar a usuarios con rol USER.
      * - USER: solo puede editarse a sí mismo.
+     * 
      * @param idObjetivo id del usuario a cambiar
-     * @param emailAuth mail del usuario
+     * @param emailAuth  mail del usuario
      * @return boolean true si puede editar o false si no
      */
     private boolean puedeEditarUsuario(Integer idObjetivo, String emailAuth) {
-        if (esAdmin()) return true;
+        if (esAdmin())
+            return true;
 
         UsuarioDTO objetivo = usuarioService.obtenerUsuarioPorId(idObjetivo);
-        if (objetivo == null) return false;
+        if (objetivo == null)
+            return false;
 
         // Empleado solo puede editarse a sí mismo
         UsuarioDTO propio = usuarioService.obtenerUsuarioPorEmail(emailAuth);

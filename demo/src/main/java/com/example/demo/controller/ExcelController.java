@@ -1,8 +1,6 @@
 package com.example.demo.controller;
 
 import java.io.ByteArrayInputStream;
-import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
@@ -15,9 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.annotation.Auditable;
-import com.example.demo.dto.excel.FilaAuditoriaClockifyDTO;
-import com.example.demo.dto.excel.FilaValidacionGitlabDTO;
-import com.example.demo.dto.excel.ResumenValidacionDTO;
 import com.example.demo.entity.Excel;
 import com.example.demo.services.ExcelService;
 import com.example.demo.services.excel.GeneradorInformeExcelService;
@@ -89,25 +84,5 @@ public class ExcelController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 
         }
-    }
-
-    // END-POINTS de prueba para ver si se obtienen los datos correctamente
-
-    @GetMapping("/resumen-validacion/{idProyecto}")
-    public ResponseEntity<ResumenValidacionDTO> getResumenValidacion(@PathVariable Long idProyecto) {
-        ResumenValidacionDTO resumen = generadorInformeExcelService.obtenerResumenValidacion(idProyecto);
-        return ResponseEntity.ok(resumen);
-    }
-
-    @GetMapping("/validacion-gitlab/{idProyecto}")
-    public ResponseEntity<List<FilaValidacionGitlabDTO>> getValidacionGitlab(@PathVariable Long idProyecto) {
-        List<FilaValidacionGitlabDTO> filas = generadorInformeExcelService.obtenerFilasValidacionGitlab(idProyecto);
-        return ResponseEntity.ok(filas);
-    }
-
-    @GetMapping("/auditoria-clockify/{idProyecto}")
-    public ResponseEntity<List<FilaAuditoriaClockifyDTO>> getAuditoriaClockify(@PathVariable Long idProyecto) {
-        List<FilaAuditoriaClockifyDTO> filas = generadorInformeExcelService.obtenerFilasAuditoriaClockify(idProyecto);
-        return ResponseEntity.ok(filas);
     }
 }
