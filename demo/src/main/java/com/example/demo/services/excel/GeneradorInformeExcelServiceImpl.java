@@ -267,7 +267,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         aplicarBordes(sDecimal, BorderStyle.THIN, IndexedColors.GREY_50_PERCENT.getIndex());
         estilos.put("decimal", sDecimal);
 
-        // --- 17. Icono centrado (✅ ❌) -----------------------------------------------
+        // --- 17. Icono centrado  -----------------------------------------------
         CellStyle sIcono = workbook.createCellStyle();
         sIcono.setAlignment(HorizontalAlignment.CENTER);
         sIcono.setVerticalAlignment(VerticalAlignment.CENTER);
