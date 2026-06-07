@@ -302,7 +302,7 @@ public class UsuarioController {
     }
 
     /**
-     * Cambiar rol: solo ADMIN.
+     * Cambiar rol: solo SuperAdministrador.
      */
     /**
      * Metodo para cambiar el rol de un usuario (solo administradores)
@@ -313,10 +313,11 @@ public class UsuarioController {
      *         false si no
      */
     @PutMapping("/{id}/rol")
-    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
+    @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ApiResponse cambiarRol(@PathVariable Integer id, @RequestBody UsuarioDTO dto) {
-        if (!esAdmin()) {
-            return new ApiResponse("No tienes permisos para cambiar roles. Se requiere rol ADMIN.", false, null);
+        if (!esSuperAdmin()) {
+            return new ApiResponse("No tienes permisos para cambiar roles. Se requiere rol SuperAdministrador.", false,
+                    null);
         }
         try {
             if (dto.getRol() == null || dto.getRol().trim().isEmpty()) {
