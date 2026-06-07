@@ -442,7 +442,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             }).collect(Collectors.toList());
 
             // ── CAMBIO: pasamos estilos ──
-            escribirListaDesdeAncla(workbook, sheet, "TABLA_VAL_GITLAB_INICIO", filasGitlab, estilos);
+            escribirListaDesdeAncla(workbook, sheet, "TABLA_VAL_GITLAB_INICIO", filasGitlab, estilos, false);
         }
 
         // 3. Tabla de Auditoría Clockify
@@ -455,7 +455,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             }).collect(Collectors.toList());
 
             // ── CAMBIO: pasamos estilos ──
-            escribirListaDesdeAncla(workbook, sheet, "TABLA_AUD_CLOCKIFY_INICIO", filasClockify, estilos);
+            escribirListaDesdeAncla(workbook, sheet, "TABLA_AUD_CLOCKIFY_INICIO", filasClockify, estilos, false);
         }
     }
 
@@ -501,6 +501,11 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     // ── CAMBIO: nueva firma con parámetro estilos ──
     private void escribirListaDesdeAncla(Workbook workbook, Sheet sheet, String nombreRango,
             List<Object[]> datos, Map<String, CellStyle> estilos) {
+        escribirListaDesdeAncla(workbook, sheet, nombreRango, datos, estilos, true);
+    }
+
+    private void escribirListaDesdeAncla(Workbook workbook, Sheet sheet, String nombreRango,
+            List<Object[]> datos, Map<String, CellStyle> estilos, boolean usarZebra) {
 
         Name nombre = workbook.getName(nombreRango);
         if (nombre == null || datos == null || datos.isEmpty())
@@ -514,7 +519,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
 
         for (int idx = 0; idx < datos.size(); idx++) {
             Object[] filaDatos = datos.get(idx);
-            boolean esImpar = (idx % 2 != 0); // zebra: filas alternas con fondo gris
+            boolean esImpar = usarZebra && (idx % 2 != 0); // zebra: filas alternas con fondo gris
 
             Row row = sheet.getRow(filaActual);
             if (row == null)
