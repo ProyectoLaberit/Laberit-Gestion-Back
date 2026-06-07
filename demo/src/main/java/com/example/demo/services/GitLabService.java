@@ -38,6 +38,9 @@ public class GitLabService {
     @Autowired
     private com.example.demo.repository.DepartamentoRepository departamentoRepository;
 
+    @Autowired
+    private DetalleEstimacionService detalleEstimacionService;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     /**
@@ -249,7 +252,8 @@ public class GitLabService {
         // Ahora la clave del mapa es: "titulo_tarea|idDepartamento" -> Mucho más seguro
         Map<String, java.util.Queue<TareaProyecto>> colasDisponibles = new HashMap<>();
         for (TareaProyecto tp : tareasDelProyecto) {
-            String clave = tp.getTarea().trim().toLowerCase() + "|" + tp.getIdDepartamento();
+            // Usamos normalizarTexto para quitar tildes y asegurar coincidencia exacta
+            String clave = detalleEstimacionService.normalizarTexto(tp.getTarea()) + "|" + tp.getIdDepartamento();
             colasDisponibles.putIfAbsent(clave, new java.util.LinkedList<>());
             colasDisponibles.get(clave).add(tp);
         }
@@ -263,20 +267,26 @@ public class GitLabService {
             String deptoGitLabString = (tarea.getLabels() != null && !tarea.getLabels().isEmpty()) 
                                     ? tarea.getLabels().get(0) : "";
             // Traducir el nombre de la etiqueta al ID numérico de nuestra base de datos
+            // Traducir el nombre de la etiqueta al ID numérico de nuestra base de datos (con normalización)
             Integer idDepartamentoLocal = todosLosDepartamentos.stream()
-                .filter(d -> d.getNombre().equalsIgnoreCase(deptoGitLabString.trim()))
+                .filter(d -> detalleEstimacionService.normalizarTexto(d.getNombre())
+                            .equals(detalleEstimacionService.normalizarTexto(deptoGitLabString)))
                 .map(com.example.demo.entity.Departamento::getId)
                 .findFirst()
                 .orElse(null); // Si no encuentra el departamento, será null
+            
             GitLabTarea nueva = new GitLabTarea();
             nueva.setIssueId(tarea.getId());
             nueva.setNumeroGitlab(tarea.getNumeroGitLab());
             nueva.setTitulo(tarea.getTitle());
             nueva.setEstado(tarea.getEstado());
             nueva.setIdProyecto(proyectoIdLocal);
-            nueva.setIdDepartamento(idDepartamentoLocal); // ¡Guardamos la ID!
+            nueva.setIdDepartamento(idDepartamentoLocal);
+            
             // Buscar en nuestras tareas pre-cargadas si existe un hueco con el mismo nombre y el mismo ID
-            String claveBusqueda = titulo.toLowerCase() + "|" + idDepartamentoLocal;
+            // Usamos normalizarTexto para que coincida con la clave guardada arriba
+            String claveBusqueda = detalleEstimacionService.normalizarTexto(titulo) + "|" + idDepartamentoLocal;
+
             java.util.Queue<TareaProyecto> cola = colasDisponibles.get(claveBusqueda);
             if (cola != null && !cola.isEmpty()) {
                 TareaProyecto tareaLocal = cola.poll();
