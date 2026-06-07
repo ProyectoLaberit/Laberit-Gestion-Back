@@ -98,8 +98,7 @@ public class ImputacionClockifyService {
      */
     public List<ImputacionClockify> obtenerPorDepartamentoYTarea(Long idProyecto, Long idTareaProyecto,
             Integer idDepartamento, String subfase) {
-        Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
-
+        
         Long numeroGitlab = null;
         if (idTareaProyecto != null) {
             numeroGitlab = gitLabTareaRepository.findNumeroGitlabByTareaProyectoId(idTareaProyecto);
@@ -108,17 +107,9 @@ public class ImputacionClockifyService {
         if (numeroGitlab != null) {
             return repository.findByNumeroGitlabAndIdProyecto(numeroGitlab, idProyecto);
         }
-
-        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamento(idProyecto, idTareaProyecto,
-                idDepartamentoReal);
-        String subfaseLimpia = normalizar(subfase);
-
-        return listaBruta.stream().filter(imp -> {
-            if (Boolean.TRUE.equals(imp.getValida())) {
-                return true;
-            }
-            return normalizar(imp.getSubfaseExtraida()).equals(subfaseLimpia);
-        }).collect(java.util.stream.Collectors.toList());
+        // Si no tiene numero de GitLab asociado, no devolvemos nada para evitar 
+        // cruzar imputaciones de otras tareas del mismo departamento y subfase.
+        return java.util.Collections.emptyList();
     }
 
     /**
@@ -236,8 +227,6 @@ public class ImputacionClockifyService {
             return java.util.Collections.emptyList();
         }
 
-        Integer idDepartamentoReal = resolverDepartamentoReal(idProyecto, idTareaProyecto, idDepartamento);
-
         Long numeroGitlab = null;
         if (idTareaProyecto != null) {
             numeroGitlab = gitLabTareaRepository.findNumeroGitlabByTareaProyectoId(idTareaProyecto);
@@ -246,17 +235,9 @@ public class ImputacionClockifyService {
         if (numeroGitlab != null) {
             return repository.findByNumeroGitlabAndIdProyectoAndFechaBetween(numeroGitlab, idProyecto, desde, hasta);
         }
-
-        List<ImputacionClockify> listaBruta = repository.obtenerDatosVistaDepartamentoFechas(idProyecto,
-                idTareaProyecto, idDepartamentoReal, desde, hasta);
-        String subfaseLimpia = normalizar(subfase);
-
-        return listaBruta.stream().filter(imp -> {
-            if (Boolean.TRUE.equals(imp.getValida())) {
-                return true;
-            }
-            return normalizar(imp.getSubfaseExtraida()).equals(subfaseLimpia);
-        }).collect(java.util.stream.Collectors.toList());
+        // Igual que arriba, si no hay GitLab ID, devolvemos una lista vacía 
+        // para que no se filtren imputaciones ajenas a esta tarea.
+        return java.util.Collections.emptyList();
     }
 
     /**
