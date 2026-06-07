@@ -7,6 +7,7 @@ import com.example.demo.entity.GitLabTarea;
 import com.example.demo.services.GitLabService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -35,6 +36,7 @@ public class GitLabController {
      *         GitLab o error de configuración.
      */
     @GetMapping("/sincronizar/{proyectoId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> sincronizarTareasGitLab(@PathVariable Long proyectoId) {
         try {
             int tareasNuevas = gitLabService.sincronizarYContarNuevasTareas(proyectoId);
@@ -60,6 +62,7 @@ public class GitLabController {
      *         GitLab.
      */
     @GetMapping("/externos")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> getProyectosExternos() {
         try {
             List<GitLabProyectoDTO> proyectosExternos = gitLabService.obtenerProyectosGitLabNoRegistrados();
@@ -80,6 +83,7 @@ public class GitLabController {
      *         500.
      */
     @PostMapping("/vincular")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> vincularTarea(
             @RequestBody GitLabTareaDTO tareaDTO,
             @RequestParam Long idTareaProyecto,
@@ -104,6 +108,7 @@ public class GitLabController {
      *         200, o estado 500 si falla.
      */
     @GetMapping("/vinculadas/validas/{idProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> getSoloValidadas(@PathVariable Long idProyecto) {
         try {
             // Recupera las entidades mapeadas desde la base de datos de Neon
@@ -132,6 +137,7 @@ public class GitLabController {
      *         HTTP 200, o estado 500 si falla.
      */
     @GetMapping("/vinculadas/todas/{idProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> getTodasRegistradas(@PathVariable Long idProyecto) {
         try {
             // Recupera todas las entidades almacenadas en la base de datos de Neon
@@ -161,6 +167,7 @@ public class GitLabController {
      *         HTTP 200, o estado 500 si falla.
      */
     @GetMapping("/vinculadas/departamento/{idProyecto}/{idDepartamento}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> obtenerTareasPorDepartamento(
             @PathVariable Long idProyecto,
             @PathVariable Integer idDepartamento) {
@@ -194,6 +201,7 @@ public class GitLabController {
      *         si falla.
      */
     @PutMapping("/vincular/{issueId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> modificarVinculacion(
             @PathVariable String issueId,
             @RequestParam Long nuevoIdTareaProyecto) {
@@ -221,6 +229,7 @@ public class GitLabController {
      *         500 si falla.
      */
     @PutMapping("/issue/{issueId}/titulo")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> actualizarTituloIssue(
             @PathVariable String issueId,
             @RequestBody Map<String, String> body) {
@@ -251,6 +260,7 @@ public class GitLabController {
      *         500 si falla.
      */
     @DeleteMapping("/borrar/{issueId}")
+    @PreAuthorize("hasAuthority('ROLE_SUPERADMINISTRADOR')")
     public ResponseEntity<ApiResponse> eliminarVinculacion(@PathVariable String issueId) {
         try {
             // Invoca la lógica de negocio para borrar el registro de la base de datos de
@@ -276,6 +286,7 @@ public class GitLabController {
      * @return ResponseEntity con ApiResponse conteniendo la tarea desvinculada.
      */
     @PutMapping("/desvincular/{issueId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
     public ResponseEntity<ApiResponse> desvincularTarea(@PathVariable String issueId) {
         try {
             GitLabTarea desvinculada = gitLabService.desvincularTarea(issueId);
@@ -296,6 +307,7 @@ public class GitLabController {
      *         HTTP 200, o estado 500 si falla.
      */
     @GetMapping("/vinculadas/invalidas/{idProyecto}")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> getSoloInvalidas(@PathVariable Long idProyecto) {
         try {
             // Recupera de la base de datos las entidades que no tienen vinculación activa

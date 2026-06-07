@@ -38,6 +38,7 @@ public class ProyectoController {
      * @return ApiResponse json con los proyectos que siguen los filtros
      */
     @GetMapping("/cargar")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> obtenerProyectos(
             @RequestParam(required = false) Boolean activo,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
