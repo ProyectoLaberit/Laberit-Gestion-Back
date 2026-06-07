@@ -443,7 +443,7 @@ public class DetalleEstimacionService {
                 .filter(d -> {
                     TareaProyecto tp = mapaTareasProyecto.get(d.getIdTareaProyecto());
                     return tp != null && tp.getIdFase().equals(idSubfase)
-                            && tp.getTarea().equalsIgnoreCase(nombreTarea.trim());
+                            && normalizarTexto(tp.getTarea()).equals(normalizarTexto(nombreTarea));
                 })
                 .map(entidad -> {
                     TareaProyecto tp = mapaTareasProyecto.get(entidad.getIdTareaProyecto());
@@ -712,9 +712,9 @@ public class DetalleEstimacionService {
         return todasLasEstimaciones.stream()
                 .filter(d -> {
                     TareaProyecto tp = mapaTareasProyecto.get(d.getIdTareaProyecto());
-                    return tp != null
+                    return tp != null 
                             && tp.getIdFase().equals(idSubfase)
-                            && tp.getTarea().equalsIgnoreCase(nombreTarea.trim());
+                            && normalizarTexto(tp.getTarea()).equals(normalizarTexto(nombreTarea));
                 })
                 .map(entidad -> {
                     TareaProyecto tp = mapaTareasProyecto.get(entidad.getIdTareaProyecto());
