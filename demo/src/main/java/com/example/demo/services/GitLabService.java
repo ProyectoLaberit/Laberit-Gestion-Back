@@ -656,4 +656,50 @@ public class GitLabService {
         return gitLabTareaRepository.findByValidaAndIdProyecto(false, idProyecto);
     }
 
+
+    /**
+     * Busca las tareas de GitLab huérfanas (inválidas) de un proyecto y trata de vincularlas
+     * con las tareas locales actualizadas cotejando el departamento y el título de la tarea 
+     * (limpiando espacios dobles y normalizando el texto). 
+     * Si encuentra una coincidencia exacta, actualiza la tarea de GitLab como válida.
+     * * @param idProyecto Identificador único del proyecto local cuyas tareas huérfanas se van a revisar.
+     */
+
+    public void revincularGitLabHuerfanas(Long idProyecto) {
+        List<GitLabTarea> huerfanas = gitLabTareaRepository.findByValidaAndIdProyecto(false, idProyecto);
+        if (huerfanas.isEmpty()) {
+            return;
+        }
+
+        List<TareaProyecto> tareasDelProyecto = tareaProyectoRepository.findByIdProyecto(idProyecto);
+        
+        Map<String, java.util.Queue<TareaProyecto>> colasDisponibles = new HashMap<>();
+        for (TareaProyecto tp : tareasDelProyecto) {
+            String tareaLimpia = detalleEstimacionService.normalizarTexto(tp.getTarea()).replaceAll("\\s+", " ");
+            String clave = tareaLimpia + "|" + tp.getIdDepartamento();
+            colasDisponibles.putIfAbsent(clave, new java.util.LinkedList<>());
+            colasDisponibles.get(clave).add(tp);
+        }
+
+        List<GitLabTarea> actualizadas = new ArrayList<>();
+
+        for (GitLabTarea tarea : huerfanas) {
+            String tituloLimpio = detalleEstimacionService.normalizarTexto(tarea.getTitulo()).replaceAll("\\s+", " ");
+            Integer idDepartamentoLocal = tarea.getIdDepartamento(); 
+
+            String claveBusqueda = tituloLimpio + "|" + idDepartamentoLocal;
+            java.util.Queue<TareaProyecto> cola = colasDisponibles.get(claveBusqueda);
+
+            if (cola != null && !cola.isEmpty()) {
+                TareaProyecto tareaLocal = cola.poll();
+                tarea.setTareaProyecto(tareaLocal.getIdTareaProyecto());
+                tarea.setValida(true);
+                actualizadas.add(tarea);
+            }
+        }
+
+        if (!actualizadas.isEmpty()) {
+            gitLabTareaRepository.saveAll(actualizadas);
+        }
+    }
 }

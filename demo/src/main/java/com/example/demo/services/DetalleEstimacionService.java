@@ -63,6 +63,12 @@ public class DetalleEstimacionService {
     @Autowired
     private GitLabTareaRepository gitLabTareaRepository;
 
+    @Autowired
+    private GitLabService gitLabService;
+
+    @Autowired
+    private ClockifyService clockifyService;
+
     /**
      * Procesa un archivo Excel físico, implementa la estrategia Find-or-Create en
      * el
@@ -202,11 +208,20 @@ public class DetalleEstimacionService {
                 }
             }
 
+        
+
             workbook.close();
             System.out.println("Total a guardar: " + listaParaGuardar.size());
+            
             if (!listaParaGuardar.isEmpty()) {
                 detalleEstimacionRepository.saveAll(listaParaGuardar);
             }
+
+           
+            gitLabService.revincularGitLabHuerfanas(proyectoId);
+            clockifyService.revincularClockifyHuerfanas(proyectoId);
+          
+
             return listaParaGuardar.size();
 
         } catch (Exception e) {
