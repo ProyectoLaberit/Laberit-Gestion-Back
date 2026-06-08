@@ -39,6 +39,9 @@ public class Proyecto {
     @Column(name = "excels")
     private Boolean excels;
 
+    @Column(name = "completado")
+    private Boolean completado;
+
     public Proyecto() {
     }
 
@@ -112,6 +115,13 @@ public class Proyecto {
 
     public void setExcels(Boolean excels) {
         this.excels = excels;
+    }
+
+    public Boolean getCompletado() {
+        return completado;
+    }
+    public void setCompletado(Boolean completado) {
+        this.completado = completado;
     }
 
 }

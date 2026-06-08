@@ -31,11 +31,13 @@ public class ProyectoDTO {
 
     private Boolean activo;
 
+    private Boolean completado;
+
 
     public ProyectoDTO() {
     }
 
-    public ProyectoDTO(Long id, String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo, Boolean excels) {
+    public ProyectoDTO(Long id, String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo, Boolean excels, Boolean completado) {
         this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
@@ -43,6 +45,7 @@ public class ProyectoDTO {
         this.fechaFin = fechaFin;
         this.activo = activo;
         this.excels = excels;
+        this.completado = completado;
     }
 
     public ProyectoDTO(String nombre, String descripcion, LocalDate fechaInicio, LocalDate fechaFin, Boolean activo) {
@@ -62,6 +65,7 @@ public class ProyectoDTO {
     public LocalDate getFechaFin() { return fechaFin; }
     public Boolean isActivo() { return activo; }
     public Boolean getExcels() { return excels; }
+    public Boolean getCompletado() { return completado; }
     
     
     public void setId(Long id) { this.id = id; }
@@ -73,4 +77,5 @@ public class ProyectoDTO {
     public void setFechaFin(LocalDate fechaFin) { this.fechaFin = fechaFin; }
     public void setActivo(Boolean activo) { this.activo = activo; }
     public void setExcels(Boolean excels) { this.excels = excels; }
+    public void setCompletado(Boolean completado) { this.completado = completado; }
 }

@@ -35,7 +35,8 @@ public class ProyectoService {
             p.getFechaInicio(),
             p.getFechaFin(),
             p.isActivo(), 
-            p.getExcels()
+            p.getExcels(),
+            p.getCompletado()
         )).collect(Collectors.toList());
     }
 
@@ -61,6 +62,14 @@ public class ProyectoService {
         nuevoProyecto.setFechaFin(dto.getFechaFin());
         nuevoProyecto.setActivo(dto.isActivo() != null ? dto.isActivo() : true);
         nuevoProyecto.setExcels(dto.getExcels());
+        nuevoProyecto.setCompletado(dto.getCompletado());
+
+        // Lógica de fecha fin dependiente del check
+        if (Boolean.TRUE.equals(dto.getCompletado())) {
+            nuevoProyecto.setFechaFin(LocalDate.now());
+        } else {
+            nuevoProyecto.setFechaFin(null);
+        }
 
         Proyecto guardado = proyectoRepository.save(nuevoProyecto);
 
@@ -71,7 +80,8 @@ public class ProyectoService {
             guardado.getFechaInicio(),
             guardado.getFechaFin(),
             guardado.isActivo(),
-            guardado.getExcels()
+            guardado.getExcels(),
+            guardado.getCompletado()
         );
     }
 
@@ -96,7 +106,8 @@ public class ProyectoService {
             proyecto.getFechaInicio(),
             proyecto.getFechaFin(),
             proyecto.isActivo(),
-            proyecto.getExcels()
+            proyecto.getExcels(),
+            proyecto.getCompletado()
         );
 
         proyectoRepository.delete(proyecto);
@@ -134,15 +145,25 @@ public class ProyectoService {
         if(proyectoDTO.getFechaInicio() != null){
             proyecto.setFechaInicio(proyectoDTO.getFechaInicio());
         }
-        if(proyectoDTO.getFechaFin() != null){
-            proyecto.setFechaFin(proyectoDTO.getFechaFin());
-        }
         if(proyectoDTO.isActivo() != null){
             proyecto.setActivo(proyectoDTO.isActivo());
         }
         if(proyectoDTO.getExcels() != null){
             proyecto.setExcels(proyectoDTO.getExcels());
         }
+        if(proyectoDTO.getCompletado() != null){
+            // Si el front dice "está completado" y en la base de datos aún no lo estaba (o era null)
+            if (proyectoDTO.getCompletado() && !Boolean.TRUE.equals(proyecto.getCompletado())) {
+                proyecto.setFechaFin(LocalDate.now());
+            } 
+            // Si el front nos dice "ya NO está completado"
+            else if (!proyectoDTO.getCompletado()) {
+                proyecto.setFechaFin(null);
+            }
+            
+            // Guarda el nuevo estado del checkbox
+            proyecto.setCompletado(proyectoDTO.getCompletado());
+        } 
         Proyecto actualizado = proyectoRepository.save(proyecto);
 
         return new ProyectoDTO(
@@ -152,7 +173,8 @@ public class ProyectoService {
             actualizado.getFechaInicio(),
             actualizado.getFechaFin(),
             actualizado.isActivo(),
-            actualizado.getExcels()
+            actualizado.getExcels(),
+            actualizado.getCompletado()
         );
     }
 
