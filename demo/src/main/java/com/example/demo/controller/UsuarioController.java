@@ -389,7 +389,7 @@ public class UsuarioController {
      * @return boolean true si puede editar o false si no
      */
     private boolean puedeEditarUsuario(Integer idObjetivo, String emailAuth) {
-        if (esAdmin())
+        if (esSuperAdmin())
             return true;
 
         UsuarioDTO objetivo = usuarioService.obtenerUsuarioPorId(idObjetivo);
@@ -398,6 +398,19 @@ public class UsuarioController {
 
         // Empleado solo puede editarse a sí mismo
         UsuarioDTO propio = usuarioService.obtenerUsuarioPorEmail(emailAuth);
-        return propio != null && propio.getId().equals(idObjetivo);
+        if (propio == null)
+            return false;
+
+        if (propio.getId().equals(idObjetivo))
+            return true;
+
+        if (tieneRol("ADMINISTRADOR"))
+            return !esRolAdministradorProtegido(objetivo.getRol());
+
+        return false;
+    }
+
+    private boolean esRolAdministradorProtegido(String rol) {
+        return "SuperAdministrador".equals(rol) || "Administrador".equals(rol);
     }
 }
