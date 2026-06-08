@@ -176,7 +176,11 @@ public class ClockifyService {
                         List<String> tagIds = (List<String>) entry.get("tagIds");
                         String nombreTag = null;
                         if (tagIds != null && !tagIds.isEmpty()) {
-                                nombreTag = etiquetas.get(tagIds.get(0));
+                                // Obtiene los nombres de todas las etiquetas y las une con comas
+                                nombreTag = tagIds.stream()
+                                                .map(etiquetas::get)
+                                                .filter(n -> n != null)
+                                                .collect(Collectors.joining(", "));
                         }
 
                         Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
@@ -380,7 +384,11 @@ public class ClockifyService {
                         List<String> tagIds = (List<String>) entry.get("tagIds");
                         String nombreTag = null;
                         if (tagIds != null && !tagIds.isEmpty()) {
-                                nombreTag = etiquetas.get(tagIds.get(0));
+                                // Obtiene los nombres de todas las etiquetas y las une con comas
+                                nombreTag = tagIds.stream()
+                                                .map(etiquetas::get)
+                                                .filter(n -> n != null)
+                                                .collect(Collectors.joining(", "));
                         }
 
                         if (!esValida) {
@@ -598,19 +606,22 @@ public class ClockifyService {
                         // -- MAPEO DE DEPARTAMENTO (TAG) --
                         List<String> tagIds = (List<String>) entry.get("tagIds");
                         if (tagIds != null && !tagIds.isEmpty()) {
-                                String idEtiqueta = tagIds.get(0);
-                                String nombreEtiquetaClockify = mapaEtiquetas.get(idEtiqueta);
-
-                                if (nombreEtiquetaClockify != null) {
-                                        String etiquetaLimpia = detalleEstimacionService
-                                                        .normalizarTexto(nombreEtiquetaClockify);
-
-                                        for (Departamento depto : departamentosBD) {
-                                                if (detalleEstimacionService.normalizarTexto(depto.getNombre())
-                                                                .equals(etiquetaLimpia)) {
-                                                        imputacion.setIdDepartamento(depto.getId());
-                                                        break;
+                                // Recorre todos los tags que haya puesto el usuario en Clockify
+                                for (String idEtiqueta : tagIds) {
+                                        String nombreEtiquetaClockify = mapaEtiquetas.get(idEtiqueta);
+                                        if (nombreEtiquetaClockify != null) {
+                                                String etiquetaLimpia = detalleEstimacionService.normalizarTexto(nombreEtiquetaClockify);
+                                                for (Departamento depto : departamentosBD) {
+                                                        if (detalleEstimacionService.normalizarTexto(depto.getNombre()).equals(etiquetaLimpia)) {
+                                                                imputacion.setIdDepartamento(depto.getId());
+                                                                break; // Encuentra el departamento
+                                                        }
                                                 }
+                                        }
+                                        
+                                        // Si ya logró asignarle el departamento a la imputación, para de buscar en el resto de etiquetas de esta tarea
+                                        if (imputacion.getIdDepartamento() != null) {
+                                                break; 
                                         }
                                 }
                         }
