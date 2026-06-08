@@ -564,6 +564,22 @@ public class ClockifyService {
             imputacion.setDescripcionOriginal(description);
             imputacion.setHorasTrabajadas(horasClockify);
 
+            // Extracción de fecha desde timeInterval
+            String startStr = (String) timeInterval.get("start");
+            if (startStr != null) {
+                try {
+                    java.time.Instant instant = java.time.Instant.parse(startStr);
+                    java.time.LocalDate localDate = instant.atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+                    imputacion.setFecha(localDate);
+                } catch (Exception e) {
+                    // Si falla el parsing, usar la fecha actual
+                    imputacion.setFecha(java.time.LocalDate.now());
+                }
+            } else {
+                // Si no hay fecha en timeInterval, usar la fecha actual
+                imputacion.setFecha(java.time.LocalDate.now());
+            }
+
                         // Extracción
                         final String subfaseLimpiaStr;
                         if (description.contains("[") && description.contains("]")) {
