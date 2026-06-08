@@ -35,6 +35,7 @@ import com.example.demo.repository.GitLabTareaRepository;
 import com.example.demo.repository.TareaProyectoRepository;
 import com.example.demo.repository.ExcelRepository;
 import com.example.demo.repository.ImputacionClockifyRepository;
+import org.springframework.context.annotation.Lazy;
 
 @Service
 public class DetalleEstimacionService {
@@ -64,9 +65,11 @@ public class DetalleEstimacionService {
     private GitLabTareaRepository gitLabTareaRepository;
 
     @Autowired
+    @Lazy
     private GitLabService gitLabService;
 
     @Autowired
+    @Lazy
     private ClockifyService clockifyService;
 
     /**
