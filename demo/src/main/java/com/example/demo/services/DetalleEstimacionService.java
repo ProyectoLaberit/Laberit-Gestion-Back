@@ -226,7 +226,7 @@ public class DetalleEstimacionService {
         if (texto == null || texto.trim().isEmpty()) {
             return "";
         }
-        String limpio = texto.trim().toLowerCase();
+        String limpio = texto.trim().toLowerCase().replaceAll("\\s+", " ");
         String normalizado = java.text.Normalizer.normalize(limpio, java.text.Normalizer.Form.NFD);
         return normalizado.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }

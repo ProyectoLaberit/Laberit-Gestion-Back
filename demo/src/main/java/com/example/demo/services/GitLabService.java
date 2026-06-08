@@ -263,17 +263,21 @@ public class GitLabService {
             }
             String titulo = (tarea.getTitle() != null) ? tarea.getTitle().trim() : "";
             if (titulo.isEmpty()) continue;
-            // Extraer la etiqueta en texto de GitLab
-            String deptoGitLabString = (tarea.getLabels() != null && !tarea.getLabels().isEmpty()) 
-                                    ? tarea.getLabels().get(0) : "";
-            // Traducir el nombre de la etiqueta al ID numérico de nuestra base de datos
-            // Traducir el nombre de la etiqueta al ID numérico de nuestra base de datos (con normalización)
-            Integer idDepartamentoLocal = todosLosDepartamentos.stream()
-                .filter(d -> detalleEstimacionService.normalizarTexto(d.getNombre())
-                            .equals(detalleEstimacionService.normalizarTexto(deptoGitLabString)))
-                .map(com.example.demo.entity.Departamento::getId)
-                .findFirst()
-                .orElse(null); // Si no encuentra el departamento, será null
+            Integer idDepartamentoLocal = null;
+            if (tarea.getLabels() != null && !tarea.getLabels().isEmpty()) {
+                for (String labelGitLab : tarea.getLabels()) {
+                    idDepartamentoLocal = todosLosDepartamentos.stream()
+                        .filter(d -> detalleEstimacionService.normalizarTexto(d.getNombre())
+                                    .equals(detalleEstimacionService.normalizarTexto(labelGitLab)))
+                        .map(com.example.demo.entity.Departamento::getId)
+                        .findFirst()
+                        .orElse(null);
+                    
+                    if (idDepartamentoLocal != null) {
+                        break;
+                    }
+                }
+            }
             
             GitLabTarea nueva = new GitLabTarea();
             nueva.setIssueId(tarea.getId());
