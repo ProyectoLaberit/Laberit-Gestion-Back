@@ -485,7 +485,7 @@ public class ClockifyService {
          * @param projectId ID de nuestro proyecto local.
          * @return Número de imputaciones nuevas guardadas.
          */
-       @Auditable(accion = "SINCRONIZAR_CLOCKIFY", tabla = "proyecto", entidad = Proyecto.class, descripcion = "Se sincronizaron las imputaciones de Clockify para el proyecto con ID: #{#projectId}")
+   @Auditable(accion = "SINCRONIZAR_CLOCKIFY", tabla = "proyecto", entidad = Proyecto.class, descripcion = "Se sincronizaron las imputaciones de Clockify para el proyecto con ID: #{#projectId}")
     public int sincronizarImputaciones(Long projectId) {
         Proyecto p = proyectoRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
@@ -499,15 +499,13 @@ public class ClockifyService {
 
         ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
                 clockify.getUrlReal() + "/user", HttpMethod.GET, entity,
-                new ParameterizedTypeReference<Map<String, Object>>() {
-                });
+                new ParameterizedTypeReference<Map<String, Object>>() {});
         String userId = (String) userResponse.getBody().get("id");
 
         String tagsUrl = clockify.getUrlReal() + "/workspaces/" + workspaceId + "/tags";
         ResponseEntity<List<Map<String, Object>>> tagsResponse = restTemplate.exchange(
                 tagsUrl, HttpMethod.GET, entity,
-                new ParameterizedTypeReference<List<Map<String, Object>>>() {
-                });
+                new ParameterizedTypeReference<List<Map<String, Object>>>() {});
 
         Map<String, String> mapaEtiquetas = new HashMap<>();
         if (tagsResponse.getBody() != null) {
@@ -518,6 +516,7 @@ public class ClockifyService {
 
         List<Departamento> departamentosBD = departamentoRepository.findAll();
         List<com.example.demo.entity.Fase> todasLasFasesBD = faseRepository.findAll();
+        List<TareaProyecto> tareasDelProyecto = tareaProyectoRepository.findByIdProyecto(projectId);
 
         List<Map<String, Object>> entradasClockify = new ArrayList<>();
         int paginaActual = 1;
@@ -526,24 +525,16 @@ public class ClockifyService {
 
         while (hayMasPaginas) {
             String url = clockify.getUrlReal() + "/workspaces/" + workspaceId +
-                    "/user/" + userId + "/time-entries?page=" + paginaActual + "&page-size="
-                    + tamanoPagina;
+                    "/user/" + userId + "/time-entries?page=" + paginaActual + "&page-size=" + tamanoPagina;
 
             ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, entity,
-                    new ParameterizedTypeReference<List<Map<String, Object>>>() {
-                    });
+                    url, HttpMethod.GET, entity, new ParameterizedTypeReference<List<Map<String, Object>>>() {});
 
             List<Map<String, Object>> paginaResultados = response.getBody();
-
             if (paginaResultados != null && !paginaResultados.isEmpty()) {
                 entradasClockify.addAll(paginaResultados);
-
-                if (paginaResultados.size() < tamanoPagina) {
-                    hayMasPaginas = false;
-                } else {
-                    paginaActual++;
-                }
+                hayMasPaginas = (paginaResultados.size() == tamanoPagina);
+                paginaActual++;
             } else {
                 hayMasPaginas = false;
             }
@@ -552,136 +543,88 @@ public class ClockifyService {
         List<ImputacionClockify> nuevasImputaciones = new ArrayList<>();
 
         for (Map<String, Object> entry : entradasClockify) {
-
-            if (!clockifyId.equals(entry.get("projectId"))) {
-                continue;
-            }
+            if (!clockifyId.equals(entry.get("projectId"))) continue;
 
             String idEntrada = (String) entry.get("id");
             String description = (String) entry.get("description");
-
-            if (description == null || description.isEmpty()) {
-                continue;
-            }
+            if (description == null || description.isEmpty()) continue;
 
             Map<String, Object> timeInterval = (Map<String, Object>) entry.get("timeInterval");
             double horasClockify = convertirDuracionAHoras((String) timeInterval.get("duration"));
 
-            ImputacionClockify imputacionExistente = imputacionService.obtenerPorIdClockify(idEntrada);
+            ImputacionClockify imputacion = imputacionService.obtenerPorIdClockify(idEntrada);
+            boolean esNuevo = (imputacion == null);
 
-            if (imputacionExistente != null) {
-                if (Math.abs(imputacionExistente.getHorasTrabajadas() - horasClockify) > 0.01) {
-                    imputacionExistente.setHorasTrabajadas(horasClockify);
-                    imputacionService.actualizarImputacion(imputacionExistente);
-                }
-                continue;
+            if (esNuevo) {
+                imputacion = new ImputacionClockify();
+                imputacion.setIdClockifyOriginal(idEntrada);
+                imputacion.setIdProyecto(projectId);
             }
 
-            ImputacionClockify imputacion = new ImputacionClockify();
-            imputacion.setIdClockifyOriginal(idEntrada);
-            imputacion.setIdProyecto(projectId);
             imputacion.setDescripcionOriginal(description);
             imputacion.setHorasTrabajadas(horasClockify);
 
-            String subfase = null;
-            if (description.contains("[") && description.contains("]")) {
-                subfase = description.substring(description.indexOf("[") + 1, description.indexOf("]"));
-                String subfaseLimpiaStr = detalleEstimacionService.normalizarTexto(subfase).replaceAll("\\s+", " ");
-                imputacion.setSubfaseExtraida(subfaseLimpiaStr);
-            }
+                        // Extracción
+                        final String subfaseLimpiaStr;
+                        if (description.contains("[") && description.contains("]")) {
+                                String subfase = description.substring(description.indexOf("[") + 1, description.indexOf("]"));
+                                subfaseLimpiaStr = detalleEstimacionService.normalizarTexto(subfase).replaceAll("\\s+", " ");
+                                imputacion.setSubfaseExtraida(subfaseLimpiaStr);
+                        } else {
+                                subfaseLimpiaStr = null;
+                        }
 
-            if (description.contains("#")) {
-                int start = description.indexOf("#");
-                int firstSpace = description.indexOf(" ", start);
-                if (firstSpace != -1) {
-                    String numeroStr = description.substring(start + 1, firstSpace).trim();
-                    try {
-                        imputacion.setNumeroGitlab(Long.parseLong(numeroStr));
-                    } catch (NumberFormatException e) {
-                        imputacion.setNumeroGitlab(null);
-                    }
+                        final String tareaLimpiaStr;
+                        if (description.contains("#")) {
+                                int start = description.indexOf("#");
+                                int firstSpace = description.indexOf(" ", start);
+                                if (firstSpace != -1) {
+                                        String numeroStr = description.substring(start + 1, firstSpace).trim();
+                                        try { imputacion.setNumeroGitlab(Long.parseLong(numeroStr)); } catch (NumberFormatException e) { imputacion.setNumeroGitlab(null); }
+                                        String titulo = description.substring(firstSpace + 1).trim();
+                                        tareaLimpiaStr = detalleEstimacionService.normalizarTexto(titulo).replaceAll("\\s+", " ");
+                                        imputacion.setTareaExtraida(tareaLimpiaStr);
+                                } else {
+                                        tareaLimpiaStr = null;
+                                }
+                        } else {
+                                tareaLimpiaStr = null;
+                        }
 
-                    String titulo = description.substring(firstSpace + 1).trim();
-                    String tareaLimpiaStr = detalleEstimacionService.normalizarTexto(titulo).replaceAll("\\s+", " ");
-                    imputacion.setTareaExtraida(tareaLimpiaStr);
-                }
-            }
-
+                        // Lógica de Departamentos (etiquetas)
             List<String> tagIds = (List<String>) entry.get("tagIds");
-            if (tagIds != null && !tagIds.isEmpty()) {
+            if (tagIds != null) {
                 for (String idEtiqueta : tagIds) {
-                    String nombreEtiquetaClockify = mapaEtiquetas.get(idEtiqueta);
-
-                    if (nombreEtiquetaClockify != null) {
-                        String etiquetaLimpia = detalleEstimacionService.normalizarTexto(nombreEtiquetaClockify).replaceAll("\\s+", " ");
-
+                    String nombreTag = mapaEtiquetas.get(idEtiqueta);
+                    if (nombreTag != null) {
+                        String etiquetaLimpia = detalleEstimacionService.normalizarTexto(nombreTag).replaceAll("\\s+", " ");
                         for (Departamento depto : departamentosBD) {
-                            String deptoLimpio = detalleEstimacionService.normalizarTexto(depto.getNombre()).replaceAll("\\s+", " ");
-                            if (deptoLimpio.equals(etiquetaLimpia)) {
+                            if (detalleEstimacionService.normalizarTexto(depto.getNombre()).replaceAll("\\s+", " ").equals(etiquetaLimpia)) {
                                 imputacion.setIdDepartamento(depto.getId());
                                 break;
                             }
                         }
                     }
-                    if (imputacion.getIdDepartamento() != null) {
-                        break;
-                    }
                 }
             }
 
-            try {
-                String startStr = (String) timeInterval.get("start");
-                if (startStr != null) {
-                    java.time.Instant start = java.time.Instant.parse(startStr);
-                    java.time.ZonedDateTime zdtStart = start.atZone(java.time.ZoneId.systemDefault());
-                    imputacion.setFecha(zdtStart.toLocalDate());
-                    imputacion.setHoraInicio(zdtStart.toLocalTime());
-                }
-                String endStr = (String) timeInterval.get("end");
-                if (endStr != null) {
-                    java.time.Instant end = java.time.Instant.parse(endStr);
-                    java.time.ZonedDateTime zdtEnd = end.atZone(java.time.ZoneId.systemDefault());
-                    imputacion.setHoraFin(zdtEnd.toLocalTime());
-                }
-            } catch (Exception e) {
-                imputacion.setFecha(java.time.LocalDate.now());
-            }
+                        // Evitar captura de variable mutable 'imputacion' en lambdas: usar copia inmutable de idDepartamento
+                        final Integer idDepartamento = imputacion.getIdDepartamento();
 
+            // Validación (Lógica de búsqueda real)
             boolean esValida = false;
-            String subfaseLimpia = imputacion.getSubfaseExtraida();
-            String tareaLimpia = imputacion.getTareaExtraida();
-
-            if (subfaseLimpia != null && !subfaseLimpia.isEmpty() && tareaLimpia != null && !tareaLimpia.isEmpty()) {
-
+            if (subfaseLimpiaStr != null && tareaLimpiaStr != null && idDepartamento != null) {
                 Integer idFaseEncontrada = todasLasFasesBD.stream()
-                        .filter(f -> {
-                            if (f.getFasePadre() == null) {
-                                return false;
-                            }
-                            String faseLimpia = detalleEstimacionService.normalizarTexto(f.getNombre()).replaceAll("\\s+", " ");
-                            return faseLimpia.equals(subfaseLimpia);
-                        })
+                        .filter(f -> f.getFasePadre() != null && detalleEstimacionService.normalizarTexto(f.getNombre()).replaceAll("\\s+", " ").equals(subfaseLimpiaStr))
                         .map(com.example.demo.entity.Fase::getId)
                         .findFirst()
                         .orElse(null);
 
-                if (idFaseEncontrada != null && imputacion.getIdDepartamento() != null) {
-                    List<com.example.demo.entity.TareaProyecto> tareasDelDepto = tareaProyectoRepository.findByIdProyecto(projectId);
-
-                    java.util.Optional<com.example.demo.entity.TareaProyecto> tareaOpt = tareasDelDepto.stream()
-                            .filter(t -> {
-                                return t.getIdFase() != null && t.getIdFase().equals(idFaseEncontrada);
-                            })
-                            .filter(t -> {
-                                return t.getIdDepartamento() != null && t.getIdDepartamento().equals(imputacion.getIdDepartamento());
-                            })
-                            .filter(t -> {
-                                if (t.getTarea() == null) {
-                                    return false;
-                                }
-                                String tLimpia = detalleEstimacionService.normalizarTexto(t.getTarea()).replaceAll("\\s+", " ");
-                                return tLimpia.equals(tareaLimpia);
-                            })
+                if (idFaseEncontrada != null) {
+                    java.util.Optional<TareaProyecto> tareaOpt = tareasDelProyecto.stream()
+                            .filter(t -> t.getIdFase() != null && t.getIdFase().equals(idFaseEncontrada))
+                            .filter(t -> t.getIdDepartamento() != null && t.getIdDepartamento().equals(idDepartamento))
+                            .filter(t -> t.getTarea() != null && detalleEstimacionService.normalizarTexto(t.getTarea()).replaceAll("\\s+", " ").equals(tareaLimpiaStr))
                             .findFirst();
 
                     if (tareaOpt.isPresent()) {
@@ -690,15 +633,18 @@ public class ClockifyService {
                     }
                 }
             }
-
             imputacion.setValida(esValida);
-            nuevasImputaciones.add(imputacion);
+
+            if (esNuevo) {
+                nuevasImputaciones.add(imputacion);
+            } else {
+                imputacionService.actualizarImputacion(imputacion);
+            }
         }
 
         if (!nuevasImputaciones.isEmpty()) {
             imputacionService.guardarImputaciones(nuevasImputaciones);
         }
-
         return nuevasImputaciones.size();
     }
 
@@ -707,7 +653,8 @@ public class ClockifyService {
    /**
      * Busca las imputaciones de Clockify huérfanas (inválidas) de un proyecto y trata de vincularlas
      * con las tareas locales actualizadas.
-     * Primero intenta una vía rápida mediante el número de GitLab. Si falla, coteja por texto exacto.
+     * Primero intenta una vía rápida mediante el número de GitLab. Si falla, coteja por texto exacto
+     * usando los campos persistentes subfase_extraida y tarea_extraida.
      *
      * @param idProyecto Identificador único del proyecto local cuyas imputaciones se van a revisar.
      */
@@ -717,16 +664,11 @@ public class ClockifyService {
             return;
         }
 
-        // 1. Preparamos el mapa de tareas de GitLab válidas para la "vía rápida"
+        // 1. Mapa de GitLab para la "vía rápida"
         List<GitLabTarea> tareasGitLabBD = gitLabTareaRepository.findByIdProyecto(idProyecto);
-        Map<Long, Long> mapaGitLab = new HashMap<>();
-        if (tareasGitLabBD != null) {
-            for (GitLabTarea gt : tareasGitLabBD) {
-                if (gt.getValida() && gt.getNumeroGitlab() != null && gt.getTareaProyecto() != null) {
-                    mapaGitLab.put(gt.getNumeroGitlab(), gt.getTareaProyecto());
-                }
-            }
-        }
+        Map<Long, Long> mapaGitLab = tareasGitLabBD.stream()
+                .filter(gt -> Boolean.TRUE.equals(gt.getValida()) && gt.getNumeroGitlab() != null && gt.getTareaProyecto() != null)
+                .collect(Collectors.toMap(GitLabTarea::getNumeroGitlab, GitLabTarea::getTareaProyecto, (a, b) -> a));
 
         List<com.example.demo.entity.Fase> todasLasFasesBD = faseRepository.findAll();
         List<TareaProyecto> tareasDelProyecto = tareaProyectoRepository.findByIdProyecto(idProyecto);
@@ -739,40 +681,31 @@ public class ClockifyService {
                 imputacion.setIdTareaProyecto(mapaGitLab.get(imputacion.getNumeroGitlab()));
                 imputacion.setValida(true);
                 actualizadas.add(imputacion);
-                continue; // Pasamos directamente a la siguiente imputación
+                continue; 
             }
 
-            // --- VÍA TEXTO: Por subfase, tarea y departamento ---
+            // --- VÍA TEXTO: Comparación robusta ---
             String subfaseLimpia = imputacion.getSubfaseExtraida();
             String tareaLimpia = imputacion.getTareaExtraida();
 
             if (subfaseLimpia != null && !subfaseLimpia.isEmpty() && tareaLimpia != null && !tareaLimpia.isEmpty()) {
+                
+                // Buscar ID de Fase Padre
                 Integer idFaseEncontrada = todasLasFasesBD.stream()
-                        .filter(f -> {
-                            if (f.getFasePadre() == null) {
-                                return false;
-                            }
-                            String faseLimpia = detalleEstimacionService.normalizarTexto(f.getNombre()).replaceAll("\\s+", " ");
-                            return faseLimpia.equals(subfaseLimpia);
-                        })
+                        .filter(f -> f.getFasePadre() != null)
+                        .filter(f -> detalleEstimacionService.normalizarTexto(f.getNombre()).equals(subfaseLimpia))
                         .map(com.example.demo.entity.Fase::getId)
                         .findFirst()
                         .orElse(null);
 
                 if (idFaseEncontrada != null && imputacion.getIdDepartamento() != null) {
+                    // Buscar TareaProyecto
                     java.util.Optional<TareaProyecto> tareaOpt = tareasDelProyecto.stream()
+                            .filter(t -> t.getIdFase() != null && t.getIdFase().equals(idFaseEncontrada))
+                            .filter(t -> t.getIdDepartamento() != null && t.getIdDepartamento().equals(imputacion.getIdDepartamento()))
                             .filter(t -> {
-                                return t.getIdFase() != null && t.getIdFase().equals(idFaseEncontrada);
-                            })
-                            .filter(t -> {
-                                return t.getIdDepartamento() != null && t.getIdDepartamento().equals(imputacion.getIdDepartamento());
-                            })
-                            .filter(t -> {
-                                if (t.getTarea() == null) {
-                                    return false;
-                                }
-                                String tLimpia = detalleEstimacionService.normalizarTexto(t.getTarea()).replaceAll("\\s+", " ");
-                                return tLimpia.equals(tareaLimpia);
+                                if (t.getTarea() == null) return false;
+                                return detalleEstimacionService.normalizarTexto(t.getTarea()).equals(tareaLimpia);
                             })
                             .findFirst();
 
