@@ -704,17 +704,28 @@ public class ClockifyService {
 
 
 
-    /**
+   /**
      * Busca las imputaciones de Clockify huérfanas (inválidas) de un proyecto y trata de vincularlas
-     * con las tareas locales actualizadas comparando la subfase, la tarea y el departamento.
-     * Si encuentra una coincidencia exacta, actualiza la imputación como válida.
+     * con las tareas locales actualizadas.
+     * Primero intenta una vía rápida mediante el número de GitLab. Si falla, coteja por texto exacto.
      *
      * @param idProyecto Identificador único del proyecto local cuyas imputaciones se van a revisar.
      */
     public void revincularClockifyHuerfanas(Long idProyecto) {
-       List<ImputacionClockify> huerfanas = imputacionClockifyRepository.findByIdProyectoAndValida(idProyecto, false);
+        List<ImputacionClockify> huerfanas = imputacionClockifyRepository.findByIdProyectoAndValida(idProyecto, false);
         if (huerfanas.isEmpty()) {
             return;
+        }
+
+        // 1. Preparamos el mapa de tareas de GitLab válidas para la "vía rápida"
+        List<GitLabTarea> tareasGitLabBD = gitLabTareaRepository.findByIdProyecto(idProyecto);
+        Map<Long, Long> mapaGitLab = new HashMap<>();
+        if (tareasGitLabBD != null) {
+            for (GitLabTarea gt : tareasGitLabBD) {
+                if (gt.getValida() && gt.getNumeroGitlab() != null && gt.getTareaProyecto() != null) {
+                    mapaGitLab.put(gt.getNumeroGitlab(), gt.getTareaProyecto());
+                }
+            }
         }
 
         List<com.example.demo.entity.Fase> todasLasFasesBD = faseRepository.findAll();
@@ -722,6 +733,16 @@ public class ClockifyService {
         List<ImputacionClockify> actualizadas = new ArrayList<>();
 
         for (ImputacionClockify imputacion : huerfanas) {
+            
+            // --- VÍA RÁPIDA: Por número de GitLab ---
+            if (imputacion.getNumeroGitlab() != null && mapaGitLab.containsKey(imputacion.getNumeroGitlab())) {
+                imputacion.setIdTareaProyecto(mapaGitLab.get(imputacion.getNumeroGitlab()));
+                imputacion.setValida(true);
+                actualizadas.add(imputacion);
+                continue; // Pasamos directamente a la siguiente imputación
+            }
+
+            // --- VÍA TEXTO: Por subfase, tarea y departamento ---
             String subfaseLimpia = imputacion.getSubfaseExtraida();
             String tareaLimpia = imputacion.getTareaExtraida();
 
