@@ -50,6 +50,15 @@ public interface ImputacionClockifyRepository extends JpaRepository<ImputacionCl
                 "AND ic.numeroGitlab IN (SELECT gt.numeroGitlab FROM GitLabTarea gt WHERE gt.idProyecto = :idProyecto AND gt.tareaProyecto IS NOT NULL)")
         Double sumarHorasTotalesProyecto(@Param("idProyecto") Long idProyecto);
 
+        @Query("SELECT COALESCE(SUM(ic.horasTrabajadas), 0) " +
+                "FROM ImputacionClockify ic " +
+                "WHERE ic.idProyecto = :idProyecto AND ic.valida = true " +
+                "AND ic.idTareaProyecto IN (" +
+                "       SELECT d.idTareaProyecto FROM DetalleEstimacion d WHERE d.idExcel = :idExcel" +
+                ")")
+        Double sumarHorasTotalesProyectoPorExcel(@Param("idProyecto") Long idProyecto,
+                @Param("idExcel") Integer idExcel);
+
         // Devuelve una lista donde [0] es el ID de la tarea y [1] es la suma de sus
         // horas válidas
         @Query("SELECT gt.tareaProyecto, SUM(ic.horasTrabajadas) " +

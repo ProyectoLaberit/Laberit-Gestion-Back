@@ -54,6 +54,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             generarHojaTareas(workbook, estilos, idProyecto, idExcel);
             // ── CAMBIO: ahora pasamos estilos a generarHojaValidaciones ──
             generarHojaValidaciones(workbook, estilos, idProyecto);
+            workbook.setForceFormulaRecalculation(true);
             workbook.write(out);
             return new ByteArrayInputStream(out.toByteArray());
 
@@ -306,7 +307,9 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
             escribirCeldaPorNombre(workbook, sheet, "KPI_MINIMAS", cabecera.getHorasMinimas());
             escribirCeldaPorNombre(workbook, sheet, "KPI_MAXIMAS", cabecera.getHorasMaximas());
             escribirCeldaPorNombre(workbook, sheet, "KPI_REALES", cabecera.getHorasReales());
-            escribirCeldaPorNombre(workbook, sheet, "KPI_DESVIACION", cabecera.getDesviacion());
+            escribirCeldaPorNombre(workbook, sheet, "KPI_DESVIACION", cabecera.getDesviacion(),
+                    cabecera.getDesviacion() <= 0 ? estilos.get("kpiDesviacionBuena")
+                            : estilos.get("kpiDesviacionMala"));
             escribirCeldaPorNombre(workbook, sheet, "KPI_VALIDAS_GITLAB", cabecera.getPorcentajesValidasGitlab());
             escribirCeldaPorNombre(workbook, sheet, "KPI_INVALIDAS_CLOCKIFY", cabecera.getImputacionesInvalidadas());
         }
@@ -464,6 +467,11 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     // ─────────────────────────────────────────────────────────────────────────────
 
     private void escribirCeldaPorNombre(Workbook workbook, Sheet sheet, String nombreRango, Object valor) {
+        escribirCeldaPorNombre(workbook, sheet, nombreRango, valor, null);
+    }
+
+    private void escribirCeldaPorNombre(Workbook workbook, Sheet sheet, String nombreRango, Object valor,
+            CellStyle estilo) {
         Name nombre = workbook.getName(nombreRango);
         if (nombre == null)
             return;
@@ -478,6 +486,9 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
         Cell celda = fila.getCell(cellRef.getCol());
         if (celda == null)
             celda = fila.createCell(cellRef.getCol());
+
+        if (estilo != null)
+            celda.setCellStyle(estilo);
 
         if (valor instanceof Double)
             celda.setCellValue((Double) valor);
@@ -603,7 +614,7 @@ public class GeneradorInformeExcelServiceImpl implements GeneradorInformeExcelSe
     public CabeceraDTO obtenerDatosCabecera(Long idProyecto, Integer idExcel) {
         Double min = detalleEstimacionRepository.obtenerTotalHorasMinimasProyecto(idProyecto, idExcel);
         Double max = detalleEstimacionRepository.obtenerTotalHorasMaximasProyecto(idProyecto, idExcel);
-        Double reales = imputacionClockifyRepository.sumarHorasTotalesProyecto(idProyecto);
+        Double reales = imputacionClockifyRepository.sumarHorasTotalesProyectoPorExcel(idProyecto, idExcel);
 
         long horasMin = (min != null) ? Math.round(min) : 0L;
         long horasMax = (max != null) ? Math.round(max) : 0L;
