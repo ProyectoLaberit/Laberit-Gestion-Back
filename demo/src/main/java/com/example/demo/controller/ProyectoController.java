@@ -101,6 +101,23 @@ public class ProyectoController {
     }
 
     /**
+     * Metodo que actualiza solo el estado completado de un proyecto.
+     * @param id id del proyecto a actualizar
+     * @param proyectoDTO objeto con el campo completado
+     * @return ApiResponse json que contiene el proyecto actualizado
+     */
+    @PutMapping("/{id}/completado")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR')")
+    public ResponseEntity<ApiResponse> actualizarCompletado(@PathVariable Long id, @RequestBody ProyectoDTO proyectoDTO) {
+        try {
+            ProyectoDTO actualizado = proyectoService.actualizarCompletado(id, proyectoDTO.getCompletado());
+            return ResponseEntity.ok(new ApiResponse("Estado completado actualizado correctamente", true, actualizado));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ApiResponse("Error al actualizar el estado completado: " + e.getMessage(), false, null));
+        }
+    }
+
+    /**
      * Alias de compatibilidad para clientes que aun envian POST al editar.
      */
     /**

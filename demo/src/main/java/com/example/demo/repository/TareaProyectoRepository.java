@@ -3,6 +3,7 @@ package com.example.demo.repository;
 import com.example.demo.dto.excel.FilaComparativaDTO;
 import com.example.demo.entity.TareaProyecto;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -77,4 +78,9 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
                      "WHERE t.idProyecto = :idProyecto AND t.idFase = :idFase AND t.completada = false")
        boolean estanTodasCompletadasPorProyectoYFase(@Param("idProyecto") Long idProyecto,
                      @Param("idFase") Integer idFase);
+
+       @Modifying(clearAutomatically = true, flushAutomatically = true)
+       @Query("UPDATE TareaProyecto t SET t.completada = :completada WHERE t.idProyecto = :idProyecto")
+       int actualizarCompletadaPorProyecto(@Param("idProyecto") Long idProyecto,
+                     @Param("completada") Boolean completada);
 }
