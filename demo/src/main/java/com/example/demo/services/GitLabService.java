@@ -92,6 +92,95 @@ public class GitLabService {
         }
     }
 
+    private Map<String, java.util.Queue<TareaProyecto>> construirColasTareasDisponibles(
+            List<TareaProyecto> tareasDelProyecto,
+            Set<Long> idsTareasYaVinculadas) {
+        Map<String, java.util.Queue<TareaProyecto>> colasDisponibles = new HashMap<>();
+
+        for (TareaProyecto tareaProyecto : tareasDelProyecto) {
+            if (idsTareasYaVinculadas.contains(tareaProyecto.getIdTareaProyecto())) {
+                continue;
+            }
+
+            String clave = construirClaveCoincidencia(
+                    tareaProyecto.getTarea(),
+                    tareaProyecto.getIdDepartamento());
+
+            if (clave.isEmpty()) {
+                continue;
+            }
+
+            colasDisponibles.putIfAbsent(clave, new java.util.LinkedList<>());
+            colasDisponibles.get(clave).add(tareaProyecto);
+        }
+
+        return colasDisponibles;
+    }
+
+    private Integer resolverDepartamentoGitLab(
+            GitLabTareaDTO tarea,
+            List<com.example.demo.entity.Departamento> departamentos) {
+        if (tarea.getLabels() == null || tarea.getLabels().isEmpty()) {
+            return null;
+        }
+
+        for (String labelGitLab : tarea.getLabels()) {
+            String labelNormalizado = detalleEstimacionService.normalizarTexto(labelGitLab);
+            Optional<Integer> idDepartamento = departamentos.stream()
+                    .filter(departamento -> detalleEstimacionService.normalizarTexto(departamento.getNombre())
+                            .equals(labelNormalizado))
+                    .map(com.example.demo.entity.Departamento::getId)
+                    .findFirst();
+
+            if (idDepartamento.isPresent()) {
+                return idDepartamento.get();
+            }
+        }
+
+        return null;
+    }
+
+    private void actualizarDatosGitLabExistente(
+            GitLabTarea destino,
+            GitLabTareaDTO origen,
+            Long proyectoIdLocal,
+            Integer idDepartamentoLocal) {
+        destino.setIssueId(origen.getId());
+        destino.setNumeroGitlab(origen.getNumeroGitLab());
+        destino.setTitulo(origen.getTitle());
+        destino.setEstado(origen.getEstado());
+        destino.setIdProyecto(proyectoIdLocal);
+        destino.setIdDepartamento(idDepartamentoLocal);
+    }
+
+    private boolean vincularPorCoincidenciaSiExiste(
+            GitLabTarea tareaGitLab,
+            Map<String, java.util.Queue<TareaProyecto>> colasDisponibles) {
+        String claveBusqueda = construirClaveCoincidencia(
+                tareaGitLab.getTitulo(),
+                tareaGitLab.getIdDepartamento());
+
+        java.util.Queue<TareaProyecto> cola = colasDisponibles.get(claveBusqueda);
+        if (cola == null || cola.isEmpty()) {
+            tareaGitLab.setTareaProyecto(null);
+            tareaGitLab.setValida(false);
+            return false;
+        }
+
+        TareaProyecto tareaLocal = cola.poll();
+        tareaGitLab.setTareaProyecto(tareaLocal.getIdTareaProyecto());
+        tareaGitLab.setValida(true);
+        return true;
+    }
+
+    private String construirClaveCoincidencia(String tarea, Integer idDepartamento) {
+        if (tarea == null || tarea.trim().isEmpty() || idDepartamento == null) {
+            return "";
+        }
+
+        return detalleEstimacionService.normalizarTexto(tarea) + "|" + idDepartamento;
+    }
+
     /**
      * Recupera y transforma las tareas de GitLab asociadas a un proyecto local.
      * * Flujo del proceso:
@@ -243,66 +332,84 @@ public class GitLabService {
      */
     public int sincronizarYContarNuevasTareas(Long proyectoIdLocal) {
         List<GitLabTareaDTO> tareasGitLab = obtenerTareasPorProyecto(proyectoIdLocal);
-        Set<String> idsEnBD = gitLabTareaRepository.findByIdProyecto(proyectoIdLocal).stream()
-                .map(GitLabTarea::getIssueId)
-                .collect(Collectors.toSet());
+        List<GitLabTarea> tareasExistentesProyecto = gitLabTareaRepository
+                .findTodasByProyectoIncluyendoVinculacion(proyectoIdLocal);
+        Map<String, GitLabTarea> tareasExistentesPorIssueId = new HashMap<>();
+        for (GitLabTarea tareaExistente : tareasExistentesProyecto) {
+            if (tareaExistente.getIssueId() != null) {
+                tareasExistentesPorIssueId.put(tareaExistente.getIssueId(), tareaExistente);
+            }
+        }
         int tareasNuevasGuardadas = 0;
-        List<TareaProyecto> tareasDelProyecto = tareaProyectoRepository.findByIdProyecto(proyectoIdLocal);
+        List<TareaProyecto> tareasDelProyecto = tareaProyectoRepository
+                .findByIdProyectoAndExcelVigente(proyectoIdLocal);
+        if (tareasDelProyecto.isEmpty()) {
+            tareasDelProyecto = tareaProyectoRepository.findByIdProyecto(proyectoIdLocal);
+        }
+        Set<Long> idsTareasVigentes = tareasDelProyecto.stream()
+                .map(TareaProyecto::getIdTareaProyecto)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Set<Long> idsTareasYaVinculadas = tareasExistentesProyecto.stream()
+                .filter(tarea -> Boolean.TRUE.equals(tarea.getValida()))
+                .map(GitLabTarea::getTareaProyecto)
+                .filter(Objects::nonNull)
+                .filter(idsTareasVigentes::contains)
+                .collect(Collectors.toSet());
         List<com.example.demo.entity.Departamento> todosLosDepartamentos = departamentoRepository.findAll();
         // Ahora la clave del mapa es: "titulo_tarea|idDepartamento" -> Mucho más seguro
-        Map<String, java.util.Queue<TareaProyecto>> colasDisponibles = new HashMap<>();
-        for (TareaProyecto tp : tareasDelProyecto) {
-            // Usamos normalizarTexto para quitar tildes y asegurar coincidencia exacta
-            String clave = detalleEstimacionService.normalizarTexto(tp.getTarea()) + "|" + tp.getIdDepartamento();
-            colasDisponibles.putIfAbsent(clave, new java.util.LinkedList<>());
-            colasDisponibles.get(clave).add(tp);
-        }
+        Map<String, java.util.Queue<TareaProyecto>> colasDisponibles = construirColasTareasDisponibles(
+                tareasDelProyecto,
+                idsTareasYaVinculadas);
+        List<GitLabTarea> tareasInvalidasParaRecomparar = new ArrayList<>();
         for (GitLabTareaDTO tarea : tareasGitLab) {
-            if (idsEnBD.contains(tarea.getId())) {
+            String titulo = (tarea.getTitle() != null) ? tarea.getTitle().trim() : "";
+            if (titulo.isEmpty()) {
                 continue;
             }
-            String titulo = (tarea.getTitle() != null) ? tarea.getTitle().trim() : "";
-            if (titulo.isEmpty()) continue;
-            Integer idDepartamentoLocal = null;
-            if (tarea.getLabels() != null && !tarea.getLabels().isEmpty()) {
-                for (String labelGitLab : tarea.getLabels()) {
-                    idDepartamentoLocal = todosLosDepartamentos.stream()
-                        .filter(d -> detalleEstimacionService.normalizarTexto(d.getNombre())
-                                    .equals(detalleEstimacionService.normalizarTexto(labelGitLab)))
-                        .map(com.example.demo.entity.Departamento::getId)
-                        .findFirst()
-                        .orElse(null);
-                    
-                    if (idDepartamentoLocal != null) {
-                        break;
-                    }
+
+            Integer idDepartamentoLocal = resolverDepartamentoGitLab(tarea, todosLosDepartamentos);
+            GitLabTarea existente = tareasExistentesPorIssueId.get(tarea.getId());
+
+            if (existente != null) {
+                if (idDepartamentoLocal == null) {
+                    idDepartamentoLocal = existente.getIdDepartamento();
                 }
+                actualizarDatosGitLabExistente(existente, tarea, proyectoIdLocal, idDepartamentoLocal);
+                boolean vinculadaAVigente = Boolean.TRUE.equals(existente.getValida())
+                        && existente.getTareaProyecto() != null
+                        && idsTareasVigentes.contains(existente.getTareaProyecto());
+
+                if (vinculadaAVigente) {
+                    gitLabTareaRepository.save(existente);
+                } else {
+                    tareasInvalidasParaRecomparar.add(existente);
+                }
+                continue;
             }
             
             GitLabTarea nueva = new GitLabTarea();
-            nueva.setIssueId(tarea.getId());
-            nueva.setNumeroGitlab(tarea.getNumeroGitLab());
-            nueva.setTitulo(tarea.getTitle());
-            nueva.setEstado(tarea.getEstado());
-            nueva.setIdProyecto(proyectoIdLocal);
-            nueva.setIdDepartamento(idDepartamentoLocal);
-            
-            // Buscar en nuestras tareas pre-cargadas si existe un hueco con el mismo nombre y el mismo ID
-            // Usamos normalizarTexto para que coincida con la clave guardada arriba
-            String claveBusqueda = detalleEstimacionService.normalizarTexto(titulo) + "|" + idDepartamentoLocal;
-
-            java.util.Queue<TareaProyecto> cola = colasDisponibles.get(claveBusqueda);
-            if (cola != null && !cola.isEmpty()) {
-                TareaProyecto tareaLocal = cola.poll();
-                nueva.setTareaProyecto(tareaLocal.getIdTareaProyecto());
-                nueva.setValida(true);
-            } else {
-                nueva.setTareaProyecto(null);
-                nueva.setValida(false);
-            }
+            actualizarDatosGitLabExistente(nueva, tarea, proyectoIdLocal, idDepartamentoLocal);
+            vincularPorCoincidenciaSiExiste(nueva, colasDisponibles);
             gitLabTareaRepository.save(nueva);
             tareasNuevasGuardadas++;
         }
+
+        List<GitLabTarea> invalidasEnBase = gitLabTareaRepository.findByValidaAndIdProyecto(false, proyectoIdLocal);
+        for (GitLabTarea invalida : invalidasEnBase) {
+            boolean yaPendiente = tareasInvalidasParaRecomparar.stream()
+                    .anyMatch(tarea -> Objects.equals(tarea.getIssueId(), invalida.getIssueId()));
+            if (!yaPendiente) {
+                tareasInvalidasParaRecomparar.add(invalida);
+            }
+        }
+
+        for (GitLabTarea invalida : tareasInvalidasParaRecomparar) {
+            if (vincularPorCoincidenciaSiExiste(invalida, colasDisponibles)) {
+                gitLabTareaRepository.save(invalida);
+            }
+        }
+
         return tareasNuevasGuardadas;
     }
 

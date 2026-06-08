@@ -15,11 +15,14 @@ import com.example.demo.dto.ClockifyTareaDTO;
 import com.example.demo.dto.ProyectoClockifyDTO;
 import com.example.demo.entity.ApiConfig;
 import com.example.demo.entity.Departamento;
+import com.example.demo.entity.GitLabTarea;
 import com.example.demo.entity.ImputacionClockify;
 import com.example.demo.entity.Proyecto;
+import com.example.demo.entity.TareaProyecto;
 import com.example.demo.repository.ApiConfigRepository;
 import com.example.demo.repository.DepartamentoRepository;
 import com.example.demo.repository.FaseRepository;
+import com.example.demo.repository.GitLabTareaRepository;
 import com.example.demo.repository.ProyectoRepository;
 
 import java.time.Duration;
@@ -56,6 +59,9 @@ public class ClockifyService {
 
         @Autowired
         private com.example.demo.repository.TareaProyectoRepository tareaProyectoRepository;
+
+        @Autowired
+        private GitLabTareaRepository gitLabTareaRepository;
 
         @Value("${clockify.workspace.id}")
         private String workspaceId;
@@ -544,6 +550,31 @@ public class ClockifyService {
                 }
 
                 List<ImputacionClockify> nuevasImputaciones = new ArrayList<>();
+                List<TareaProyecto> tareasDelProyectoVigente = tareaProyectoRepository
+                                .findByIdProyectoAndExcelVigente(projectId);
+                if (tareasDelProyectoVigente.isEmpty()) {
+                        tareasDelProyectoVigente = tareaProyectoRepository.findByIdProyecto(projectId);
+                }
+
+                Map<Long, TareaProyecto> tareasVigentesPorId = new HashMap<>();
+                for (TareaProyecto tareaProyecto : tareasDelProyectoVigente) {
+                        if (tareaProyecto.getIdTareaProyecto() != null) {
+                                tareasVigentesPorId.put(tareaProyecto.getIdTareaProyecto(), tareaProyecto);
+                        }
+                }
+
+                Map<Long, GitLabTarea> tareasGitLabValidasPorNumero = new HashMap<>();
+                for (GitLabTarea tareaGitLab : gitLabTareaRepository.findValidasByProyectoIncluyendoVinculacion(projectId)) {
+                        if (tareaGitLab.getNumeroGitlab() == null || tareaGitLab.getTareaProyecto() == null) {
+                                continue;
+                        }
+                        if (!tareasVigentesPorId.containsKey(tareaGitLab.getTareaProyecto())) {
+                                continue;
+                        }
+                        tareasGitLabValidasPorNumero.putIfAbsent(tareaGitLab.getNumeroGitlab(), tareaGitLab);
+                }
+
+                int imputacionesActualizadas = 0;
 
                 // 3. Procesar cada entrada
                 for (Map<String, Object> entry : entradasClockify) {
@@ -565,8 +596,30 @@ public class ClockifyService {
                         ImputacionClockify imputacionExistente = imputacionService.obtenerPorIdClockify(idEntrada);
 
                         if (imputacionExistente != null) {
+                                boolean requiereGuardado = false;
                                 if (Math.abs(imputacionExistente.getHorasTrabajadas() - horasClockify) > 0.01) {
                                         imputacionExistente.setHorasTrabajadas(horasClockify);
+                                        requiereGuardado = true;
+                                }
+
+                                Boolean validaAnterior = imputacionExistente.getValida();
+                                Long idTareaAnterior = imputacionExistente.getIdTareaProyecto();
+                                boolean estabaInvalida = !Boolean.TRUE.equals(validaAnterior);
+                                boolean quedaValida = vincularImputacionConTareaProyecto(imputacionExistente, projectId,
+                                                todasLasFasesBD, tareasDelProyectoVigente, tareasVigentesPorId,
+                                                tareasGitLabValidasPorNumero);
+
+                                if (!java.util.Objects.equals(validaAnterior, imputacionExistente.getValida())
+                                                || !java.util.Objects.equals(idTareaAnterior,
+                                                                imputacionExistente.getIdTareaProyecto())) {
+                                        requiereGuardado = true;
+                                }
+
+                                if (estabaInvalida && quedaValida) {
+                                        imputacionesActualizadas++;
+                                }
+
+                                if (requiereGuardado) {
                                         imputacionService.actualizarImputacion(imputacionExistente);
                                 }
                                 continue;
@@ -686,7 +739,9 @@ public class ClockifyService {
                                 }
                         }
 
-                        imputacion.setValida(esValida);
+                        imputacion.setValida(vincularImputacionConTareaProyecto(imputacion, projectId,
+                                        todasLasFasesBD, tareasDelProyectoVigente, tareasVigentesPorId,
+                                        tareasGitLabValidasPorNumero));
                         nuevasImputaciones.add(imputacion);
                 }
 
@@ -694,6 +749,113 @@ public class ClockifyService {
                         imputacionService.guardarImputaciones(nuevasImputaciones);
                 }
 
-                return nuevasImputaciones.size();
+                return nuevasImputaciones.size() + imputacionesActualizadas;
+        }
+
+        private boolean vincularImputacionConTareaProyecto(
+                        ImputacionClockify imputacion,
+                        Long projectId,
+                        List<com.example.demo.entity.Fase> todasLasFasesBD,
+                        List<TareaProyecto> tareasDelProyectoVigente,
+                        Map<Long, TareaProyecto> tareasVigentesPorId,
+                        Map<Long, GitLabTarea> tareasGitLabValidasPorNumero) {
+
+                Long idTareaPorGitLab = resolverTareaProyectoPorGitLab(
+                                imputacion,
+                                projectId,
+                                tareasVigentesPorId,
+                                tareasGitLabValidasPorNumero);
+
+                if (idTareaPorGitLab != null) {
+                        imputacion.setIdTareaProyecto(idTareaPorGitLab);
+                        imputacion.setValida(true);
+                        return true;
+                }
+
+                Long idTareaPorTexto = resolverTareaProyectoPorTexto(
+                                imputacion,
+                                todasLasFasesBD,
+                                tareasDelProyectoVigente);
+
+                if (idTareaPorTexto != null) {
+                        imputacion.setIdTareaProyecto(idTareaPorTexto);
+                        imputacion.setValida(true);
+                        return true;
+                }
+
+                imputacion.setIdTareaProyecto(null);
+                imputacion.setValida(false);
+                return false;
+        }
+
+        private Long resolverTareaProyectoPorGitLab(
+                        ImputacionClockify imputacion,
+                        Long projectId,
+                        Map<Long, TareaProyecto> tareasVigentesPorId,
+                        Map<Long, GitLabTarea> tareasGitLabValidasPorNumero) {
+
+                if (imputacion.getNumeroGitlab() == null) {
+                        return null;
+                }
+
+                GitLabTarea tareaGitLab = tareasGitLabValidasPorNumero.get(imputacion.getNumeroGitlab());
+                if (tareaGitLab == null || tareaGitLab.getTareaProyecto() == null) {
+                        return null;
+                }
+
+                TareaProyecto tareaProyecto = tareasVigentesPorId.get(tareaGitLab.getTareaProyecto());
+                if (tareaProyecto == null || !projectId.equals(tareaProyecto.getIdProyecto())) {
+                        return null;
+                }
+
+                if (imputacion.getIdDepartamento() != null && tareaProyecto.getIdDepartamento() != null
+                                && !tareaProyecto.getIdDepartamento().equals(imputacion.getIdDepartamento())) {
+                        return null;
+                }
+
+                if (imputacion.getIdDepartamento() == null) {
+                        imputacion.setIdDepartamento(tareaProyecto.getIdDepartamento());
+                }
+
+                return tareaProyecto.getIdTareaProyecto();
+        }
+
+        private Long resolverTareaProyectoPorTexto(
+                        ImputacionClockify imputacion,
+                        List<com.example.demo.entity.Fase> todasLasFasesBD,
+                        List<TareaProyecto> tareasDelProyectoVigente) {
+
+                String subfaseLimpia = imputacion.getSubfaseExtraida();
+                String tareaLimpia = imputacion.getTareaExtraida();
+
+                if (subfaseLimpia == null || subfaseLimpia.isEmpty()
+                                || tareaLimpia == null || tareaLimpia.isEmpty()
+                                || imputacion.getIdDepartamento() == null) {
+                        return null;
+                }
+
+                Integer idFaseEncontrada = todasLasFasesBD.stream()
+                                .filter(fase -> fase.getFasePadre() != null
+                                                && detalleEstimacionService.normalizarTexto(fase.getNombre())
+                                                                .equals(subfaseLimpia))
+                                .map(com.example.demo.entity.Fase::getId)
+                                .findFirst()
+                                .orElse(null);
+
+                if (idFaseEncontrada == null) {
+                        return null;
+                }
+
+                return tareasDelProyectoVigente.stream()
+                                .filter(tarea -> tarea.getIdFase() != null
+                                                && tarea.getIdFase().equals(idFaseEncontrada))
+                                .filter(tarea -> tarea.getIdDepartamento() != null
+                                                && tarea.getIdDepartamento().equals(imputacion.getIdDepartamento()))
+                                .filter(tarea -> tarea.getTarea() != null
+                                                && detalleEstimacionService.normalizarTexto(tarea.getTarea())
+                                                                .equals(tareaLimpia))
+                                .map(TareaProyecto::getIdTareaProyecto)
+                                .findFirst()
+                                .orElse(null);
         }
 }

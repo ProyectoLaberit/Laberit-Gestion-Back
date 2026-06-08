@@ -21,6 +21,12 @@ public interface TareaProyectoRepository extends JpaRepository<TareaProyecto, Lo
        // método para sacar todas las tareas de un proyecto
        List<TareaProyecto> findByIdProyecto(Long idProyecto);
 
+       @Query(value = "SELECT DISTINCT t.* FROM tarea_proyecto t " +
+                     "JOIN detalle_estimacion d ON d.id_tarea_proyecto = t.id_tarea_proyecto " +
+                     "JOIN excel e ON e.id_excel = d.id_excel " +
+                     "WHERE t.id_proyecto = :idProyecto AND e.vigente = true", nativeQuery = true)
+       List<TareaProyecto> findByIdProyectoAndExcelVigente(@Param("idProyecto") Long idProyecto);
+
        List<TareaProyecto> findByTarea(String tarea);
 
        List<TareaProyecto> findByIdProyectoAndIdFaseAndTarea(Long idProyecto, Integer idFase, String tarea);
