@@ -41,10 +41,11 @@ public class ProyectoController {
     @PreAuthorize("hasAnyAuthority('ROLE_SUPERADMINISTRADOR', 'ROLE_ADMINISTRADOR', 'ROLE_EMPLEADO')")
     public ResponseEntity<ApiResponse> obtenerProyectos(
             @RequestParam(required = false) Boolean activo,
+            @RequestParam(required = false) Boolean completado,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate desde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate hasta) {
         try {
-            List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(activo, desde, hasta);
+            List<ProyectoDTO> lista = proyectoService.obtenerTodosLosProyectos(activo,completado, desde, hasta);
             return ResponseEntity.ok(new ApiResponse("Listado de proyectos recuperado", true, lista));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(new ApiResponse("Error al cargar los proyectos: " + e.getMessage(), false, null));

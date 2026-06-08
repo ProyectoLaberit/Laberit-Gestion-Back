@@ -22,10 +22,12 @@ public interface ProyectoRepository extends JpaRepository<Proyecto, Long> {
 
         @Query("SELECT p FROM Proyecto p WHERE " +
                         "(:activo IS NULL OR p.activo = :activo) AND " +
+                        "(:completado IS NULL OR p.completado = :completado) AND " +
                         "(cast(:desde as date) IS NULL OR p.fechaInicio >= :desde) AND " +
                         "(cast(:hasta as date) IS NULL OR p.fechaInicio <= :hasta)")
         List<Proyecto> findByFiltrosOpcionales(
                         @Param("activo") Boolean activo,
+                        @Param("completado") Boolean completado,
                         @Param("desde") LocalDate desde,
                         @Param("hasta") LocalDate hasta);
 }

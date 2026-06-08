@@ -27,8 +27,8 @@ public class ProyectoService {
      * Recupera una lista de todos los proyectos filtrada por su estado de actividad
      * y un rango de fechas.
      */
-    public List<ProyectoDTO> obtenerTodosLosProyectos(Boolean activo, LocalDate desde, LocalDate hasta) {
-        List<Proyecto> proyectosDB = proyectoRepository.findByFiltrosOpcionales(activo, desde, hasta);
+    public List<ProyectoDTO> obtenerTodosLosProyectos(Boolean activo, Boolean completado, LocalDate desde, LocalDate hasta) {
+        List<Proyecto> proyectosDB = proyectoRepository.findByFiltrosOpcionales(activo, completado, desde, hasta);
 
         return proyectosDB.stream()
                 .map(this::convertirADTO)
