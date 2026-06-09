@@ -263,7 +263,7 @@ public class ClockifyService {
      * Sincroniza las entradas de tiempo de Clockify con nuestra base de datos local.
      * Incorpora extracción de horas/fechas limpia y doble vía de validación (GitLab + Texto).
      */
-   @Auditable(accion = "SINCRONIZAR_CLOCKIFY", tabla = "proyecto", entidad = Proyecto.class, descripcion = "Se sincronizaron las imputaciones de Clockify para el proyecto con ID: #{#projectId}")
+  @Auditable(accion = "SINCRONIZAR_CLOCKIFY", tabla = "proyecto", entidad = Proyecto.class, descripcion = "Se sincronizaron las imputaciones de Clockify para el proyecto con ID: #{#projectId}")
     public int sincronizarImputaciones(Long projectId) {
         Proyecto p = proyectoRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
@@ -387,7 +387,16 @@ public class ClockifyService {
                 }
             }
 
-            // 3. EXTRACCIÓN DEL STRING DE LA TAREA Y EL NÚMERO DE GITLAB
+            // 3. EXTRACCIÓN DIVIDIDA DE SUBFASE, NÚMERO DE GITLAB Y TAREA
+            String subfaseExtraida = null;
+            if (description.contains("[") && description.contains("]")) {
+                String subfase = description.substring(description.indexOf("[") + 1, description.indexOf("]"));
+                subfaseExtraida = detalleEstimacionService.normalizarTexto(subfase).replaceAll("\\s+", " ");
+                imputacion.setSubfaseExtraida(subfaseExtraida);
+            } else {
+                imputacion.setSubfaseExtraida(null);
+            }
+
             String tareaExtraida = null;
             if (description.contains("#")) {
                 int start = description.indexOf("#");
@@ -402,22 +411,27 @@ public class ClockifyService {
                     
                     String titulo = description.substring(firstSpace + 1).trim();
                     tareaExtraida = detalleEstimacionService.normalizarTexto(titulo).replaceAll("\\s+", " ");
+                    imputacion.setTareaExtraida(tareaExtraida);
+                } else {
+                    imputacion.setTareaExtraida(null);
                 }
+            } else {
+                imputacion.setTareaExtraida(null);
             }
 
             // 4. COMPARACIÓN BÁSICA: STRING DE CLOCKIFY VS STRING DE TAREA_PROYECTO
             boolean esValida = false;
             final Integer idDepartamento = imputacion.getIdDepartamento();
-            final String tareaBuscada = tareaExtraida;
 
-            if (tareaBuscada != null && idDepartamento != null) {
+            if (tareaExtraida != null && idDepartamento != null) {
+                final String tareaBuscadaFinal = tareaExtraida;
                 java.util.Optional<TareaProyecto> coincidencia = tareasDelProyecto.stream()
                         .filter(tp -> {
                             return tp.getIdDepartamento().equals(idDepartamento);
                         })
                         .filter(tp -> {
                             String tareaTp = detalleEstimacionService.normalizarTexto(tp.getTarea()).replaceAll("\\s+", " ");
-                            return tareaTp.equals(tareaBuscada);
+                            return tareaTp.equals(tareaBuscadaFinal);
                         })
                         .findFirst();
 
@@ -450,7 +464,7 @@ public class ClockifyService {
      * con las tareas locales actualizadas.
      */
    public void revincularClockifyHuerfanas(Long idProyecto) {
-        // Reevaluación Total: Ya no traemos solo las false, traemos TODAS
+        // Reevaluación Total: Traemos TODAS las imputaciones
         List<ImputacionClockify> todas = imputacionClockifyRepository.findByIdProyecto(idProyecto);
         if (todas.isEmpty()) {
             return;
@@ -459,27 +473,19 @@ public class ClockifyService {
         List<TareaProyecto> tareasDelProyecto = tareaProyectoRepository.findByIdProyecto(idProyecto);
 
         for (ImputacionClockify imputacion : todas) {
-            String desc = imputacion.getDescripcionOriginal();
-            String tareaExtraida = null;
-
-            // Extracción en tiempo real por si la BD viene con nulos
-            if (desc != null && desc.contains("#")) {
-                int start = desc.indexOf("#");
-                int firstSpace = desc.indexOf(" ", start);
-                if (firstSpace != -1) {
-                    String titulo = desc.substring(firstSpace + 1).trim();
-                    tareaExtraida = detalleEstimacionService.normalizarTexto(titulo).replaceAll("\\s+", " ");
-                }
-            }
-
+            // Leemos el string limpio directamente de la base de datos
+            String tareaBuscada = imputacion.getTareaExtraida();
+            Integer idDepto = imputacion.getIdDepartamento();
             boolean esValida = false;
-            final Integer idDepto = imputacion.getIdDepartamento();
-            final String tareaBuscada = tareaExtraida;
 
             if (tareaBuscada != null && idDepto != null) {
                 java.util.Optional<TareaProyecto> coincidencia = tareasDelProyecto.stream()
-                        .filter(tp -> tp.getIdDepartamento().equals(idDepto))
-                        .filter(tp -> detalleEstimacionService.normalizarTexto(tp.getTarea()).replaceAll("\\s+", " ").equals(tareaBuscada))
+                        .filter(tp -> {
+                            return tp.getIdDepartamento().equals(idDepto);
+                        })
+                        .filter(tp -> {
+                            return detalleEstimacionService.normalizarTexto(tp.getTarea()).replaceAll("\\s+", " ").equals(tareaBuscada);
+                        })
                         .findFirst();
 
                 if (coincidencia.isPresent()) {
@@ -488,7 +494,6 @@ public class ClockifyService {
                 }
             }
 
-            // Aplicamos el nuevo estado, ya sea a true (se arregló) o a false (se rompió al subir un nuevo Excel)
             imputacion.setValida(esValida);
             if (!esValida) {
                 imputacion.setIdTareaProyecto(null);
